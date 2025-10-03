@@ -1,0 +1,9 @@
+{
+  "type": "module",
+  "name": "torch",
+  "packageManager": "yarn@4.10.3",
+  "version": "0.1.0",
+  "description": "machine-learning libraries for Source Academy",
+  "repository": "git@github.com/source-academy/torch.git",
+  "license": "Apache-2.0"
+}
