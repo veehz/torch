@@ -5,5 +5,42 @@
   "version": "0.1.0",
   "description": "machine-learning libraries for Source Academy",
   "repository": "git@github.com/source-academy/torch.git",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "files": [
+    "build"
+  ],
+  "main": "./build/node/torch.node.cjs.js",
+  "module": "./build/node/torch.node.es.js",
+  "types": "./build/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/types/index.d.ts",
+      "browser": "./build/browser/torch.browser.es.js",
+      "import": "./build/node/torch.node.es.js",
+      "require": "./build/node/torch.node.cjs.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf build",
+    "build:browser": "vite build --config vite.config.browser.ts",
+    "build:node": "vite build --config vite.config.node.ts",
+    "build": "npm run clean && npm run build:node && npm run build:browser",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.6.2",
+    "jest": "^30.2.0",
+    "jest-util": "^30.2.0",
+    "rimraf": "^6.0.1",
+    "ts-jest": "^29.4.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9",
+    "vite-plugin-dts": "^4.5.4"
+  },
+  "dependencies": {
+    "@veehz/gpu.js": "^2.16.0"
+  }
 }

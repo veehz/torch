@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>torch.js browser backprop example</title>
+  <!-- GPU.js runtime (required by torch GPU backend) -->
+  <script src="../../build/browser/gpu-browser.min.js"></script>
+  <!-- torch UMD bundle exposes global `torch` -->
+  <script src="../../build/browser/torch.browser.umd.js"></script>
+</head>
+<body>
+  <pre id="output"></pre>
+  <script>
+    const { Tensor } = window.torch;
+
+    const x = new Tensor([2.0], { requires_grad: true });
+    const y = x.pow(new Tensor([2.0]));
+
+    const outEl = document.getElementById('output');
+    const log = (...args) => {
+      console.log(...args);
+      outEl.textContent += args.map(String).join(' ') + "\n";
+    };
+
+    log(y.item());
+    y.backward();
+    log(x.grad && x.grad.item());
+  </script>
+</body>
+</html>
+
