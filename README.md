@@ -39,5 +39,6 @@ You can run `http-server` and load `examples/browser/index.html` to see how it w
 
 ```bash
 npx http-server --cors=* -c-1 .
-# and navigate to http://localhost:8080/examples/browser/index.html
+# and navigate to http://localhost:8080/examples/browser/index.html to run torch in js
+# or http://localhost:8080/examples/pyodide/index.html to run in python
 ```
