@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>torch+pyodide browser backprop example</title>
+    <!-- GPU.js runtime (required by torch GPU backend) -->
+    <script src="../../build/browser/gpu-browser.min.js"></script>
+    <!-- torch UMD bundle exposes global `torch` -->
+    <script src="../../build/browser/torch.browser.umd.js"></script>
+</head>
+
+<body>
+    <h1>Torch + Pyodide</h1>
+    <div>
+        <textarea id="code" rows="10" cols="50" placeholder="Enter Python code here...">
+x = torch.tensor([1, 2, 3], requires_grad=True)
+y = torch.tensor([4, 5, 6], requires_grad=True)
+
+print("x:", x)
+print("y:", y)
+
+print("Sum of x:", x.sum())
+
+z = x * y
+
+print("z:", z)
+
+zsum = z.sum()
+zsum.backward()
+
+print("grad of x:", x.grad)
+print("grad of y:", y.grad)</textarea>
+    </div>
+
+    <div>
+        <button onclick="runCode()">Run Code</button>
+        <button onclick="clearOutput()">Clear</button>
+    </div>
+    <div>
+        <h3>Output:</h3>
+        <pre id="output"></pre>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <script>
+        const { Tensor } = window.torch;
+        let pyodide;
+
+        async function main() {
+            pyodide = await loadPyodide();
+
+            // Set up torch utilities
+            const torch_utils = {
+                get_data_from_tensor: function (tensor) {
+                    return tensor.data;
+                },
+                create_tensor_from_python_data: function (data, requires_grad) {
+                    const jsData = typeof data.toJs === "function" ? data.toJs() : data;
+                    console.log("creating tensor from python data", jsData);
+                    return new Tensor(jsData, { requires_grad });
+                },
+                to_js_list: function (data) {
+                    return data.toJs();
+                },
+            };
+
+            // Make torch and torch_utils available to Python
+            pyodide.globals.set("js_torch", torch);
+            pyodide.globals.set("torch_utils", torch_utils);
+
+            // Load the bridge.py file first
+            try {
+                const response = await fetch('./bridge.py');
+                const bridgeCode = await response.text();
+
+                console.log(bridgeCode);
+
+                // Load the bridge code into Pyodide
+                pyodide.runPython(bridgeCode);
+
+                document.getElementById("output").textContent = "Pyodide and bridge.py loaded successfully!";
+            } catch (error) {
+                document.getElementById("output").textContent = `Error loading bridge.py: ${error.message}`;
+            }
+        }
+
+        function runCode() {
+            const code = document.getElementById("code").value;
+            const output = document.getElementById("output");
+
+            try {
+                // Capture stdout
+                pyodide.runPython(`
+                    import sys
+                    from io import StringIO
+                    sys.stdout = StringIO()
+                `);
+
+                // Run user code
+                pyodide.runPython(code);
+
+                // Get output
+                const result = pyodide.runPython("sys.stdout.getvalue()");
+                output.textContent = result || "No output";
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        function clearOutput() {
+            document.getElementById("output").textContent = "";
+        }
+
+        main();
+    </script>
+</body>
+
+</html>
