@@ -3,8 +3,6 @@ import { Tensor } from './tensor';
 
 import { Add, Div, Log, Mul, Pow, Sub, Sum } from './operations/classes';
 
-import { _broadcast_shape, _get_original_index_kernel } from './broadcasting';
-
 export * from './operations/functional';
 export { Tensor };
 

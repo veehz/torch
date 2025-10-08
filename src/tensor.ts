@@ -1,6 +1,6 @@
-import { _get_original_index } from "./broadcasting";
-import { Operation } from "./operations/base";
-import { getOperation } from "./operations/registry";
+import { _get_original_index } from './broadcasting';
+import { Operation } from './operations/base';
+import { getOperation } from './operations/registry';
 
 /*
  * TODO:
@@ -35,7 +35,7 @@ function _get_shape(data: NestedNumberArray): number[] {
 
 function _flatten(data: NestedNumberArray): number[] {
   if (Array.isArray(data)) {
-    return data.flatMap((item) => _flatten(item));
+    return data.flatMap(item => _flatten(item));
   } else if (ArrayBuffer.isView(data)) {
     return Array.from(data);
   } else {
@@ -46,7 +46,7 @@ function _flatten(data: NestedNumberArray): number[] {
 export class Tensor {
   data: number[];
   _shape: number[];
-  operation: any = null;
+  operation: Operation | null = null;
   public grad: Tensor | null = null;
 
   requires_grad: boolean;
@@ -54,7 +54,7 @@ export class Tensor {
   constructor(
     data: NestedNumberArray,
     options: { requires_grad?: boolean } = {},
-    internal_options: { operation?: Operation, shape?: number[] } = {}
+    internal_options: { operation?: Operation; shape?: number[] } = {}
   ) {
     this.data = _flatten(data);
     this.requires_grad = options.requires_grad ?? false;
@@ -87,36 +87,36 @@ export class Tensor {
   }
 
   add(other: Tensor): Tensor {
-    return this._executeBinaryOp("add", other);
+    return this._executeBinaryOp('add', other);
   }
 
   sub(other: Tensor): Tensor {
-    return this._executeBinaryOp("sub", other);
+    return this._executeBinaryOp('sub', other);
   }
 
   mul(other: Tensor): Tensor {
-    return this._executeBinaryOp("mul", other);
+    return this._executeBinaryOp('mul', other);
   }
 
   div(other: Tensor): Tensor {
-    return this._executeBinaryOp("div", other);
+    return this._executeBinaryOp('div', other);
   }
 
   sum(): Tensor {
-    return this._executeUnaryOp("sum");
+    return this._executeUnaryOp('sum');
   }
 
   pow(other: Tensor): Tensor {
-    return this._executeBinaryOp("pow", other);
+    return this._executeBinaryOp('pow', other);
   }
 
   log(): Tensor {
-    return this._executeUnaryOp("log");
+    return this._executeUnaryOp('log');
   }
 
   item(): number {
     if (this.data.length !== 1) {
-      throw new Error("Tensor.item() is only valid for scalars");
+      throw new Error('Tensor.item() is only valid for scalars');
     }
     return this.data[0];
   }
@@ -129,7 +129,7 @@ export class Tensor {
 
     if (!grad) {
       if (this.data.length !== 1) {
-        throw new Error("Gradient is required for non-scalar tensors");
+        throw new Error('Gradient is required for non-scalar tensors');
       }
 
       grad = new Tensor(1);

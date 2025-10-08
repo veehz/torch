@@ -1,8 +1,8 @@
-import gpu from "../gpu";
-import { _broadcast_shape, _get_original_index_kernel, _pad_shape } from "../broadcasting";
-import { Tensor } from "../tensor";
+import gpu from '../gpu';
+import { _broadcast_shape, _get_original_index_kernel, _pad_shape } from '../broadcasting';
+import { Tensor } from '../tensor';
 // import * as utils from "../utils";
-import { Operation, BinaryOperation, UnaryOperation } from "./base";
+import { Operation, BinaryOperation, UnaryOperation } from './base';
 
 /* This did not work as it doesn't support dynamic function registration */
 // export function _broadcast_operation(
@@ -68,24 +68,16 @@ export function _add_broadcast(
       b_shape: number[],
       broadcast_shape: number[]
     ) {
-      const a_index = _get_original_index_kernel(
-        a_shape,
-        broadcast_shape,
-        this.thread.x
-      );
-      const b_index = _get_original_index_kernel(
-        b_shape,
-        broadcast_shape,
-        this.thread.x
-      );
+      const a_index = _get_original_index_kernel(a_shape, broadcast_shape, this.thread.x);
+      const b_index = _get_original_index_kernel(b_shape, broadcast_shape, this.thread.x);
 
       return a[a_index] + b[b_index];
     },
     {
       constants: {
-        shape_length: broadcast_shape.length,
+        shape_length: broadcast_shape.length
       },
-      output: [broadcast_shape.reduce((acc, val) => acc * val, 1)],
+      output: [broadcast_shape.reduce((acc, val) => acc * val, 1)]
     }
   );
 
@@ -114,24 +106,13 @@ export function _add_broadcast(
 //     return _broadcast_operation(_add_)(a, b);
 // }
 
-
-export function _add_tensor(
-  a: Tensor,
-  b: Tensor,
-  operation: Operation | null = null
-): Tensor {
+export function _add_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
 
   const kernel = gpu.createKernel(
-    function (
-      a: number[],
-      as: number[],
-      b: number[],
-      bs: number[],
-      bcs: number[]
-    ) {
+    function (a: number[], as: number[], b: number[], bs: number[], bcs: number[]) {
       const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
       const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
 
@@ -139,9 +120,9 @@ export function _add_tensor(
     },
     {
       constants: {
-        shape_length: broadcast_shape.length,
+        shape_length: broadcast_shape.length
       },
-      output: [broadcast_shape.reduce((acc, val) => acc * val, 1)],
+      output: [broadcast_shape.reduce((acc, val) => acc * val, 1)]
     }
   );
 
@@ -165,23 +146,13 @@ export class Add extends BinaryOperation {
   }
 }
 
-export function _sub_tensor(
-  a: Tensor,
-  b: Tensor,
-  operation: Operation | null = null
-): Tensor {
+export function _sub_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
 
   const kernel = gpu.createKernel(
-    function (
-      a: number[],
-      as: number[],
-      b: number[],
-      bs: number[],
-      bcs: number[]
-    ) {
+    function (a: number[], as: number[], b: number[], bs: number[], bcs: number[]) {
       const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
       const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
 
@@ -189,9 +160,9 @@ export function _sub_tensor(
     },
     {
       constants: {
-        shape_length: broadcast_shape?.length || 0,
+        shape_length: broadcast_shape?.length || 0
       },
-      output: [broadcast_shape.reduce((acc, val) => acc * val, 1)],
+      output: [broadcast_shape.reduce((acc, val) => acc * val, 1)]
     }
   );
 
@@ -215,22 +186,12 @@ export class Sub extends BinaryOperation {
   }
 }
 
-export function _mul_tensor(
-  a: Tensor,
-  b: Tensor,
-  operation: Operation | null = null
-): Tensor {
+export function _mul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = gpu.createKernel(
-    function (
-      a: number[],
-      as: number[],
-      b: number[],
-      bs: number[],
-      bcs: number[]
-    ) {
+    function (a: number[], as: number[], b: number[], bs: number[], bcs: number[]) {
       const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
       const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
 
@@ -238,9 +199,9 @@ export function _mul_tensor(
     },
     {
       constants: {
-        shape_length: broadcast_shape.length,
+        shape_length: broadcast_shape.length
       },
-      output: [broadcast_shape.reduce((acc, val) => acc * val, 1)],
+      output: [broadcast_shape.reduce((acc, val) => acc * val, 1)]
     }
   );
 
@@ -264,22 +225,12 @@ export class Mul extends BinaryOperation {
   }
 }
 
-export function _div_tensor(
-  a: Tensor,
-  b: Tensor,
-  operation: Operation | null = null
-): Tensor {
+export function _div_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = gpu.createKernel(
-    function (
-      a: number[],
-      as: number[],
-      b: number[],
-      bs: number[],
-      bcs: number[]
-    ) {
+    function (a: number[], as: number[], b: number[], bs: number[], bcs: number[]) {
       const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
       const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
 
@@ -287,9 +238,9 @@ export function _div_tensor(
     },
     {
       constants: {
-        shape_length: broadcast_shape.length,
+        shape_length: broadcast_shape.length
       },
-      output: [broadcast_shape.reduce((acc, val) => acc * val, 1)],
+      output: [broadcast_shape.reduce((acc, val) => acc * val, 1)]
     }
   );
 
@@ -331,22 +282,12 @@ export class Sum extends UnaryOperation {
   }
 }
 
-export function _pow_tensor(
-  a: Tensor,
-  b: Tensor,
-  operation: Operation | null = null
-): Tensor {
+export function _pow_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = gpu.createKernel(
-    function (
-      a: number[],
-      as: number[],
-      b: number[],
-      bs: number[],
-      bcs: number[]
-    ) {
+    function (a: number[], as: number[], b: number[], bs: number[], bcs: number[]) {
       const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
       const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
 
@@ -354,9 +295,9 @@ export function _pow_tensor(
     },
     {
       constants: {
-        shape_length: broadcast_shape.length,
+        shape_length: broadcast_shape.length
       },
-      output: [broadcast_shape.reduce((acc, val) => acc * val, 1)],
+      output: [broadcast_shape.reduce((acc, val) => acc * val, 1)]
     }
   );
 
@@ -380,18 +321,13 @@ export class Pow extends BinaryOperation {
   }
 }
 
-export function _log_tensor(
-  a: Tensor,
-  operation: Operation | null = null
-): Tensor {
+export function _log_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   const kernel = gpu.createKernel(
-    function (
-      a: number[],
-    ) {
+    function (a: number[]) {
       return Math.log(a[this.thread.x]);
     },
     {
-      output: [a.shape.reduce((acc, val) => acc * val, 1)],
+      output: [a.shape.reduce((acc, val) => acc * val, 1)]
     }
   );
 
@@ -410,6 +346,6 @@ export class Log extends UnaryOperation {
   }
   backward(dz: Tensor): void {
     const [a] = this.cache;
-    a.backward((new Tensor(1)).div(a));
+    a.backward(new Tensor(1).div(a));
   }
 }

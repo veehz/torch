@@ -1,4 +1,4 @@
-import { Operation, OperationConstructor } from "./base";
+import { OperationConstructor } from './base';
 
 // Only allow registering concrete, constructible Operation classes
 const operations = new Map<string, OperationConstructor>();
