@@ -38,7 +38,7 @@ export function _get_original_index(original_shape: number[], new_shape: number[
 }
 
 
-export function _get_original_index_gpu(original_shape: number[], new_shape: number[], index: number): number {
+export function _get_original_index_kernel(original_shape: number[], new_shape: number[], index: number): number {
     let original_index = 0;
     let cur_stride = 1;
     let temp_index = index;

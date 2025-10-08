@@ -1,7 +1,6 @@
 import { _get_original_index } from "./broadcasting";
-import { Operation } from "./operations/function_base";
+import { Operation } from "./operations/base";
 import { getOperation } from "./operations/registry";
-import { TensorBase } from "./tensor_base";
 
 /*
  * TODO:
@@ -44,7 +43,7 @@ function _flatten(data: NestedNumberArray): number[] {
   }
 }
 
-export class Tensor extends TensorBase {
+export class Tensor {
   data: number[];
   _shape: number[];
   operation: any = null;
@@ -57,7 +56,6 @@ export class Tensor extends TensorBase {
     options: { requires_grad?: boolean } = {},
     internal_options: { operation?: Operation, shape?: number[] } = {}
   ) {
-    super();
     this.data = _flatten(data);
     this.requires_grad = options.requires_grad ?? false;
 

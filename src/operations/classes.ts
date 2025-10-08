@@ -1,8 +1,8 @@
 import gpu from "../gpu";
-import { _broadcast_shape, _get_original_index_gpu, _pad_shape } from "../broadcasting";
+import { _broadcast_shape, _get_original_index_kernel, _pad_shape } from "../broadcasting";
 import { Tensor } from "../tensor";
 // import * as utils from "../utils";
-import { Operation, BinaryOperation, UnaryOperation } from "./function_base";
+import { Operation, BinaryOperation, UnaryOperation } from "./base";
 
 /* This did not work as it doesn't support dynamic function registration */
 // export function _broadcast_operation(
@@ -68,12 +68,12 @@ export function _add_broadcast(
       b_shape: number[],
       broadcast_shape: number[]
     ) {
-      const a_index = _get_original_index_gpu(
+      const a_index = _get_original_index_kernel(
         a_shape,
         broadcast_shape,
         this.thread.x
       );
-      const b_index = _get_original_index_gpu(
+      const b_index = _get_original_index_kernel(
         b_shape,
         broadcast_shape,
         this.thread.x
@@ -132,8 +132,8 @@ export function _add_tensor(
       bs: number[],
       bcs: number[]
     ) {
-      const a_index = _get_original_index_gpu(as, bcs, this.thread.x);
-      const b_index = _get_original_index_gpu(bs, bcs, this.thread.x);
+      const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
+      const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
 
       return a[a_index] + b[b_index];
     },
@@ -182,8 +182,8 @@ export function _sub_tensor(
       bs: number[],
       bcs: number[]
     ) {
-      const a_index = _get_original_index_gpu(as, bcs, this.thread.x);
-      const b_index = _get_original_index_gpu(bs, bcs, this.thread.x);
+      const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
+      const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
 
       return a[a_index] - b[b_index];
     },
@@ -231,8 +231,8 @@ export function _mul_tensor(
       bs: number[],
       bcs: number[]
     ) {
-      const a_index = _get_original_index_gpu(as, bcs, this.thread.x);
-      const b_index = _get_original_index_gpu(bs, bcs, this.thread.x);
+      const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
+      const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
 
       return a[a_index] * b[b_index];
     },
@@ -280,8 +280,8 @@ export function _div_tensor(
       bs: number[],
       bcs: number[]
     ) {
-      const a_index = _get_original_index_gpu(as, bcs, this.thread.x);
-      const b_index = _get_original_index_gpu(bs, bcs, this.thread.x);
+      const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
+      const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
 
       return a[a_index] / b[b_index];
     },
@@ -347,8 +347,8 @@ export function _pow_tensor(
       bs: number[],
       bcs: number[]
     ) {
-      const a_index = _get_original_index_gpu(as, bcs, this.thread.x);
-      const b_index = _get_original_index_gpu(bs, bcs, this.thread.x);
+      const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
+      const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
 
       return Math.pow(a[a_index], b[b_index]);
     },
