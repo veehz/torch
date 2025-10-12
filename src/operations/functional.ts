@@ -1,37 +1,38 @@
 import { Tensor } from '../tensor';
 import { getOperation } from './registry';
 
-export function add(a: Tensor, b: Tensor): Tensor {
-  const operation = new (getOperation('add'))();
-  return operation.forward(a, b);
+function generate_unary_function(opname: string) {
+  return (a: Tensor | number) => {
+    if (typeof a == 'number') {
+      a = new Tensor(a);
+    }
+
+    const operation = new (getOperation(opname))();
+    return operation.forward(a);
+  };
 }
 
-export function sub(a: Tensor, b: Tensor): Tensor {
-  const operation = new (getOperation('sub'))();
-  return operation.forward(a, b);
+function generate_binary_function(opname: string) {
+  return (a: Tensor | number, b: Tensor | number) => {
+    if (typeof a == 'number') {
+      a = new Tensor(a);
+    }
+
+    if (typeof b == 'number') {
+      b = new Tensor(b);
+    }
+
+    const operation = new (getOperation(opname))();
+    return operation.forward(a, b);
+  };
 }
 
-export function mul(a: Tensor, b: Tensor): Tensor {
-  const operation = new (getOperation('mul'))();
-  return operation.forward(a, b);
-}
-
-export function div(a: Tensor, b: Tensor): Tensor {
-  const operation = new (getOperation('div'))();
-  return operation.forward(a, b);
-}
-
-export function sum(a: Tensor): Tensor {
-  const operation = new (getOperation('sum'))();
-  return operation.forward(a);
-}
-
-export function pow(a: Tensor, b: Tensor): Tensor {
-  const operation = new (getOperation('pow'))();
-  return operation.forward(a, b);
-}
-
-export function log(a: Tensor): Tensor {
-  const operation = new (getOperation('log'))();
-  return operation.forward(a);
-}
+export const add = generate_binary_function('add');
+export const sub = generate_binary_function('sub');
+export const mul = generate_binary_function('mul');
+export const div = generate_binary_function('div');
+export const sum = generate_unary_function('sum');
+export const mean = generate_unary_function('mean');
+export const pow = generate_unary_function('pow');
+export const log = generate_unary_function('log');
+export const matmul = generate_binary_function('matmul');

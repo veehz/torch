@@ -18,7 +18,7 @@ type TypedArray =
   | Float32Array
   | Float64Array;
 
-type NestedNumberArray = number | TypedArray | NestedNumberArray[];
+export type NestedNumberArray = number | TypedArray | NestedNumberArray[];
 
 function _get_shape(data: NestedNumberArray): number[] {
   if (ArrayBuffer.isView(data)) {
@@ -81,24 +81,32 @@ export class Tensor {
     return operation.forward(this);
   }
 
-  private _executeBinaryOp(opName: string, other: Tensor): Tensor {
+  private _executeBinaryOp(opName: string, other: Tensor | number): Tensor {
+    if (typeof other == 'number') {
+      other = new Tensor(other);
+    }
     const operation = new (getOperation(opName))();
     return operation.forward(this, other);
   }
 
-  add(other: Tensor): Tensor {
+  private _executeOpRaw(opName: string, ...args: any[]): Tensor {
+    const operation = new (getOperation(opName))();
+    return operation.forward(this, ...args);
+  }
+
+  add(other: Tensor | number): Tensor {
     return this._executeBinaryOp('add', other);
   }
 
-  sub(other: Tensor): Tensor {
+  sub(other: Tensor | number): Tensor {
     return this._executeBinaryOp('sub', other);
   }
 
-  mul(other: Tensor): Tensor {
+  mul(other: Tensor | number): Tensor {
     return this._executeBinaryOp('mul', other);
   }
 
-  div(other: Tensor): Tensor {
+  div(other: Tensor | number): Tensor {
     return this._executeBinaryOp('div', other);
   }
 
@@ -106,12 +114,20 @@ export class Tensor {
     return this._executeUnaryOp('sum');
   }
 
-  pow(other: Tensor): Tensor {
+  pow(other: Tensor | number): Tensor {
     return this._executeBinaryOp('pow', other);
   }
 
   log(): Tensor {
     return this._executeUnaryOp('log');
+  }
+
+  transpose(dim0: number, dim1: number): Tensor {
+    return this._executeOpRaw('transpose', dim0, dim1);
+  }
+
+  matmul(other: Tensor): Tensor {
+    return this._executeBinaryOp('matmul', other);
   }
 
   item(): number {

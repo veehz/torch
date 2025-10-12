@@ -65,4 +65,40 @@ describe('Tensor', () => {
       expect(result.shape).toEqual([3]);
     });
   });
+
+  describe("Matrix Multiplication", () => {
+    test("should multiply two tensors with dim 1", () => {
+      const t1 = new Tensor([10]);
+      const t2 = new Tensor([20]);
+      const result = t1.matmul(t2);
+
+      expect(Array.from(result.data)).toEqual([200]);
+      expect(result.shape).toEqual([1]);
+    });
+
+    test("should multiply two tensors with the correct values", () => {
+      const t1 = new Tensor([
+        [1, 2, 3],
+        [4, 5, 6]
+      ]);
+
+      const t2 = new Tensor([
+        [9, 9, 1],
+        [6, 4, 3],
+        [5, 5, 6]
+      ])
+
+      const result = t1.matmul(t2);
+
+      const expected = [
+        36, 32, 25,
+        96, 86, 55
+      ];
+
+      expect(Array.from(result.data)).toEqual(expected);
+      expect(result.shape).toEqual([2, 3]);
+    });
+  });
+
+
 });
