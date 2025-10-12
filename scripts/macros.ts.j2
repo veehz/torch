@@ -50,12 +50,12 @@ function _{{ name }}_tensor(a: Tensor, operation: Operation | null = null): Tens
 {% macro binary_op_class(classname, opname, backward_operations) -%}
 // class generated from binary_op_class("{{ classname }}", "{{ opname }}", backward_operations)
 export class {{ classname }} extends BinaryOperation {
-  cache: [Tensor, Tensor];
-  forward(a: Tensor, b: Tensor): Tensor {
+  private cache: [Tensor, Tensor];
+  public forward(a: Tensor, b: Tensor): Tensor {
     this.cache = [a, b];
     return _{{ opname }}_tensor(a, b, this);
   }
-  backward(dz: Tensor): void {
+  public backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -68,12 +68,12 @@ registerOperation('{{ opname }}', {{ classname }});
 {% macro unary_op_class(classname, opname, backward_operations) -%}
 // class generated from unary_op_class("{{ classname }}", "{{ opname }}", backward_operations)
 export class {{ classname }} extends UnaryOperation {
-  cache: [Tensor];
-  forward(a: Tensor): Tensor {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
     this.cache = [a];
     return _{{ opname }}_tensor(a, this);
   }
-  backward(dz: Tensor): void {
+  public backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:

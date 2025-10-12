@@ -15,12 +15,12 @@ export function _sum_tensor(a: Tensor, operation: Operation | null = null): Tens
 
 // class generated from unary_op_class("Sum", "sum", backward_operations)
 export class Sum extends UnaryOperation {
-  cache: [Tensor];
-  forward(a: Tensor): Tensor {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
     this.cache = [a];
     return _sum_tensor(a, this);
   }
-  backward(dz: Tensor): void {
+  public backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -40,12 +40,12 @@ export function _mean_tensor(a: Tensor, operation: Operation | null = null): Ten
 
 // class generated from unary_op_class("Mean", "mean", backward_operations)
 export class Mean extends UnaryOperation {
-  cache: [Tensor];
-  forward(a: Tensor): Tensor {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
     this.cache = [a];
     return _mean_tensor(a, this);
   }
-  backward(dz: Tensor): void {
+  public backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -83,12 +83,12 @@ function _add_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 }
 // class generated from binary_op_class("Add", "add", backward_operations)
 export class Add extends BinaryOperation {
-  cache: [Tensor, Tensor];
-  forward(a: Tensor, b: Tensor): Tensor {
+  private cache: [Tensor, Tensor];
+  public forward(a: Tensor, b: Tensor): Tensor {
     this.cache = [a, b];
     return _add_tensor(a, b, this);
   }
-  backward(dz: Tensor): void {
+  public backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -126,12 +126,12 @@ function _sub_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 }
 // class generated from binary_op_class("Sub", "sub", backward_operations)
 export class Sub extends BinaryOperation {
-  cache: [Tensor, Tensor];
-  forward(a: Tensor, b: Tensor): Tensor {
+  private cache: [Tensor, Tensor];
+  public forward(a: Tensor, b: Tensor): Tensor {
     this.cache = [a, b];
     return _sub_tensor(a, b, this);
   }
-  backward(dz: Tensor): void {
+  public backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -169,12 +169,12 @@ function _mul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 }
 // class generated from binary_op_class("Mul", "mul", backward_operations)
 export class Mul extends BinaryOperation {
-  cache: [Tensor, Tensor];
-  forward(a: Tensor, b: Tensor): Tensor {
+  private cache: [Tensor, Tensor];
+  public forward(a: Tensor, b: Tensor): Tensor {
     this.cache = [a, b];
     return _mul_tensor(a, b, this);
   }
-  backward(dz: Tensor): void {
+  public backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -212,12 +212,12 @@ function _div_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 }
 // class generated from binary_op_class("Div", "div", backward_operations)
 export class Div extends BinaryOperation {
-  cache: [Tensor, Tensor];
-  forward(a: Tensor, b: Tensor): Tensor {
+  private cache: [Tensor, Tensor];
+  public forward(a: Tensor, b: Tensor): Tensor {
     this.cache = [a, b];
     return _div_tensor(a, b, this);
   }
-  backward(dz: Tensor): void {
+  public backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -255,12 +255,12 @@ function _pow_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 }
 // class generated from binary_op_class("Pow", "pow", backward_operations)
 export class Pow extends BinaryOperation {
-  cache: [Tensor, Tensor];
-  forward(a: Tensor, b: Tensor): Tensor {
+  private cache: [Tensor, Tensor];
+  public forward(a: Tensor, b: Tensor): Tensor {
     this.cache = [a, b];
     return _pow_tensor(a, b, this);
   }
-  backward(dz: Tensor): void {
+  public backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -390,12 +390,12 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null
 
 // class generated from binary_op_class("Matmul", "matmul", backward_operations)
 export class Matmul extends BinaryOperation {
-  cache: [Tensor, Tensor];
-  forward(a: Tensor, b: Tensor): Tensor {
+  private cache: [Tensor, Tensor];
+  public forward(a: Tensor, b: Tensor): Tensor {
     this.cache = [a, b];
     return _matmul_tensor(a, b, this);
   }
-  backward(dz: Tensor): void {
+  public backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -425,12 +425,12 @@ function _log_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 }
 // class generated from unary_op_class("Log", "log", backward_operations)
 export class Log extends UnaryOperation {
-  cache: [Tensor];
-  forward(a: Tensor): Tensor {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
     this.cache = [a];
     return _log_tensor(a, this);
   }
-  backward(dz: Tensor): void {
+  public backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
