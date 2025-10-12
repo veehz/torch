@@ -11,55 +11,7 @@ import { Operation, BinaryOperation, UnaryOperation } from './base';
 import * as functional from './functional';
 import { registerOperation } from './registry';
 
-function _sum_tensor(a: Tensor, operation: Operation | null = null): Tensor {
-  return new Tensor(
-    a.data.reduce((acc, val) => acc + val, 0),
-    { requires_grad: a.requires_grad },
-    { operation: operation }
-  );
-}
-
-// class generated from unary_op_class("Sum", "sum", backward_operations)
-export class Sum extends UnaryOperation {
-  private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
-    this.cache = [a];
-    return _sum_tensor(a, this);
-  }
-  public backward(dz: Tensor): void {
-    const [a] = this.cache;
-
-    // backward_operations:
-    const result = new Tensor(Array(a.data.length).fill(dz.data[0]));
-    a.backward(result);
-  }
-}
-registerOperation('sum', Sum);
-
-function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
-  return new Tensor(
-    a.data.reduce((acc, val) => acc + val, 0) / a.data.length,
-    { requires_grad: a.requires_grad },
-    { operation: operation }
-  );
-}
-
-// class generated from unary_op_class("Mean", "mean", backward_operations)
-export class Mean extends UnaryOperation {
-  private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
-    this.cache = [a];
-    return _mean_tensor(a, this);
-  }
-  public backward(dz: Tensor): void {
-    const [a] = this.cache;
-
-    // backward_operations:
-    const result = new Tensor(Array(a.data.length).fill(dz.data[0] / a.data.length));
-    a.backward(result);
-  }
-}
-registerOperation('mean', Mean);
+// binary pointwise
 
 // function generated from binary_op_base("add", "a[a_index] + b[b_index]")
 function _add_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
@@ -276,6 +228,436 @@ export class Pow extends BinaryOperation {
 }
 registerOperation('pow', Pow);
 
+// function generated from binary_op_base("fmod", "a[a_index] % b[b_index]")
+function _fmod_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
+  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
+  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
+  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
+  const kernel = gpu.createKernel(
+    function (a: number[], as: number[], b: number[], bs: number[], bcs: number[]) {
+      const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
+      const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
+
+      return a[a_index] % b[b_index];
+    },
+    {
+      constants: {
+        shape_length: broadcast_shape.length
+      },
+      output: [broadcast_shape.reduce((acc, val) => acc * val, 1)]
+    }
+  );
+
+  return new Tensor(
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
+    { requires_grad: a.requires_grad || b.requires_grad },
+    { operation: operation, shape: broadcast_shape }
+  );
+}
+// class generated from binary_op_class("Fmod", "fmod", backward_operations)
+export class Fmod extends BinaryOperation {
+  private cache: [Tensor, Tensor];
+  public forward(a: Tensor, b: Tensor): Tensor {
+    this.cache = [a, b];
+    return _fmod_tensor(a, b, this);
+  }
+  public backward(dz: Tensor): void {
+    const [a, b] = this.cache;
+
+    // backward_operations:
+    a.backward(dz);
+  }
+}
+registerOperation('fmod', Fmod);
+
+// unary pointwise
+
+// function generated from unary_op_base("log", "Math.log(a[this.thread.x])")
+function _log_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+  const kernel = gpu.createKernel(
+    function (a: number[]) {
+      return Math.log(a[this.thread.x]);
+    },
+    {
+      output: [a.shape.reduce((acc, val) => acc * val, 1)]
+    }
+  );
+
+  return new Tensor(
+    kernel(a.data) as number[],
+    { requires_grad: a.requires_grad },
+    { operation: operation, shape: a.shape }
+  );
+}
+// class generated from unary_op_class("Log", "log", backward_operations)
+export class Log extends UnaryOperation {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
+    this.cache = [a];
+    return _log_tensor(a, this);
+  }
+  public backward(dz: Tensor): void {
+    const [a] = this.cache;
+
+    // backward_operations:
+    a.backward(new Tensor(1).div(a));
+  }
+}
+registerOperation('log', Log);
+
+// function generated from unary_op_base("sqrt", "Math.sqrt(a[this.thread.x])")
+function _sqrt_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+  const kernel = gpu.createKernel(
+    function (a: number[]) {
+      return Math.sqrt(a[this.thread.x]);
+    },
+    {
+      output: [a.shape.reduce((acc, val) => acc * val, 1)]
+    }
+  );
+
+  return new Tensor(
+    kernel(a.data) as number[],
+    { requires_grad: a.requires_grad },
+    { operation: operation, shape: a.shape }
+  );
+}
+// class generated from unary_op_class("Sqrt", "sqrt", backward_operations)
+export class Sqrt extends UnaryOperation {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
+    this.cache = [a];
+    return _sqrt_tensor(a, this);
+  }
+  public backward(dz: Tensor): void {
+    const [a] = this.cache;
+
+    // backward_operations:
+    a.backward(new Tensor(1).div(a.sqrt()).div(2));
+  }
+}
+registerOperation('sqrt', Sqrt);
+
+// function generated from unary_op_base("exp", "Math.exp(a[this.thread.x])")
+function _exp_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+  const kernel = gpu.createKernel(
+    function (a: number[]) {
+      return Math.exp(a[this.thread.x]);
+    },
+    {
+      output: [a.shape.reduce((acc, val) => acc * val, 1)]
+    }
+  );
+
+  return new Tensor(
+    kernel(a.data) as number[],
+    { requires_grad: a.requires_grad },
+    { operation: operation, shape: a.shape }
+  );
+}
+// class generated from unary_op_class("Exp", "exp", backward_operations)
+export class Exp extends UnaryOperation {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
+    this.cache = [a];
+    return _exp_tensor(a, this);
+  }
+  public backward(dz: Tensor): void {
+    const [a] = this.cache;
+
+    // backward_operations:
+    a.backward(dz.mul(a.exp()));
+  }
+}
+registerOperation('exp', Exp);
+
+// function generated from unary_op_base("abs", "Math.abs(a[this.thread.x])")
+function _abs_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+  const kernel = gpu.createKernel(
+    function (a: number[]) {
+      return Math.abs(a[this.thread.x]);
+    },
+    {
+      output: [a.shape.reduce((acc, val) => acc * val, 1)]
+    }
+  );
+
+  return new Tensor(
+    kernel(a.data) as number[],
+    { requires_grad: a.requires_grad },
+    { operation: operation, shape: a.shape }
+  );
+}
+// class generated from unary_op_class("Abs", "abs", backward_operations)
+export class Abs extends UnaryOperation {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
+    this.cache = [a];
+    return _abs_tensor(a, this);
+  }
+  public backward(dz: Tensor): void {
+    const [a] = this.cache;
+
+    // backward_operations:
+    a.backward(dz.mul(functional.sign(a)));
+  }
+}
+registerOperation('abs', Abs);
+
+// function generated from unary_op_base("sign", "Math.sign(a[this.thread.x])")
+function _sign_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+  const kernel = gpu.createKernel(
+    function (a: number[]) {
+      return Math.sign(a[this.thread.x]);
+    },
+    {
+      output: [a.shape.reduce((acc, val) => acc * val, 1)]
+    }
+  );
+
+  return new Tensor(
+    kernel(a.data) as number[],
+    { requires_grad: a.requires_grad },
+    { operation: operation, shape: a.shape }
+  );
+}
+// class generated from unary_op_class("Sign", "sign", backward_operations)
+export class Sign extends UnaryOperation {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
+    this.cache = [a];
+    return _sign_tensor(a, this);
+  }
+  public backward(dz: Tensor): void {
+    const [a] = this.cache;
+
+    // backward_operations:
+    
+  }
+}
+registerOperation('sign', Sign);
+
+// function generated from unary_op_base("neg", "Math.sign(a[this.thread.x]) * a[this.thread.x]")
+function _neg_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+  const kernel = gpu.createKernel(
+    function (a: number[]) {
+      return Math.sign(a[this.thread.x]) * a[this.thread.x];
+    },
+    {
+      output: [a.shape.reduce((acc, val) => acc * val, 1)]
+    }
+  );
+
+  return new Tensor(
+    kernel(a.data) as number[],
+    { requires_grad: a.requires_grad },
+    { operation: operation, shape: a.shape }
+  );
+}
+// class generated from unary_op_class("Neg", "neg", backward_operations)
+export class Neg extends UnaryOperation {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
+    this.cache = [a];
+    return _neg_tensor(a, this);
+  }
+  public backward(dz: Tensor): void {
+    const [a] = this.cache;
+
+    // backward_operations:
+    a.backward(dz.mul(new Tensor(-1)));
+  }
+}
+registerOperation('neg', Neg);
+
+// function generated from unary_op_base("reciprocal", "1 / a[this.thread.x]")
+function _reciprocal_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+  const kernel = gpu.createKernel(
+    function (a: number[]) {
+      return 1 / a[this.thread.x];
+    },
+    {
+      output: [a.shape.reduce((acc, val) => acc * val, 1)]
+    }
+  );
+
+  return new Tensor(
+    kernel(a.data) as number[],
+    { requires_grad: a.requires_grad },
+    { operation: operation, shape: a.shape }
+  );
+}
+// class generated from unary_op_class("Reciprocal", "reciprocal", backward_operations)
+export class Reciprocal extends UnaryOperation {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
+    this.cache = [a];
+    return _reciprocal_tensor(a, this);
+  }
+  public backward(dz: Tensor): void {
+    const [a] = this.cache;
+
+    // backward_operations:
+    a.backward(dz.mul(a.pow(-2)));
+  }
+}
+registerOperation('reciprocal', Reciprocal);
+
+// trigonometric
+
+// function generated from unary_op_base("sin", "Math.sin(a[this.thread.x])")
+function _sin_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+  const kernel = gpu.createKernel(
+    function (a: number[]) {
+      return Math.sin(a[this.thread.x]);
+    },
+    {
+      output: [a.shape.reduce((acc, val) => acc * val, 1)]
+    }
+  );
+
+  return new Tensor(
+    kernel(a.data) as number[],
+    { requires_grad: a.requires_grad },
+    { operation: operation, shape: a.shape }
+  );
+}
+// class generated from unary_op_class("Sin", "sin", backward_operations)
+export class Sin extends UnaryOperation {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
+    this.cache = [a];
+    return _sin_tensor(a, this);
+  }
+  public backward(dz: Tensor): void {
+    const [a] = this.cache;
+
+    // backward_operations:
+    a.backward(dz.mul(a.cos()));
+  }
+}
+registerOperation('sin', Sin);
+
+// function generated from unary_op_base("cos", "Math.cos(a[this.thread.x])")
+function _cos_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+  const kernel = gpu.createKernel(
+    function (a: number[]) {
+      return Math.cos(a[this.thread.x]);
+    },
+    {
+      output: [a.shape.reduce((acc, val) => acc * val, 1)]
+    }
+  );
+
+  return new Tensor(
+    kernel(a.data) as number[],
+    { requires_grad: a.requires_grad },
+    { operation: operation, shape: a.shape }
+  );
+}
+// class generated from unary_op_class("Cos", "cos", backward_operations)
+export class Cos extends UnaryOperation {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
+    this.cache = [a];
+    return _cos_tensor(a, this);
+  }
+  public backward(dz: Tensor): void {
+    const [a] = this.cache;
+
+    // backward_operations:
+    a.backward(dz.mul(a.sin().neg()));
+  }
+}
+registerOperation('cos', Cos);
+
+// function generated from unary_op_base("tan", "Math.tan(a[this.thread.x])")
+function _tan_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+  const kernel = gpu.createKernel(
+    function (a: number[]) {
+      return Math.tan(a[this.thread.x]);
+    },
+    {
+      output: [a.shape.reduce((acc, val) => acc * val, 1)]
+    }
+  );
+
+  return new Tensor(
+    kernel(a.data) as number[],
+    { requires_grad: a.requires_grad },
+    { operation: operation, shape: a.shape }
+  );
+}
+// class generated from unary_op_class("Tan", "tan", backward_operations)
+export class Tan extends UnaryOperation {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
+    this.cache = [a];
+    return _tan_tensor(a, this);
+  }
+  public backward(dz: Tensor): void {
+    const [a] = this.cache;
+
+    // backward_operations:
+    a.backward(dz.mul(a.cos().pow(-2)));
+  }
+}
+registerOperation('tan', Tan);
+
+// reduction
+
+function _sum_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+  return new Tensor(
+    a.data.reduce((acc, val) => acc + val, 0),
+    { requires_grad: a.requires_grad },
+    { operation: operation }
+  );
+}
+
+// class generated from unary_op_class("Sum", "sum", backward_operations)
+export class Sum extends UnaryOperation {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
+    this.cache = [a];
+    return _sum_tensor(a, this);
+  }
+  public backward(dz: Tensor): void {
+    const [a] = this.cache;
+
+    // backward_operations:
+    const result = new Tensor(Array(a.data.length).fill(dz.data[0]));
+    a.backward(result);
+  }
+}
+registerOperation('sum', Sum);
+
+function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+  return new Tensor(
+    a.data.reduce((acc, val) => acc + val, 0) / a.data.length,
+    { requires_grad: a.requires_grad },
+    { operation: operation }
+  );
+}
+
+// class generated from unary_op_class("Mean", "mean", backward_operations)
+export class Mean extends UnaryOperation {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
+    this.cache = [a];
+    return _mean_tensor(a, this);
+  }
+  public backward(dz: Tensor): void {
+    const [a] = this.cache;
+
+    // backward_operations:
+    const result = new Tensor(Array(a.data.length).fill(dz.data[0] / a.data.length));
+    a.backward(result);
+  }
+}
+registerOperation('mean', Mean);
+
+// linalg
+
 function _transpose_tensor(
   a: Tensor,
   dim0: number,
@@ -430,47 +812,7 @@ export class Matmul extends BinaryOperation {
 }
 registerOperation('matmul', Matmul);
 
-// function generated from binary_op_base("fmod", "a[a_index] % b[b_index]")
-function _fmod_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = gpu.createKernel(
-    function (a: number[], as: number[], b: number[], bs: number[], bcs: number[]) {
-      const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-      const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-
-      return a[a_index] % b[b_index];
-    },
-    {
-      constants: {
-        shape_length: broadcast_shape.length
-      },
-      output: [broadcast_shape.reduce((acc, val) => acc * val, 1)]
-    }
-  );
-
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation: operation, shape: broadcast_shape }
-  );
-}
-// class generated from binary_op_class("Fmod", "fmod", backward_operations)
-export class Fmod extends BinaryOperation {
-  private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
-    this.cache = [a, b];
-    return _fmod_tensor(a, b, this);
-  }
-  public backward(dz: Tensor): void {
-    const [a, b] = this.cache;
-
-    // backward_operations:
-    a.backward(dz);
-  }
-}
-registerOperation('fmod', Fmod);
+// comparison
 
 // function generated from binary_op_base("lt", "(a[a_index] < b[b_index]) ? 1 : 0")
 function _lt_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
@@ -723,135 +1065,3 @@ export class Ne extends BinaryOperation {
   }
 }
 registerOperation('ne', Ne);
-
-// function generated from unary_op_base("sqrt", "Math.sqrt(a[this.thread.x])")
-function _sqrt_tensor(a: Tensor, operation: Operation | null = null): Tensor {
-  const kernel = gpu.createKernel(
-    function (a: number[]) {
-      return Math.sqrt(a[this.thread.x]);
-    },
-    {
-      output: [a.shape.reduce((acc, val) => acc * val, 1)]
-    }
-  );
-
-  return new Tensor(
-    kernel(a.data) as number[],
-    { requires_grad: a.requires_grad },
-    { operation: operation, shape: a.shape }
-  );
-}
-// class generated from unary_op_class("Sqrt", "sqrt", backward_operations)
-export class Sqrt extends UnaryOperation {
-  private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
-    this.cache = [a];
-    return _sqrt_tensor(a, this);
-  }
-  public backward(dz: Tensor): void {
-    const [a] = this.cache;
-
-    // backward_operations:
-    a.backward(new Tensor(1).div(a.sqrt()).div(2));
-  }
-}
-registerOperation('sqrt', Sqrt);
-
-// function generated from unary_op_base("sign", "Math.sign(a[this.thread.x])")
-function _sign_tensor(a: Tensor, operation: Operation | null = null): Tensor {
-  const kernel = gpu.createKernel(
-    function (a: number[]) {
-      return Math.sign(a[this.thread.x]);
-    },
-    {
-      output: [a.shape.reduce((acc, val) => acc * val, 1)]
-    }
-  );
-
-  return new Tensor(
-    kernel(a.data) as number[],
-    { requires_grad: a.requires_grad },
-    { operation: operation, shape: a.shape }
-  );
-}
-// class generated from unary_op_class("Sign", "sign", backward_operations)
-export class Sign extends UnaryOperation {
-  private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
-    this.cache = [a];
-    return _sign_tensor(a, this);
-  }
-  public backward(dz: Tensor): void {
-    const [a] = this.cache;
-
-    // backward_operations:
-    
-  }
-}
-registerOperation('sign', Sign);
-
-// function generated from unary_op_base("abs", "Math.abs(a[this.thread.x])")
-function _abs_tensor(a: Tensor, operation: Operation | null = null): Tensor {
-  const kernel = gpu.createKernel(
-    function (a: number[]) {
-      return Math.abs(a[this.thread.x]);
-    },
-    {
-      output: [a.shape.reduce((acc, val) => acc * val, 1)]
-    }
-  );
-
-  return new Tensor(
-    kernel(a.data) as number[],
-    { requires_grad: a.requires_grad },
-    { operation: operation, shape: a.shape }
-  );
-}
-// class generated from unary_op_class("Abs", "abs", backward_operations)
-export class Abs extends UnaryOperation {
-  private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
-    this.cache = [a];
-    return _abs_tensor(a, this);
-  }
-  public backward(dz: Tensor): void {
-    const [a] = this.cache;
-
-    // backward_operations:
-    a.backward(dz.mul(functional.sign(a)));
-  }
-}
-registerOperation('abs', Abs);
-
-// function generated from unary_op_base("log", "Math.log(a[this.thread.x])")
-function _log_tensor(a: Tensor, operation: Operation | null = null): Tensor {
-  const kernel = gpu.createKernel(
-    function (a: number[]) {
-      return Math.log(a[this.thread.x]);
-    },
-    {
-      output: [a.shape.reduce((acc, val) => acc * val, 1)]
-    }
-  );
-
-  return new Tensor(
-    kernel(a.data) as number[],
-    { requires_grad: a.requires_grad },
-    { operation: operation, shape: a.shape }
-  );
-}
-// class generated from unary_op_class("Log", "log", backward_operations)
-export class Log extends UnaryOperation {
-  private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
-    this.cache = [a];
-    return _log_tensor(a, this);
-  }
-  public backward(dz: Tensor): void {
-    const [a] = this.cache;
-
-    // backward_operations:
-    a.backward(new Tensor(1).div(a));
-  }
-}
-registerOperation('log', Log);

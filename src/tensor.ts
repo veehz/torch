@@ -146,6 +146,8 @@ export class Tensor {
 
   // operations
 
+  // binary pointwise
+
   add(other: Tensor | number): Tensor {
     return this._executeBinaryOp('add', other);
   }
@@ -162,6 +164,60 @@ export class Tensor {
     return this._executeBinaryOp('div', other);
   }
 
+  pow(other: Tensor | number): Tensor {
+    return this._executeBinaryOp('pow', other);
+  }
+
+  fmod(other: Tensor | number): Tensor {
+    return this._executeBinaryOp('fmod', other);
+  }
+
+  // unary pointwise
+
+  log(): Tensor {
+    return this._executeUnaryOp('log');
+  }
+
+  sqrt(): Tensor {
+    return this._executeUnaryOp('sqrt');
+  }
+
+  exp(): Tensor {
+    return this._executeUnaryOp('exp');
+  }
+
+  abs(): Tensor {
+    return this._executeUnaryOp('abs');
+  }
+
+  sign(): Tensor {
+    return this._executeUnaryOp('sign');
+  }
+
+  neg(): Tensor {
+    return this._executeUnaryOp('neg');
+  }
+
+  reciprocal(): Tensor {
+    return this._executeUnaryOp('reciprocal');
+  }
+  
+  // trigonometric
+
+  sin(): Tensor {
+    return this._executeUnaryOp('sin');
+  }
+  
+  cos(): Tensor {
+    return this._executeUnaryOp('cos');
+  }
+  
+  tan(): Tensor {
+    return this._executeUnaryOp('tan');
+  }
+
+  // reduction
+
   sum(): Tensor {
     return this._executeUnaryOp('sum');
   }
@@ -170,9 +226,7 @@ export class Tensor {
     return this._executeUnaryOp('mean');
   }
 
-  pow(other: Tensor | number): Tensor {
-    return this._executeBinaryOp('pow', other);
-  }
+  // linalg
 
   transpose(dim0: number, dim1: number): Tensor {
     return this._executeOpRaw('transpose', dim0, dim1);
@@ -182,9 +236,7 @@ export class Tensor {
     return this._executeBinaryOp('matmul', other);
   }
 
-  fmod(other: Tensor | number): Tensor {
-    return this._executeBinaryOp('fmod', other);
-  }
+  // comparison
 
   lt(other: Tensor | number): Tensor {
     return this._executeBinaryOp('lt', other);
@@ -208,21 +260,5 @@ export class Tensor {
 
   ne(other: Tensor | number): Tensor {
     return this._executeBinaryOp('ne', other);
-  }
-
-  sqrt(): Tensor {
-    return this._executeUnaryOp('sqrt');
-  }
-
-  sign(): Tensor {
-    return this._executeUnaryOp('sign');
-  }
-
-  abs(): Tensor {
-    return this._executeUnaryOp('abs');
-  }
-
-  log(): Tensor {
-    return this._executeUnaryOp('log');
   }
 }

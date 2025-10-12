@@ -68,7 +68,6 @@ export class Linear extends Module {
     const k = Math.sqrt(1 / in_features);
 
     this.weight = new Parameter(rand([out_features, in_features]).mul(2 * k).sub(k));
-    console.log("weight", this.weight.shape);
     this.bias = new Parameter(rand([out_features]).mul(2 * k).sub(k));
 
     this.register("weight", this.weight);

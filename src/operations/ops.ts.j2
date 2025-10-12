@@ -11,6 +11,65 @@ import { Operation, BinaryOperation, UnaryOperation } from './base';
 import * as functional from './functional';
 import { registerOperation } from './registry';
 
+// binary pointwise
+
+{{ binary_op_base("add", "a[a_index] + b[b_index]") }}
+{{ binary_op_class("Add", "add", ["a.backward(dz);", "b.backward(dz);"]) }}
+
+{{ binary_op_base("sub", "a[a_index] - b[b_index]") }}
+{{ binary_op_class("Sub", "sub", ["a.backward(dz);", "b.backward(dz.mul(new Tensor(-1)));"]) }}
+
+{{ binary_op_base("mul", "a[a_index] * b[b_index]") }}
+{{ binary_op_class("Mul", "mul", ["a.backward(dz.mul(b));", "b.backward(dz.mul(a));"]) }}
+
+{{ binary_op_base("div", "a[a_index] / b[b_index]") }}
+{{ binary_op_class("Div", "div", ["a.backward(dz.div(b));", "b.backward(dz.mul(a).mul(new Tensor(-1)).div(b).div(b));"]) }}
+
+{{ binary_op_base("pow", "a[a_index] ** b[b_index]") }}
+{{ binary_op_class("Pow", "pow", [
+  "a.backward(dz.mul(b).mul(a.pow(b.sub(new Tensor(1)))));",
+  "b.backward(dz.mul(a.pow(b)).mul(a.log()));"
+])}}
+
+{{ binary_op_base("fmod", "a[a_index] % b[b_index]") }}
+{{ binary_op_class("Fmod", "fmod", ["a.backward(dz);"]) }}
+
+// unary pointwise
+
+{{ unary_op_base("log", "Math.log(a[this.thread.x])") }}
+{{ unary_op_class("Log", "log", ["a.backward(new Tensor(1).div(a));"]) }}
+
+{{ unary_op_base("sqrt", "Math.sqrt(a[this.thread.x])") }}
+{{ unary_op_class("Sqrt", "sqrt", ["a.backward(new Tensor(1).div(a.sqrt()).div(2));"]) }}
+
+{{ unary_op_base("exp", "Math.exp(a[this.thread.x])") }}
+{{ unary_op_class("Exp", "exp", ["a.backward(dz.mul(a.exp()));"]) }}
+
+{{ unary_op_base("abs", "Math.abs(a[this.thread.x])") }}
+{{ unary_op_class("Abs", "abs", ["a.backward(dz.mul(functional.sign(a)));"]) }}
+
+{{ unary_op_base("sign", "Math.sign(a[this.thread.x])") }}
+{{ unary_op_class("Sign", "sign", []) }}
+
+{{ unary_op_base("neg", "Math.sign(a[this.thread.x]) * a[this.thread.x]") }}
+{{ unary_op_class("Neg", "neg", ["a.backward(dz.mul(new Tensor(-1)));"]) }}
+
+{{ unary_op_base("reciprocal", "1 / a[this.thread.x]") }}
+{{ unary_op_class("Reciprocal", "reciprocal", ["a.backward(dz.mul(a.pow(-2)));"]) }}
+
+// trigonometric
+
+{{ unary_op_base("sin", "Math.sin(a[this.thread.x])") }}
+{{ unary_op_class("Sin", "sin", ["a.backward(dz.mul(a.cos()));"]) }}
+
+{{ unary_op_base("cos", "Math.cos(a[this.thread.x])") }}
+{{ unary_op_class("Cos", "cos", ["a.backward(dz.mul(a.sin().neg()));"]) }}
+
+{{ unary_op_base("tan", "Math.tan(a[this.thread.x])") }}
+{{ unary_op_class("Tan", "tan", ["a.backward(dz.mul(a.cos().pow(-2)));"]) }}
+
+// reduction
+
 function _sum_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   return new Tensor(
     a.data.reduce((acc, val) => acc + val, 0),
@@ -31,23 +90,7 @@ function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 
 {{ unary_op_class("Mean", "mean", ["const result = new Tensor(Array(a.data.length).fill(dz.data[0] / a.data.length));", "a.backward(result);"]) }}
 
-{{ binary_op_base("add", "a[a_index] + b[b_index]") }}
-{{ binary_op_class("Add", "add", ["a.backward(dz);", "b.backward(dz);"]) }}
-
-{{ binary_op_base("sub", "a[a_index] - b[b_index]") }}
-{{ binary_op_class("Sub", "sub", ["a.backward(dz);", "b.backward(dz.mul(new Tensor(-1)));"]) }}
-
-{{ binary_op_base("mul", "a[a_index] * b[b_index]") }}
-{{ binary_op_class("Mul", "mul", ["a.backward(dz.mul(b));", "b.backward(dz.mul(a));"]) }}
-
-{{ binary_op_base("div", "a[a_index] / b[b_index]") }}
-{{ binary_op_class("Div", "div", ["a.backward(dz.div(b));", "b.backward(dz.mul(a).mul(new Tensor(-1)).div(b).div(b));"]) }}
-
-{{ binary_op_base("pow", "a[a_index] ** b[b_index]") }}
-{{ binary_op_class("Pow", "pow", [
-  "a.backward(dz.mul(b).mul(a.pow(b.sub(new Tensor(1)))));",
-  "b.backward(dz.mul(a.pow(b)).mul(a.log()));"
-])}}
+// linalg
 
 function _transpose_tensor(
   a: Tensor,
@@ -189,8 +232,7 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null
 
 {{ binary_op_class("Matmul", "matmul", []) }}
 
-{{ binary_op_base("fmod", "a[a_index] % b[b_index]") }}
-{{ binary_op_class("Fmod", "fmod", ["a.backward(dz);"]) }}
+// comparison
 
 {{ binary_op_base("lt", "(a[a_index] < b[b_index]) ? 1 : 0") }}
 {{ binary_op_class("Lt", "lt", []) }}
@@ -209,16 +251,3 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null
 
 {{ binary_op_base("ne", "(a[a_index] != b[b_index]) ? 1 : 0") }}
 {{ binary_op_class("Ne", "ne", []) }}
-
-{{ unary_op_base("sqrt", "Math.sqrt(a[this.thread.x])") }}
-{{ unary_op_class("Sqrt", "sqrt", ["a.backward(new Tensor(1).div(a.sqrt()).div(2));"]) }}
-
-{{ unary_op_base("sign", "Math.sign(a[this.thread.x])") }}
-{{ unary_op_class("Sign", "sign", []) }}
-
-{{ unary_op_base("abs", "Math.abs(a[this.thread.x])") }}
-{{ unary_op_class("Abs", "abs", ["a.backward(dz.mul(functional.sign(a)));"]) }}
-
-{{ unary_op_base("log", "Math.log(a[this.thread.x])") }}
-{{ unary_op_class("Log", "log", ["a.backward(new Tensor(1).div(a));"]) }}
-{# {{ unary_op_base("neg", "-a[this.thread.x]") }} #}
