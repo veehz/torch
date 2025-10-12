@@ -1,26 +1,30 @@
 {% macro binary_op_base(name, operation) -%}
-// function generated from binary_op_base("{{ name }}", "{{ operation }}")
+const _{{ name }}_kernel = gpu.createKernel(
+  function (a: number[], as: number[], b: number[], bs: number[], bcs: number[]) {
+    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
+    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
+
+    return {{ operation }};
+  },
+  {
+    dynamicOutput: true
+  }
+);
+
 function _{{ name }}_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = gpu.createKernel(
-    function (a: number[], as: number[], b: number[], bs: number[], bcs: number[]) {
-      const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-      const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
 
-      return {{ operation }};
-    },
-    {
-      constants: {
-        shape_length: broadcast_shape.length
-      },
-      output: [broadcast_shape.reduce((acc, val) => acc * val, 1)]
-    }
-  );
-
+  const kernel = _{{ name }}_kernel;
+  kernel.setConstants({
+    shape_length: broadcast_shape.length
+  });
+  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  
   return new Tensor(
     kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
+    // data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: broadcast_shape }
   );
@@ -29,15 +33,19 @@ function _{{ name }}_tensor(a: Tensor, b: Tensor, operation: Operation | null = 
 
 {% macro unary_op_base(name, operation) -%}
 // function generated from unary_op_base("{{ name }}", "{{ operation }}")
+
+const _{{ name }}_kernel = gpu.createKernel(
+  function (a: number[]) {
+    return {{ operation }};
+  },
+  {
+    dynamicOutput: true
+  }
+);
+
 function _{{ name }}_tensor(a: Tensor, operation: Operation | null = null): Tensor {
-  const kernel = gpu.createKernel(
-    function (a: number[]) {
-      return {{ operation }};
-    },
-    {
-      output: [a.shape.reduce((acc, val) => acc * val, 1)]
-    }
-  );
+  const kernel = _{{ name }}_kernel;
+  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
 
   return new Tensor(
     kernel(a.data) as number[],
@@ -52,8 +60,10 @@ function _{{ name }}_tensor(a: Tensor, operation: Operation | null = null): Tens
 export class {{ classname }} extends BinaryOperation {
   private cache: [Tensor, Tensor];
   public forward(a: Tensor, b: Tensor): Tensor {
-    this.cache = [a, b];
-    return _{{ opname }}_tensor(a, b, this);
+    if(a.requires_grad || b.requires_grad) {
+      this.cache = [a, b];
+    }
+    return _{{ opname }}_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   public backward(dz: Tensor): void {
     const [a, b] = this.cache;
@@ -70,8 +80,10 @@ registerOperation('{{ opname }}', {{ classname }});
 export class {{ classname }} extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    this.cache = [a];
-    return _{{ opname }}_tensor(a, this);
+    if(a.requires_grad) {
+      this.cache = [a];
+    }
+    return _{{ opname }}_tensor(a, a.requires_grad ? this : null);
   }
   public backward(dz: Tensor): void {
     const [a] = this.cache;

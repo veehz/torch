@@ -11,15 +11,19 @@ import { Operation, BinaryOperation, UnaryOperation } from '../operations/base';
 import { registerOperation } from '../operations/registry';
 
 // function generated from unary_op_base("relu", "Math.max(a[this.thread.x], 0)")
+
+const _relu_kernel = gpu.createKernel(
+  function (a: number[]) {
+    return Math.max(a[this.thread.x], 0);
+  },
+  {
+    dynamicOutput: true
+  }
+);
+
 function _relu_tensor(a: Tensor, operation: Operation | null = null): Tensor {
-  const kernel = gpu.createKernel(
-    function (a: number[]) {
-      return Math.max(a[this.thread.x], 0);
-    },
-    {
-      output: [a.shape.reduce((acc, val) => acc * val, 1)]
-    }
-  );
+  const kernel = _relu_kernel;
+  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
 
   return new Tensor(
     kernel(a.data) as number[],
@@ -31,8 +35,10 @@ function _relu_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 export class Relu extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    this.cache = [a];
-    return _relu_tensor(a, this);
+    if(a.requires_grad) {
+      this.cache = [a];
+    }
+    return _relu_tensor(a, a.requires_grad ? this : null);
   }
   public backward(dz: Tensor): void {
     const [a] = this.cache;

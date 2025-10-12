@@ -1,6 +1,6 @@
 import { _get_original_index } from './broadcasting';
 import { Operation } from './operations/base';
-import { getOperation } from './operations/registry';
+import { getOperation, getOperationCache } from './operations/registry';
 
 /*
  * TODO:
@@ -77,7 +77,7 @@ export class Tensor {
   }
 
   private _executeUnaryOp(opName: string): Tensor {
-    const operation = new (getOperation(opName))();
+    const operation = this.requires_grad ? new (getOperation(opName))() : getOperationCache(opName);
     return operation.forward(this);
   }
 
@@ -85,7 +85,7 @@ export class Tensor {
     if (typeof other == 'number') {
       other = new Tensor(other);
     }
-    const operation = new (getOperation(opName))();
+    const operation = this.requires_grad || other.requires_grad ? new (getOperation(opName))() : getOperationCache(opName);
     return operation.forward(this, other);
   }
 
@@ -109,6 +109,10 @@ export class Tensor {
     this.requires_grad = false;
     this.grad = null;
     this.operation = null;
+  }
+
+  zero_(): void {
+    this.data = Array(this.data.length).fill(0);
   }
 
   backward(grad?: Tensor | null): void {
