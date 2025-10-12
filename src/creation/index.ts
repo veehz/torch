@@ -49,7 +49,9 @@ export function rand(...args: number[] | number[][]): Tensor {
 }
 
 export function randint(low: number, high: number, shape: number[]): Tensor {
-  const tensor = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(Math.floor(Math.random() * (high - low) + low)));
+  const tensor = new Tensor(
+    Array(shape.reduce((a, b) => a * b, 1)).fill(Math.floor(Math.random() * (high - low) + low))
+  );
   tensor.shape = shape;
   return tensor;
 }

@@ -4,7 +4,10 @@
  */
 
 import { GPU } from '@veehz/gpu.js';
-import { _get_original_index_from_transposed_index, _get_original_index_kernel } from './broadcasting';
+import {
+  _get_original_index_from_transposed_index,
+  _get_original_index_kernel
+} from './broadcasting';
 
 const gpu = new GPU();
 
