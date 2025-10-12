@@ -94,6 +94,58 @@ export class Tensor {
     return operation.forward(this, ...args);
   }
 
+  item(): number {
+    if (this.data.length !== 1) {
+      throw new Error('Tensor.item() is only valid for scalars');
+    }
+    return this.data[0];
+  }
+
+  detach(): Tensor {
+    return new Tensor(this.data, { requires_grad: false }, { shape: this.shape });
+  }
+
+  detach_(): void {
+    this.requires_grad = false;
+    this.grad = null;
+    this.operation = null;
+  }
+
+  backward(grad?: Tensor | null): void {
+    if (!this.requires_grad) {
+      // If this tensor does not require gradients, stop propagation.
+      // TODO: check pytorch behaviour
+      return;
+    }
+
+    if (!grad) {
+      if (this.data.length !== 1) {
+        throw new Error('Gradient is required for non-scalar tensors');
+      }
+
+      grad = new Tensor(1);
+    }
+
+    if (!this.grad) {
+      this.grad = new Tensor(Array(this.data.length).fill(0));
+    }
+
+    // Add grad to this.grad
+    for (let i = 0; i < grad.data.length; i++) {
+      this.grad.data[_get_original_index(this.shape, grad.shape, i)] += grad.data[i];
+    }
+
+    if (this.operation) {
+      // Propagate only the incoming local gradient, not the accumulated one,
+      // to avoid double-counting when a tensor receives gradients from
+      // multiple downstream paths.
+      // this.operation.backward(grad);
+      this.operation.backward(this.grad);
+    }
+  }
+
+  // operations
+
   add(other: Tensor | number): Tensor {
     return this._executeBinaryOp('add', other);
   }
@@ -172,44 +224,5 @@ export class Tensor {
 
   log(): Tensor {
     return this._executeUnaryOp('log');
-  }
-
-  item(): number {
-    if (this.data.length !== 1) {
-      throw new Error('Tensor.item() is only valid for scalars');
-    }
-    return this.data[0];
-  }
-
-  backward(grad?: Tensor | null): void {
-    if (!this.requires_grad) {
-      // If this tensor does not require gradients, stop propagation.
-      return;
-    }
-
-    if (!grad) {
-      if (this.data.length !== 1) {
-        throw new Error('Gradient is required for non-scalar tensors');
-      }
-
-      grad = new Tensor(1);
-    }
-
-    if (!this.grad) {
-      this.grad = new Tensor(Array(this.data.length).fill(0));
-    }
-
-    // Add grad to this.grad
-    for (let i = 0; i < grad.data.length; i++) {
-      this.grad.data[_get_original_index(this.shape, grad.shape, i)] += grad.data[i];
-    }
-
-    if (this.operation) {
-      // Propagate only the incoming local gradient, not the accumulated one,
-      // to avoid double-counting when a tensor receives gradients from
-      // multiple downstream paths.
-      // this.operation.backward(grad);
-      this.operation.backward(this.grad);
-    }
   }
 }
