@@ -5,7 +5,7 @@ import gpu from "../gpu";
 import { Operation, BinaryOperation, UnaryOperation } from './base';
 import { registerOperation } from "./registry";
 
-export function _sum_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+function _sum_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   return new Tensor(
     a.data.reduce((acc, val) => acc + val, 0),
     { requires_grad: a.requires_grad },
@@ -30,7 +30,7 @@ export class Sum extends UnaryOperation {
 }
 registerOperation('sum', Sum);
 
-export function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   return new Tensor(
     a.data.reduce((acc, val) => acc + val, 0) / a.data.length,
     { requires_grad: a.requires_grad },
