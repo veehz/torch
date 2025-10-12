@@ -114,12 +114,12 @@ export class Tensor {
     return this._executeUnaryOp('sum');
   }
 
-  pow(other: Tensor | number): Tensor {
-    return this._executeBinaryOp('pow', other);
+  mean(): Tensor {
+    return this._executeUnaryOp('mean');
   }
 
-  log(): Tensor {
-    return this._executeUnaryOp('log');
+  pow(other: Tensor | number): Tensor {
+    return this._executeBinaryOp('pow', other);
   }
 
   transpose(dim0: number, dim1: number): Tensor {
@@ -128,6 +128,50 @@ export class Tensor {
 
   matmul(other: Tensor): Tensor {
     return this._executeBinaryOp('matmul', other);
+  }
+
+  fmod(other: Tensor | number): Tensor {
+    return this._executeBinaryOp('fmod', other);
+  }
+
+  lt(other: Tensor | number): Tensor {
+    return this._executeBinaryOp('lt', other);
+  }
+
+  gt(other: Tensor | number): Tensor {
+    return this._executeBinaryOp('gt', other);
+  }
+
+  le(other: Tensor | number): Tensor {
+    return this._executeBinaryOp('le', other);
+  }
+
+  ge(other: Tensor | number): Tensor {
+    return this._executeBinaryOp('ge', other);
+  }
+  
+  eq(other: Tensor | number): Tensor {
+    return this._executeBinaryOp('eq', other);
+  }
+
+  ne(other: Tensor | number): Tensor {
+    return this._executeBinaryOp('ne', other);
+  }
+
+  sqrt(): Tensor {
+    return this._executeUnaryOp('sqrt');
+  }
+
+  sign(): Tensor {
+    return this._executeUnaryOp('sign');
+  }
+
+  abs(): Tensor {
+    return this._executeUnaryOp('abs');
+  }
+
+  log(): Tensor {
+    return this._executeUnaryOp('log');
   }
 
   item(): number {

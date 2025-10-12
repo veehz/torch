@@ -1,0 +1,14 @@
+{% from 'scripts/macros.ts.j2' import binary_op_base, unary_op_base, binary_op_class, unary_op_class %}
+import { Tensor } from '../tensor';
+import {
+  _broadcast_shape,
+  _get_original_index_from_transposed_index,
+  _get_original_index_kernel,
+  _pad_shape
+} from '../broadcasting';
+import gpu from '../gpu';
+import { Operation, BinaryOperation, UnaryOperation } from '../operations/base';
+import { registerOperation } from '../operations/registry';
+
+{{ unary_op_base("relu", "Math.max(a[this.thread.x], 0)") }}
+{{ unary_op_class("Relu", "relu", ["a.backward(dz.mul(a.gt(0)));"]) }}

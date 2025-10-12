@@ -8,6 +8,7 @@ import {
 } from '../broadcasting';
 import gpu from '../gpu';
 import { Operation, BinaryOperation, UnaryOperation } from './base';
+import * as functional from './functional';
 import { registerOperation } from './registry';
 
 function _sum_tensor(a: Tensor, operation: Operation | null = null): Tensor {
@@ -188,19 +189,35 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null
 
 {{ binary_op_class("Matmul", "matmul", []) }}
 
-{# {{ binary_op_base("mod", "a[a_index] % b[b_index]") }}
-{{ binary_op_base("lt", "(a[a_index] < b[b_index]) ? 1 : 0") }}
-{{ binary_op_base("gt", "(a[a_index] > b[b_index]) ? 1 : 0") }}
-{{ binary_op_base("le", "(a[a_index] <= b[b_index]) ? 1 : 0") }}
-{{ binary_op_base("ge", "(a[a_index] >= b[b_index]) ? 1 : 0") }}
-{{ binary_op_base("eq", "(a[a_index] == b[b_index]) ? 1 : 0") }}
-{{ binary_op_base("ne", "(a[a_index] != b[b_index]) ? 1 : 0") }} #}
+{{ binary_op_base("fmod", "a[a_index] % b[b_index]") }}
+{{ binary_op_class("Fmod", "fmod", ["a.backward(dz);"]) }}
 
-{# {{ unary_op_base("sqrt", "Math.sqrt(a[this.thread.x])") }}
+{{ binary_op_base("lt", "(a[a_index] < b[b_index]) ? 1 : 0") }}
+{{ binary_op_class("Lt", "lt", []) }}
+
+{{ binary_op_base("gt", "(a[a_index] > b[b_index]) ? 1 : 0") }}
+{{ binary_op_class("Gt", "gt", []) }}
+
+{{ binary_op_base("le", "(a[a_index] <= b[b_index]) ? 1 : 0") }}
+{{ binary_op_class("Le", "le", []) }}
+
+{{ binary_op_base("ge", "(a[a_index] >= b[b_index]) ? 1 : 0") }}
+{{ binary_op_class("Ge", "ge", []) }}
+
+{{ binary_op_base("eq", "(a[a_index] == b[b_index]) ? 1 : 0") }}
+{{ binary_op_class("Eq", "eq", []) }}
+
+{{ binary_op_base("ne", "(a[a_index] != b[b_index]) ? 1 : 0") }}
+{{ binary_op_class("Ne", "ne", []) }}
+
+{{ unary_op_base("sqrt", "Math.sqrt(a[this.thread.x])") }}
+{{ unary_op_class("Sqrt", "sqrt", ["a.backward(new Tensor(1).div(a.sqrt()).div(2));"]) }}
+
+{{ unary_op_base("sign", "Math.sign(a[this.thread.x])") }}
+{{ unary_op_class("Sign", "sign", []) }}
+
 {{ unary_op_base("abs", "Math.abs(a[this.thread.x])") }}
-{{ unary_op_base("sin", "Math.sin(a[this.thread.x])") }}
-{{ unary_op_base("cos", "Math.cos(a[this.thread.x])") }}
-{{ unary_op_base("exp", "Math.exp(a[this.thread.x])") }} #}
+{{ unary_op_class("Abs", "abs", ["a.backward(dz.mul(functional.sign(a)));"]) }}
 
 {{ unary_op_base("log", "Math.log(a[this.thread.x])") }}
 {{ unary_op_class("Log", "log", ["a.backward(new Tensor(1).div(a));"]) }}
