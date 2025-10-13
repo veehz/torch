@@ -19187,7 +19187,7 @@ function _get_original_index_from_transposed_index(original_shape, dim0, dim1, t
   }
   return original_index;
 }
-const gpu = new gpuBrowserExports.GPU();
+const gpu = new gpuBrowserExports.GPU({ mode: "cpu" });
 gpu.addFunction(_get_original_index_kernel, {
   returnType: "Integer",
   argumentTypes: {
@@ -19264,6 +19264,11 @@ class Tensor {
   get shape() {
     return this._shape.length === 0 ? [1] : this._shape;
   }
+  toArray_() {
+    if (this.data instanceof gpuBrowserExports.Texture) {
+      this.data = this.data.toArray();
+    }
+  }
   toArray() {
     if (this.data instanceof gpuBrowserExports.Texture) {
       return this.data.toArray();
@@ -19298,7 +19303,7 @@ class Tensor {
     if (this.dataLength() !== 1) {
       throw new Error("Tensor.item() is only valid for scalars");
     }
-    return this.data[0];
+    return this.toArray()[0];
   }
   detach() {
     return new Tensor(this.data, { requires_grad: false }, { shape: this.shape });
@@ -19320,10 +19325,13 @@ class Tensor {
         throw new Error("Gradient is required for non-scalar tensors");
       }
       grad = new Tensor(1);
+    } else {
+      grad.toArray_();
     }
     if (!this.grad) {
       this.grad = new Tensor(Array(this.dataLength()).fill(0));
     }
+    this.grad.toArray_();
     for (let i = 0; i < grad.dataLength(); i++) {
       this.grad.data[_get_original_index(this.shape, grad.shape, i)] += grad.data[i];
     }
@@ -19346,6 +19354,9 @@ class Tensor {
     return this._executeBinaryOp("div", other);
   }
   pow(other) {
+    if (typeof other == "number" && other % 1 === 0) {
+      return this._executeOpRaw("powint", other);
+    }
     return this._executeBinaryOp("pow", other);
   }
   fmod(other) {
@@ -19484,8 +19495,9 @@ const _add_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _add_tensor(a, b, operation = null) {
@@ -19526,8 +19538,9 @@ const _sub_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _sub_tensor(a, b, operation = null) {
@@ -19568,8 +19581,9 @@ const _mul_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _mul_tensor(a, b, operation = null) {
@@ -19610,8 +19624,9 @@ const _div_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _div_tensor(a, b, operation = null) {
@@ -19648,12 +19663,13 @@ const _pow_kernel = gpu.createKernel(
   function(a, as, b, bs, bcs) {
     const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
     const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-    return a[a_index] ** b[b_index];
+    return Math.pow(a[a_index], b[b_index]);
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _pow_tensor(a, b, operation = null) {
@@ -19694,8 +19710,9 @@ const _fmod_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _fmod_tensor(a, b, operation = null) {
@@ -19727,14 +19744,50 @@ class Fmod extends BinaryOperation {
   }
 }
 registerOperation("fmod", Fmod);
+function _powint_kernel_function(a, n) {
+  return Math.pow(a[this.thread.x], n);
+}
+const _powint_kernel = gpu.createKernel(
+  _powint_kernel_function,
+  {
+    dynamicOutput: true,
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
+  }
+);
+function _powint_tensor(a, n, operation = null) {
+  const kernel = _powint_kernel;
+  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  return new Tensor(
+    kernel(a.data, n),
+    { requires_grad: a.requires_grad },
+    { operation, shape: a.shape }
+  );
+}
+class PowInt extends Operation {
+  cache;
+  forward(a, n) {
+    if (a.requires_grad) {
+      this.cache = [a, n];
+    }
+    return _powint_tensor(a, n, a.requires_grad ? this : null);
+  }
+  backward(dz) {
+    const [a, n] = this.cache;
+    a.backward(dz.mul(n).mul(a.pow(n - 1)));
+  }
+}
+registerOperation("powint", PowInt);
 const _log_kernel = gpu.createKernel(
   function(a) {
     return Math.log(a[this.thread.x]);
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _log_tensor(a, operation = null) {
@@ -19766,8 +19819,9 @@ const _sqrt_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _sqrt_tensor(a, operation = null) {
@@ -19799,8 +19853,9 @@ const _exp_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _exp_tensor(a, operation = null) {
@@ -19832,8 +19887,9 @@ const _abs_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _abs_tensor(a, operation = null) {
@@ -19865,8 +19921,9 @@ const _sign_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _sign_tensor(a, operation = null) {
@@ -19897,8 +19954,9 @@ const _neg_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _neg_tensor(a, operation = null) {
@@ -19930,8 +19988,9 @@ const _reciprocal_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _reciprocal_tensor(a, operation = null) {
@@ -19963,8 +20022,9 @@ const _sin_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _sin_tensor(a, operation = null) {
@@ -19996,8 +20056,9 @@ const _cos_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _cos_tensor(a, operation = null) {
@@ -20029,8 +20090,9 @@ const _tan_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _tan_tensor(a, operation = null) {
@@ -20073,7 +20135,7 @@ class Sum extends UnaryOperation {
   }
   backward(dz) {
     const [a] = this.cache;
-    const result = new Tensor(Array(a.dataLength()).fill(dz.data[0]));
+    const result = new Tensor(Array(a.dataLength()).fill(dz.item()));
     a.backward(result);
   }
 }
@@ -20095,7 +20157,7 @@ class Mean extends UnaryOperation {
   }
   backward(dz) {
     const [a] = this.cache;
-    const result = new Tensor(Array(a.dataLength()).fill(dz.data[0] / a.dataLength()));
+    const result = new Tensor(Array(a.dataLength()).fill(dz.item() / a.dataLength()));
     a.backward(result);
   }
 }
@@ -20107,8 +20169,9 @@ const _transpose_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _transpose_tensor(a, dim0, dim1, operation = null) {
@@ -20154,11 +20217,15 @@ function _matmul_kernel_function(a, as, b, bs, bcs) {
   }
   return sum2;
 }
-const _matmul_kernel = gpu.createKernel(_matmul_kernel_function, {
-  dynamicOutput: true,
-  pipeline: true,
-  immutable: true
-});
+const _matmul_kernel = gpu.createKernel(
+  _matmul_kernel_function,
+  {
+    dynamicOutput: true,
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
+  }
+);
 function _matmul_tensor(a, b, operation = null) {
   if (a.shape.length == 1 && b.shape.length == 1) {
     return a.mul(b).sum();
@@ -20227,8 +20294,9 @@ const _lt_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _lt_tensor(a, b, operation = null) {
@@ -20267,8 +20335,9 @@ const _gt_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _gt_tensor(a, b, operation = null) {
@@ -20307,8 +20376,9 @@ const _le_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _le_tensor(a, b, operation = null) {
@@ -20347,8 +20417,9 @@ const _ge_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _ge_tensor(a, b, operation = null) {
@@ -20387,8 +20458,9 @@ const _eq_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _eq_tensor(a, b, operation = null) {
@@ -20427,8 +20499,9 @@ const _ne_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _ne_tensor(a, b, operation = null) {
@@ -20511,8 +20584,9 @@ const _relu_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
   }
 );
 function _relu_tensor(a, operation = null) {
@@ -20705,6 +20779,7 @@ exports.Mul = Mul;
 exports.Ne = Ne;
 exports.Neg = Neg;
 exports.Pow = Pow;
+exports.PowInt = PowInt;
 exports.Reciprocal = Reciprocal;
 exports.Sign = Sign;
 exports.Sin = Sin;

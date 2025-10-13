@@ -15,6 +15,7 @@ export declare class Tensor {
         shape?: number[];
     });
     get shape(): number[];
+    toArray_(): void;
     toArray(): number[];
     dataLength(): number;
     set shape(shape: number[]);

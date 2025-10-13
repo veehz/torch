@@ -30,6 +30,11 @@ export declare class Fmod extends BinaryOperation {
     forward(a: Tensor, b: Tensor): Tensor;
     backward(dz: Tensor): void;
 }
+export declare class PowInt extends Operation {
+    private cache;
+    forward(a: Tensor, n: number): Tensor;
+    backward(dz: Tensor): void;
+}
 export declare class Log extends UnaryOperation {
     private cache;
     forward(a: Tensor): Tensor;
