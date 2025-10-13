@@ -1,21 +1,22 @@
+import { assert } from 'chai';
 import { _broadcast_shape } from '../src/broadcasting';
 
 describe('Broadcasting', () => {
-    test('Broadcast shape of same dimensions', () => {
-        expect(_broadcast_shape([1, 3, 1], [4, 3, 6])).toEqual([4, 3, 6]);
-        expect(_broadcast_shape([4, 3, 6], [1, 3, 1])).toEqual([4, 3, 6]);
-        expect(_broadcast_shape([2, 2, 2], [2, 2, 2])).toEqual([2, 2, 2]);
+  it('Broadcast shape of same dimensions', () => {
+    assert.deepStrictEqual(_broadcast_shape([1, 3, 1], [4, 3, 6]), [4, 3, 6]);
+    assert.deepStrictEqual(_broadcast_shape([4, 3, 6], [1, 3, 1]), [4, 3, 6]);
+    assert.deepStrictEqual(_broadcast_shape([2, 2, 2], [2, 2, 2]), [2, 2, 2]);
 
-        expect(() => _broadcast_shape([1, 2, 1], [1, 3, 1])).toThrow(Error);
-    });
+    assert.throws(() => _broadcast_shape([1, 2, 1], [1, 3, 1]), Error);
+  });
 
-    test('Broadcast shape of different dimensions', () => {
-        expect(_broadcast_shape([2, 3, 1], [3, 1])).toEqual([2, 3, 1]);
-        expect(_broadcast_shape([3, 1], [2, 3, 1])).toEqual([2, 3, 1]);
-        expect(_broadcast_shape([1], [2, 2, 2])).toEqual([2, 2, 2]);
-        expect(_broadcast_shape([2], [])).toEqual([2]);
-        expect(_broadcast_shape([1, 4], [3, 3, 1])).toEqual([3, 3, 4]);
+  it('Broadcast shape of different dimensions', () => {
+    assert.deepStrictEqual(_broadcast_shape([2, 3, 1], [3, 1]), [2, 3, 1]);
+    assert.deepStrictEqual(_broadcast_shape([3, 1], [2, 3, 1]), [2, 3, 1]);
+    assert.deepStrictEqual(_broadcast_shape([1], [2, 2, 2]), [2, 2, 2]);
+    assert.deepStrictEqual(_broadcast_shape([2], []), [2]);
+    assert.deepStrictEqual(_broadcast_shape([1, 4], [3, 3, 1]), [3, 3, 4]);
 
-        expect(() => _broadcast_shape([1, 2], [3, 3, 6])).toThrow(Error);
-    });
+    assert.throws(() => _broadcast_shape([1, 2], [3, 3, 6]), Error);
+  });
 });

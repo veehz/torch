@@ -11,7 +11,7 @@
       "esModuleInterop": true,
       "noEmit": true,
       "skipLibCheck": true,
-      "types": ["node", "jest"]
+      "types": ["node", "mocha"]
     },
     "include": ["src", "test", "vite.config.browser.ts", "vite.config.node.ts"]
   }
