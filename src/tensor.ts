@@ -73,6 +73,12 @@ export class Tensor {
     // return this._shape;
   }
 
+  toArray_(): void {
+    if (this.data instanceof Texture) {
+      this.data = this.data.toArray() as number[];
+    }
+  }
+
   toArray(): number[] {
     if (this.data instanceof Texture) {
       return this.data.toArray() as number[];
@@ -113,7 +119,7 @@ export class Tensor {
     if (this.dataLength() !== 1) {
       throw new Error('Tensor.item() is only valid for scalars');
     }
-    return this.data[0];
+    return this.toArray()[0];
   }
 
   detach(): Tensor {
@@ -141,13 +147,16 @@ export class Tensor {
       if (this.dataLength() !== 1) {
         throw new Error('Gradient is required for non-scalar tensors');
       }
-
       grad = new Tensor(1);
+    } else {
+      grad.toArray_();
     }
 
     if (!this.grad) {
       this.grad = new Tensor(Array(this.dataLength()).fill(0));
     }
+
+    this.grad.toArray_();
 
     // Add grad to this.grad
     for (let i = 0; i < grad.dataLength(); i++) {
