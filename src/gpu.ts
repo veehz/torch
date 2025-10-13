@@ -34,3 +34,6 @@ gpu.addFunction(_get_original_index_from_transposed_index, {
 });
 
 export default gpu;
+
+// for debugging purposes
+export { GPU };
