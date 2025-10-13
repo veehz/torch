@@ -1,0 +1,56 @@
+import { Operation } from './operations/base';
+import { Texture } from './gpu';
+type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
+export type NestedNumberArray = number | TypedArray | NestedNumberArray[];
+export declare class Tensor {
+    data: number[] | Texture;
+    _shape: number[];
+    operation: Operation | null;
+    grad: Tensor | null;
+    requires_grad: boolean;
+    constructor(data: NestedNumberArray | Texture, options?: {
+        requires_grad?: boolean;
+    }, internal_options?: {
+        operation?: Operation;
+        shape?: number[];
+    });
+    get shape(): number[];
+    toArray(): number[];
+    dataLength(): number;
+    set shape(shape: number[]);
+    private _executeUnaryOp;
+    private _executeBinaryOp;
+    private _executeOpRaw;
+    item(): number;
+    detach(): Tensor;
+    detach_(): void;
+    zero_(): void;
+    backward(grad?: Tensor | null): void;
+    add(other: Tensor | number): Tensor;
+    sub(other: Tensor | number): Tensor;
+    mul(other: Tensor | number): Tensor;
+    div(other: Tensor | number): Tensor;
+    pow(other: Tensor | number): Tensor;
+    fmod(other: Tensor | number): Tensor;
+    log(): Tensor;
+    sqrt(): Tensor;
+    exp(): Tensor;
+    abs(): Tensor;
+    sign(): Tensor;
+    neg(): Tensor;
+    reciprocal(): Tensor;
+    sin(): Tensor;
+    cos(): Tensor;
+    tan(): Tensor;
+    sum(): Tensor;
+    mean(): Tensor;
+    transpose(dim0: number, dim1: number): Tensor;
+    matmul(other: Tensor): Tensor;
+    lt(other: Tensor | number): Tensor;
+    gt(other: Tensor | number): Tensor;
+    le(other: Tensor | number): Tensor;
+    ge(other: Tensor | number): Tensor;
+    eq(other: Tensor | number): Tensor;
+    ne(other: Tensor | number): Tensor;
+}
+export {};
