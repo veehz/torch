@@ -33,7 +33,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      'gpu.js': path.resolve(__dirname, './public/gpu-browser.min.js'),
+      'gpu.js': path.resolve(__dirname, './vendor/gpu-browser.min.js'),
     },
   },
 });
