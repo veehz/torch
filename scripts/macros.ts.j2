@@ -1,3 +1,12 @@
+{% macro kernel_options() -%}
+  {
+    dynamicOutput: true,
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
+  }
+{%- endmacro %}
+
 {% macro binary_op_base(name, operation) -%}
 const _{{ name }}_kernel = gpu.createKernel(
   function (a: number[], as: number[], b: number[], bs: number[], bcs: number[]) {
@@ -6,11 +15,7 @@ const _{{ name }}_kernel = gpu.createKernel(
 
     return {{ operation }};
   },
-  {
-    dynamicOutput: true,
-    pipeline: true,
-    immutable: true
-  }
+  {{ kernel_options() }}
 );
 
 function _{{ name }}_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
@@ -39,11 +44,7 @@ const _{{ name }}_kernel = gpu.createKernel(
   function (a: number[]) {
     return {{ operation }};
   },
-  {
-    dynamicOutput: true,
-    pipeline: true,
-    immutable: true
-  }
+  {{ kernel_options() }}
 );
 
 function _{{ name }}_tensor(a: Tensor, operation: Operation | null = null): Tensor {
