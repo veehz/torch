@@ -1,6 +1,7 @@
 import { _get_original_index } from './broadcasting';
 import { Operation } from './operations/base';
 import { getOperation, getOperationCache } from './operations/registry';
+import { Texture } from './gpu';
 
 /*
  * TODO:
@@ -44,7 +45,7 @@ function _flatten(data: NestedNumberArray): number[] {
 }
 
 export class Tensor {
-  data: number[];
+  data: number[] | Texture;
   _shape: number[];
   operation: Operation | null = null;
   public grad: Tensor | null = null;
@@ -52,14 +53,14 @@ export class Tensor {
   requires_grad: boolean;
 
   constructor(
-    data: NestedNumberArray,
+    data: NestedNumberArray | Texture,
     options: { requires_grad?: boolean } = {},
     internal_options: { operation?: Operation; shape?: number[] } = {}
   ) {
-    this.data = _flatten(data);
+    this.data = data instanceof Texture ? data : _flatten(data);
     this.requires_grad = options.requires_grad ?? false;
 
-    this._shape = internal_options.shape ?? _get_shape(data);
+    this._shape = internal_options.shape ?? _get_shape(data instanceof Texture ? data.toArray() : data);
     this.operation = internal_options.operation ?? null;
   }
 
@@ -70,6 +71,20 @@ export class Tensor {
   get shape(): number[] {
     return this._shape.length === 0 ? [1] : this._shape;
     // return this._shape;
+  }
+
+  toArray(): number[] {
+    if (this.data instanceof Texture) {
+      return this.data.toArray() as number[];
+    }
+    return this.data;
+  }
+
+  dataLength(): number {
+    if (this.data instanceof Texture) {
+      return this.shape.reduce((acc, val) => acc * val, 1);
+    }
+    return this.data.length;
   }
 
   set shape(shape: number[]) {
@@ -95,7 +110,7 @@ export class Tensor {
   }
 
   item(): number {
-    if (this.data.length !== 1) {
+    if (this.dataLength() !== 1) {
       throw new Error('Tensor.item() is only valid for scalars');
     }
     return this.data[0];
@@ -112,7 +127,7 @@ export class Tensor {
   }
 
   zero_(): void {
-    this.data = Array(this.data.length).fill(0);
+    this.data = Array(this.dataLength()).fill(0);
   }
 
   backward(grad?: Tensor | null): void {
@@ -123,7 +138,7 @@ export class Tensor {
     }
 
     if (!grad) {
-      if (this.data.length !== 1) {
+      if (this.dataLength() !== 1) {
         throw new Error('Gradient is required for non-scalar tensors');
       }
 
@@ -131,11 +146,11 @@ export class Tensor {
     }
 
     if (!this.grad) {
-      this.grad = new Tensor(Array(this.data.length).fill(0));
+      this.grad = new Tensor(Array(this.dataLength()).fill(0));
     }
 
     // Add grad to this.grad
-    for (let i = 0; i < grad.data.length; i++) {
+    for (let i = 0; i < grad.dataLength(); i++) {
       this.grad.data[_get_original_index(this.shape, grad.shape, i)] += grad.data[i];
     }
 

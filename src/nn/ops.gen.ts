@@ -17,7 +17,9 @@ const _relu_kernel = gpu.createKernel(
     return Math.max(a[this.thread.x], 0);
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -35,7 +37,7 @@ function _relu_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 export class Relu extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    if(a.requires_grad) {
+    if (a.requires_grad) {
       this.cache = [a];
     }
     return _relu_tensor(a, a.requires_grad ? this : null);

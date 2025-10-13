@@ -6,7 +6,7 @@ import {
   _get_original_index_kernel,
   _pad_shape
 } from '../broadcasting';
-import gpu from '../gpu';
+import gpu, { Texture } from '../gpu';
 import { Operation, BinaryOperation, UnaryOperation } from './base';
 import * as functional from './functional';
 import { registerOperation } from './registry';
@@ -21,7 +21,9 @@ const _add_kernel = gpu.createKernel(
     return a[a_index] + b[b_index];
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -35,10 +37,9 @@ function _add_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
     shape_length: broadcast_shape.length
   });
   kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
-  
+
   return new Tensor(
     kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
-    // data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: broadcast_shape }
   );
@@ -47,7 +48,7 @@ function _add_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 export class Add extends BinaryOperation {
   private cache: [Tensor, Tensor];
   public forward(a: Tensor, b: Tensor): Tensor {
-    if(a.requires_grad || b.requires_grad) {
+    if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _add_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
@@ -70,7 +71,9 @@ const _sub_kernel = gpu.createKernel(
     return a[a_index] - b[b_index];
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -84,10 +87,9 @@ function _sub_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
     shape_length: broadcast_shape.length
   });
   kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
-  
+
   return new Tensor(
     kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
-    // data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: broadcast_shape }
   );
@@ -96,7 +98,7 @@ function _sub_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 export class Sub extends BinaryOperation {
   private cache: [Tensor, Tensor];
   public forward(a: Tensor, b: Tensor): Tensor {
-    if(a.requires_grad || b.requires_grad) {
+    if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _sub_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
@@ -119,7 +121,9 @@ const _mul_kernel = gpu.createKernel(
     return a[a_index] * b[b_index];
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -133,10 +137,9 @@ function _mul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
     shape_length: broadcast_shape.length
   });
   kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
-  
+
   return new Tensor(
     kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
-    // data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: broadcast_shape }
   );
@@ -145,7 +148,7 @@ function _mul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 export class Mul extends BinaryOperation {
   private cache: [Tensor, Tensor];
   public forward(a: Tensor, b: Tensor): Tensor {
-    if(a.requires_grad || b.requires_grad) {
+    if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _mul_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
@@ -168,7 +171,9 @@ const _div_kernel = gpu.createKernel(
     return a[a_index] / b[b_index];
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -182,10 +187,9 @@ function _div_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
     shape_length: broadcast_shape.length
   });
   kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
-  
+
   return new Tensor(
     kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
-    // data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: broadcast_shape }
   );
@@ -194,7 +198,7 @@ function _div_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 export class Div extends BinaryOperation {
   private cache: [Tensor, Tensor];
   public forward(a: Tensor, b: Tensor): Tensor {
-    if(a.requires_grad || b.requires_grad) {
+    if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _div_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
@@ -217,7 +221,9 @@ const _pow_kernel = gpu.createKernel(
     return a[a_index] ** b[b_index];
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -231,10 +237,9 @@ function _pow_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
     shape_length: broadcast_shape.length
   });
   kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
-  
+
   return new Tensor(
     kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
-    // data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: broadcast_shape }
   );
@@ -243,7 +248,7 @@ function _pow_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 export class Pow extends BinaryOperation {
   private cache: [Tensor, Tensor];
   public forward(a: Tensor, b: Tensor): Tensor {
-    if(a.requires_grad || b.requires_grad) {
+    if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _pow_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
@@ -266,7 +271,9 @@ const _fmod_kernel = gpu.createKernel(
     return a[a_index] % b[b_index];
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -280,10 +287,9 @@ function _fmod_tensor(a: Tensor, b: Tensor, operation: Operation | null = null):
     shape_length: broadcast_shape.length
   });
   kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
-  
+
   return new Tensor(
     kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
-    // data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: broadcast_shape }
   );
@@ -292,7 +298,7 @@ function _fmod_tensor(a: Tensor, b: Tensor, operation: Operation | null = null):
 export class Fmod extends BinaryOperation {
   private cache: [Tensor, Tensor];
   public forward(a: Tensor, b: Tensor): Tensor {
-    if(a.requires_grad || b.requires_grad) {
+    if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _fmod_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
@@ -315,7 +321,9 @@ const _log_kernel = gpu.createKernel(
     return Math.log(a[this.thread.x]);
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -333,7 +341,7 @@ function _log_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 export class Log extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    if(a.requires_grad) {
+    if (a.requires_grad) {
       this.cache = [a];
     }
     return _log_tensor(a, a.requires_grad ? this : null);
@@ -354,7 +362,9 @@ const _sqrt_kernel = gpu.createKernel(
     return Math.sqrt(a[this.thread.x]);
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -372,7 +382,7 @@ function _sqrt_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 export class Sqrt extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    if(a.requires_grad) {
+    if (a.requires_grad) {
       this.cache = [a];
     }
     return _sqrt_tensor(a, a.requires_grad ? this : null);
@@ -393,7 +403,9 @@ const _exp_kernel = gpu.createKernel(
     return Math.exp(a[this.thread.x]);
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -411,7 +423,7 @@ function _exp_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 export class Exp extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    if(a.requires_grad) {
+    if (a.requires_grad) {
       this.cache = [a];
     }
     return _exp_tensor(a, a.requires_grad ? this : null);
@@ -432,7 +444,9 @@ const _abs_kernel = gpu.createKernel(
     return Math.abs(a[this.thread.x]);
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -450,7 +464,7 @@ function _abs_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 export class Abs extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    if(a.requires_grad) {
+    if (a.requires_grad) {
       this.cache = [a];
     }
     return _abs_tensor(a, a.requires_grad ? this : null);
@@ -471,7 +485,9 @@ const _sign_kernel = gpu.createKernel(
     return Math.sign(a[this.thread.x]);
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -489,7 +505,7 @@ function _sign_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 export class Sign extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    if(a.requires_grad) {
+    if (a.requires_grad) {
       this.cache = [a];
     }
     return _sign_tensor(a, a.requires_grad ? this : null);
@@ -510,7 +526,9 @@ const _neg_kernel = gpu.createKernel(
     return Math.sign(a[this.thread.x]) * a[this.thread.x];
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -528,7 +546,7 @@ function _neg_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 export class Neg extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    if(a.requires_grad) {
+    if (a.requires_grad) {
       this.cache = [a];
     }
     return _neg_tensor(a, a.requires_grad ? this : null);
@@ -549,7 +567,9 @@ const _reciprocal_kernel = gpu.createKernel(
     return 1 / a[this.thread.x];
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -567,7 +587,7 @@ function _reciprocal_tensor(a: Tensor, operation: Operation | null = null): Tens
 export class Reciprocal extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    if(a.requires_grad) {
+    if (a.requires_grad) {
       this.cache = [a];
     }
     return _reciprocal_tensor(a, a.requires_grad ? this : null);
@@ -590,7 +610,9 @@ const _sin_kernel = gpu.createKernel(
     return Math.sin(a[this.thread.x]);
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -608,7 +630,7 @@ function _sin_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 export class Sin extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    if(a.requires_grad) {
+    if (a.requires_grad) {
       this.cache = [a];
     }
     return _sin_tensor(a, a.requires_grad ? this : null);
@@ -629,7 +651,9 @@ const _cos_kernel = gpu.createKernel(
     return Math.cos(a[this.thread.x]);
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -647,7 +671,7 @@ function _cos_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 export class Cos extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    if(a.requires_grad) {
+    if (a.requires_grad) {
       this.cache = [a];
     }
     return _cos_tensor(a, a.requires_grad ? this : null);
@@ -668,7 +692,9 @@ const _tan_kernel = gpu.createKernel(
     return Math.tan(a[this.thread.x]);
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -686,7 +712,7 @@ function _tan_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 export class Tan extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    if(a.requires_grad) {
+    if (a.requires_grad) {
       this.cache = [a];
     }
     return _tan_tensor(a, a.requires_grad ? this : null);
@@ -704,7 +730,7 @@ registerOperation('tan', Tan);
 
 function _sum_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   return new Tensor(
-    a.data.reduce((acc, val) => acc + val, 0),
+    a.toArray().reduce((acc, val) => acc + val, 0),
     { requires_grad: a.requires_grad },
     { operation: operation }
   );
@@ -714,7 +740,7 @@ function _sum_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 export class Sum extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    if(a.requires_grad) {
+    if (a.requires_grad) {
       this.cache = [a];
     }
     return _sum_tensor(a, a.requires_grad ? this : null);
@@ -723,7 +749,7 @@ export class Sum extends UnaryOperation {
     const [a] = this.cache;
 
     // backward_operations:
-    const result = new Tensor(Array(a.data.length).fill(dz.data[0]));
+    const result = new Tensor(Array(a.dataLength()).fill(dz.data[0]));
     a.backward(result);
   }
 }
@@ -731,7 +757,7 @@ registerOperation('sum', Sum);
 
 function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   return new Tensor(
-    a.data.reduce((acc, val) => acc + val, 0) / a.data.length,
+    a.toArray().reduce((acc, val) => acc + val, 0) / a.dataLength(),
     { requires_grad: a.requires_grad },
     { operation: operation }
   );
@@ -741,7 +767,7 @@ function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 export class Mean extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    if(a.requires_grad) {
+    if (a.requires_grad) {
       this.cache = [a];
     }
     return _mean_tensor(a, a.requires_grad ? this : null);
@@ -750,7 +776,7 @@ export class Mean extends UnaryOperation {
     const [a] = this.cache;
 
     // backward_operations:
-    const result = new Tensor(Array(a.data.length).fill(dz.data[0] / a.data.length));
+    const result = new Tensor(Array(a.dataLength()).fill(dz.data[0] / a.dataLength()));
     a.backward(result);
   }
 }
@@ -758,24 +784,29 @@ registerOperation('mean', Mean);
 
 // linalg
 
+const _transpose_kernel = gpu.createKernel(
+  function (a: number[], as: number[], dim0: number, dim1: number) {
+    const a_index = _get_original_index_from_transposed_index(as, dim0, dim1, this.thread.x);
+    return a[a_index];
+  },
+  {
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
+  }
+);
+
 function _transpose_tensor(
   a: Tensor,
   dim0: number,
   dim1: number,
   operation: Operation | null = null
 ): Tensor {
-  const kernel = gpu.createKernel(
-    function (a: number[], as: number[], dim0: number, dim1: number) {
-      const a_index = _get_original_index_from_transposed_index(as, dim0, dim1, this.thread.x);
-      return a[a_index];
-    },
-    {
-      constants: {
-        shape_length: a.shape.length
-      },
-      output: [a.shape.reduce((acc, val) => acc * val, 1)]
-    }
-  );
+  const kernel = _transpose_kernel;
+  kernel.setConstants({
+    shape_length: a.shape.length
+  });
+  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
 
   const swapped_shape = [...a.shape];
   [swapped_shape[dim0], swapped_shape[dim1]] = [swapped_shape[dim1], swapped_shape[dim0]];
@@ -801,6 +832,42 @@ export class Transpose extends Operation {
   }
 }
 registerOperation('transpose', Transpose);
+
+function _matmul_kernel_function(
+  a: number[],
+  as: number[],
+  b: number[],
+  bs: number[],
+  bcs: number[]
+) {
+  let a_index = _get_original_index_kernel(as, bcs, this.thread.x);
+  let b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
+
+  const l = this.constants.shape_length;
+
+  const tmp1 = bcs[l] * bcs[l + 1];
+  const position = this.thread.x % tmp1;
+
+  a_index = a_index * as[l] * as[l + 1] + Math.floor(position / bcs[l + 1]) * as[l + 1];
+  b_index = b_index * bs[l] * bs[l + 1] + (position % bcs[l + 1]);
+
+  const b_stride = bs[l + 1];
+
+  let sum = 0;
+  for (let i = 0; i < this.constants.lp; i++) {
+    sum = sum + a[a_index] * b[b_index];
+    a_index = a_index + 1;
+    b_index = b_index + b_stride;
+  }
+
+  return sum;
+}
+
+const _matmul_kernel = gpu.createKernel(_matmul_kernel_function, {
+  dynamicOutput: true,
+  pipeline: true,
+  immutable: true
+});
 
 function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
   if (a.shape.length == 1 && b.shape.length == 1) {
@@ -833,42 +900,13 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null
   const padded_a_shape = _pad_shape(a_shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b_shape, broadcast_shape);
 
-  function _matmul_kernel(
-    a: number[],
-    as: number[],
-    b: number[],
-    bs: number[],
-    bcs: number[],
-    lp: number
-  ) {
-    let a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-    let b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-
-    const l = this.constants.shape_length;
-
-    const position = this.thread.x % (bcs[l] * bcs[l + 1]);
-    a_index = a_index * as[l] * as[l + 1] + Math.floor(position / bcs[l + 1]) * as[l + 1];
-    b_index = b_index * bs[l] * bs[l + 1] + (position % bcs[l + 1]);
-
-    const b_stride = bs[l + 1];
-
-    let sum = 0;
-    for (let i = 0; i < lp; i++) {
-      sum = sum + a[a_index] * b[b_index];
-      a_index = a_index + 1;
-      b_index = b_index + b_stride;
-    }
-
-    return sum;
-  }
-
-  const kernel = gpu.createKernel(_matmul_kernel, {
-    constants: {
-      // assumes that _get_original_index_kernel reads from the front
-      shape_length: broadcast_shape.length - 2
-    },
-    output: [broadcast_shape.reduce((acc, val) => acc * val, 1)]
+  const kernel = _matmul_kernel;
+  kernel.setConstants({
+    lp: loop_iterations,
+    // assumes that _get_original_index_kernel reads from the front
+    shape_length: broadcast_shape.length - 2
   });
+  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
 
   let shape_after_removing_extra_dims = [...broadcast_shape];
 
@@ -888,8 +926,7 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null
       padded_a_shape,
       b.data,
       padded_b_shape,
-      broadcast_shape,
-      loop_iterations
+      broadcast_shape
     ) as number[],
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: shape_after_removing_extra_dims }
@@ -900,7 +937,7 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null
 export class Matmul extends BinaryOperation {
   private cache: [Tensor, Tensor];
   public forward(a: Tensor, b: Tensor): Tensor {
-    if(a.requires_grad || b.requires_grad) {
+    if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _matmul_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
@@ -924,7 +961,9 @@ const _lt_kernel = gpu.createKernel(
     return (a[a_index] < b[b_index]) ? 1 : 0;
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -938,10 +977,9 @@ function _lt_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
     shape_length: broadcast_shape.length
   });
   kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
-  
+
   return new Tensor(
     kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
-    // data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: broadcast_shape }
   );
@@ -950,7 +988,7 @@ function _lt_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 export class Lt extends BinaryOperation {
   private cache: [Tensor, Tensor];
   public forward(a: Tensor, b: Tensor): Tensor {
-    if(a.requires_grad || b.requires_grad) {
+    if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _lt_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
@@ -972,7 +1010,9 @@ const _gt_kernel = gpu.createKernel(
     return (a[a_index] > b[b_index]) ? 1 : 0;
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -986,10 +1026,9 @@ function _gt_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
     shape_length: broadcast_shape.length
   });
   kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
-  
+
   return new Tensor(
     kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
-    // data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: broadcast_shape }
   );
@@ -998,7 +1037,7 @@ function _gt_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 export class Gt extends BinaryOperation {
   private cache: [Tensor, Tensor];
   public forward(a: Tensor, b: Tensor): Tensor {
-    if(a.requires_grad || b.requires_grad) {
+    if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _gt_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
@@ -1020,7 +1059,9 @@ const _le_kernel = gpu.createKernel(
     return (a[a_index] <= b[b_index]) ? 1 : 0;
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -1034,10 +1075,9 @@ function _le_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
     shape_length: broadcast_shape.length
   });
   kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
-  
+
   return new Tensor(
     kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
-    // data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: broadcast_shape }
   );
@@ -1046,7 +1086,7 @@ function _le_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 export class Le extends BinaryOperation {
   private cache: [Tensor, Tensor];
   public forward(a: Tensor, b: Tensor): Tensor {
-    if(a.requires_grad || b.requires_grad) {
+    if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _le_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
@@ -1068,7 +1108,9 @@ const _ge_kernel = gpu.createKernel(
     return (a[a_index] >= b[b_index]) ? 1 : 0;
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -1082,10 +1124,9 @@ function _ge_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
     shape_length: broadcast_shape.length
   });
   kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
-  
+
   return new Tensor(
     kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
-    // data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: broadcast_shape }
   );
@@ -1094,7 +1135,7 @@ function _ge_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 export class Ge extends BinaryOperation {
   private cache: [Tensor, Tensor];
   public forward(a: Tensor, b: Tensor): Tensor {
-    if(a.requires_grad || b.requires_grad) {
+    if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _ge_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
@@ -1116,7 +1157,9 @@ const _eq_kernel = gpu.createKernel(
     return (a[a_index] == b[b_index]) ? 1 : 0;
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -1130,10 +1173,9 @@ function _eq_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
     shape_length: broadcast_shape.length
   });
   kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
-  
+
   return new Tensor(
     kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
-    // data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: broadcast_shape }
   );
@@ -1142,7 +1184,7 @@ function _eq_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 export class Eq extends BinaryOperation {
   private cache: [Tensor, Tensor];
   public forward(a: Tensor, b: Tensor): Tensor {
-    if(a.requires_grad || b.requires_grad) {
+    if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _eq_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
@@ -1164,7 +1206,9 @@ const _ne_kernel = gpu.createKernel(
     return (a[a_index] != b[b_index]) ? 1 : 0;
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -1178,10 +1222,9 @@ function _ne_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
     shape_length: broadcast_shape.length
   });
   kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
-  
+
   return new Tensor(
     kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
-    // data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: broadcast_shape }
   );
@@ -1190,7 +1233,7 @@ function _ne_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 export class Ne extends BinaryOperation {
   private cache: [Tensor, Tensor];
   public forward(a: Tensor, b: Tensor): Tensor {
-    if(a.requires_grad || b.requires_grad) {
+    if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _ne_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);

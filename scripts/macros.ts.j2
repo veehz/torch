@@ -7,7 +7,9 @@ const _{{ name }}_kernel = gpu.createKernel(
     return {{ operation }};
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -21,10 +23,9 @@ function _{{ name }}_tensor(a: Tensor, b: Tensor, operation: Operation | null = 
     shape_length: broadcast_shape.length
   });
   kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
-  
+
   return new Tensor(
     kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
-    // data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: broadcast_shape }
   );
@@ -39,7 +40,9 @@ const _{{ name }}_kernel = gpu.createKernel(
     return {{ operation }};
   },
   {
-    dynamicOutput: true
+    dynamicOutput: true,
+    pipeline: true,
+    immutable: true
   }
 );
 
@@ -60,7 +63,7 @@ function _{{ name }}_tensor(a: Tensor, operation: Operation | null = null): Tens
 export class {{ classname }} extends BinaryOperation {
   private cache: [Tensor, Tensor];
   public forward(a: Tensor, b: Tensor): Tensor {
-    if(a.requires_grad || b.requires_grad) {
+    if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _{{ opname }}_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
@@ -80,7 +83,7 @@ registerOperation('{{ opname }}', {{ classname }});
 export class {{ classname }} extends UnaryOperation {
   private cache: [Tensor];
   public forward(a: Tensor): Tensor {
-    if(a.requires_grad) {
+    if (a.requires_grad) {
       this.cache = [a];
     }
     return _{{ opname }}_tensor(a, a.requires_grad ? this : null);

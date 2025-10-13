@@ -8,7 +8,7 @@ describe("Functional", () => {
       const t2 = new Tensor([20]);
       const result = torch.add(t1, t2);
 
-      expect(Array.from(result.data)).toEqual([30]);
+      expect(Array.from(result.toArray())).toEqual([30]);
       expect(result.shape).toEqual([1]);
     });
 
@@ -17,7 +17,7 @@ describe("Functional", () => {
       const t2 = new Tensor([1]);
       const result = torch.add(t1, t2);
 
-      expect(Array.from(result.data)).toEqual([11, 21, 31]);
+      expect(Array.from(result.toArray())).toEqual([11, 21, 31]);
       expect(result.shape).toEqual([3]);
     });
 
@@ -26,7 +26,7 @@ describe("Functional", () => {
       const t2 = new Tensor([4, 5, 6]);
       const result = torch.add(t1, t2);
 
-      expect(Array.from(result.data)).toEqual([5, 7, 9]);
+      expect(Array.from(result.toArray())).toEqual([5, 7, 9]);
       expect(result.shape).toEqual([3]);
     });
   });
@@ -37,7 +37,7 @@ describe("Functional", () => {
       const t2 = new Tensor([20]);
       const result = torch.mul(t1, t2);
 
-      expect(Array.from(result.data)).toEqual([200]);
+      expect(Array.from(result.toArray())).toEqual([200]);
       expect(result.shape).toEqual([1]);
     });
   });
@@ -48,7 +48,7 @@ describe("Functional", () => {
       const t2 = new Tensor([1]);
       const result = torch.mul(t1, t2);
 
-      expect(Array.from(result.data)).toEqual([10, 20, 30]);
+      expect(Array.from(result.toArray())).toEqual([10, 20, 30]);
       expect(result.shape).toEqual([3]);
     });
   });
@@ -59,7 +59,7 @@ describe("Functional", () => {
       const t2 = new Tensor([20]);
       const result = torch.matmul(t1, t2);
 
-      expect(Array.from(result.data)).toEqual([200]);
+      expect(Array.from(result.toArray())).toEqual([200]);
       expect(result.shape).toEqual([1]);
     });
 
@@ -68,7 +68,7 @@ describe("Functional", () => {
       const t2 = new Tensor([5, 6, 7, 8]);
       const result = torch.matmul(t1, t2);
 
-      expect(Array.from(result.data)).toEqual([70]);
+      expect(Array.from(result.toArray())).toEqual([70]);
       expect(result.shape).toEqual([1]);
     });
 
@@ -91,7 +91,7 @@ describe("Functional", () => {
         96, 86, 55
       ];
 
-      expect(Array.from(result.data)).toEqual(expected);
+      expect(Array.from(result.toArray())).toEqual(expected);
       expect(result.shape).toEqual([2, 3]);
     });
 
@@ -115,7 +115,7 @@ describe("Functional", () => {
     test("should transpose a tensor", () => {
       const t = new Tensor([[1, 2], [3, 4]]);
       const result = t.transpose(0, 1);
-      expect(Array.from(result.data)).toEqual([1, 3, 2, 4]);
+      expect(Array.from(result.toArray())).toEqual([1, 3, 2, 4]);
       expect(result.shape).toEqual([2, 2]);
     });
   });

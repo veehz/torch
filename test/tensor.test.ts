@@ -21,7 +21,7 @@ describe('Tensor', () => {
       const t2 = new Tensor([20]);
       const result = t1.add(t2);
       
-      expect(Array.from(result.data)).toEqual([30]);
+      expect(Array.from(result.toArray())).toEqual([30]);
       expect(result.shape).toEqual([1]);
     });
 
@@ -29,8 +29,10 @@ describe('Tensor', () => {
       const t1 = new Tensor([10, 20, 30]);
       const t2 = new Tensor([1]);
       const result = t1.add(t2);
+
+      console.log("shsh", result.shape, result.toArray());
       
-      expect(Array.from(result.data)).toEqual([11, 21, 31]);
+      expect(Array.from(result.toArray())).toEqual([11, 21, 31]);
       expect(result.shape).toEqual([3]);
     });
 
@@ -39,7 +41,7 @@ describe('Tensor', () => {
       const t2 = new Tensor([4, 5, 6]);
       const result = t1.add(t2);
       
-      expect(Array.from(result.data)).toEqual([5, 7, 9]);
+      expect(Array.from(result.toArray())).toEqual([5, 7, 9]);
       expect(result.shape).toEqual([3]);
     });
   });
@@ -50,7 +52,7 @@ describe('Tensor', () => {
       const t2 = new Tensor([20]);
       const result = t1.mul(t2);
 
-      expect(Array.from(result.data)).toEqual([200]);
+      expect(Array.from(result.toArray())).toEqual([200]);
       expect(result.shape).toEqual([1]);
     });
   });
@@ -61,7 +63,7 @@ describe('Tensor', () => {
       const t2 = new Tensor([1]);
       const result = t1.mul(t2);
 
-      expect(Array.from(result.data)).toEqual([10, 20, 30]);
+      expect(Array.from(result.toArray())).toEqual([10, 20, 30]);
       expect(result.shape).toEqual([3]);
     });
   });
@@ -72,7 +74,7 @@ describe('Tensor', () => {
       const t2 = new Tensor([20]);
       const result = t1.matmul(t2);
 
-      expect(Array.from(result.data)).toEqual([200]);
+      expect(Array.from(result.toArray())).toEqual([200]);
       expect(result.shape).toEqual([1]);
     });
 
@@ -95,7 +97,7 @@ describe('Tensor', () => {
         96, 86, 55
       ];
 
-      expect(Array.from(result.data)).toEqual(expected);
+      expect(Array.from(result.toArray())).toEqual(expected);
       expect(result.shape).toEqual([2, 3]);
     });
   });
