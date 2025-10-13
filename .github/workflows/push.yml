@@ -48,8 +48,14 @@ jobs:
         - name: Install dependencies
           run: yarn install --immutable
 
+        - name: Build
+          run: yarn build
+
         - name: Build docs
           run: yarn docs
+
+        - name: Copy build to docs/build
+          run: cp -r build docs/build
 
         - name: Deploy docs
           uses: peaceiris/actions-gh-pages@v4
