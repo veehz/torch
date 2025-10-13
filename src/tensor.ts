@@ -193,6 +193,9 @@ export class Tensor {
   }
 
   pow(other: Tensor | number): Tensor {
+    if (typeof other == 'number' && other % 1 === 0) {
+      return this._executeOpRaw('powint', other);
+    }
     return this._executeBinaryOp('pow', other);
   }
 

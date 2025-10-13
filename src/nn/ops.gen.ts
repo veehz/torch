@@ -18,8 +18,9 @@ const _relu_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 

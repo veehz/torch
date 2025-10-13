@@ -1,4 +1,4 @@
-{% from 'scripts/macros.ts.j2' import binary_op_base, unary_op_base, binary_op_class, unary_op_class %}
+{% from 'scripts/macros.ts.j2' import binary_op_base, unary_op_base, binary_op_class, unary_op_class, kernel_options %}
 import { Tensor } from '../tensor';
 import {
   _broadcast_shape,
@@ -25,7 +25,7 @@ import { registerOperation } from './registry';
 {{ binary_op_base("div", "a[a_index] / b[b_index]") }}
 {{ binary_op_class("Div", "div", ["a.backward(dz.div(b));", "b.backward(dz.mul(a).mul(new Tensor(-1)).div(b).div(b));"]) }}
 
-{{ binary_op_base("pow", "a[a_index] ** b[b_index]") }}
+{{ binary_op_base("pow", "Math.pow(a[a_index], b[b_index])") }}
 {{ binary_op_class("Pow", "pow", [
   "a.backward(dz.mul(b).mul(a.pow(b.sub(new Tensor(1)))));",
   "b.backward(dz.mul(a.pow(b)).mul(a.log()));"
@@ -33,6 +33,47 @@ import { registerOperation } from './registry';
 
 {{ binary_op_base("fmod", "a[a_index] % b[b_index]") }}
 {{ binary_op_class("Fmod", "fmod", ["a.backward(dz);"]) }}
+
+function _powint_kernel_function(a: number[], n: number) {
+  return Math.pow(a[this.thread.x], n);
+}
+
+const _powint_kernel = gpu.createKernel(
+  _powint_kernel_function,
+  {{ kernel_options() }}
+);
+
+function _powint_tensor(a: Tensor, n: number, operation: Operation | null = null): Tensor {
+  const kernel = _powint_kernel;
+  {# kernel.setConstants({
+    n: n
+  }); #}
+  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+
+  return new Tensor(
+    kernel(a.data, n) as number[],
+    { requires_grad: a.requires_grad },
+    { operation: operation, shape: a.shape }
+  );
+}
+
+export class PowInt extends Operation {
+  private cache: [Tensor, number];
+  public forward(a: Tensor, n: number): Tensor {
+    if (a.requires_grad) {
+      this.cache = [a, n];
+    }
+
+    return _powint_tensor(a, n, a.requires_grad ? this : null);
+  }
+  public backward(dz: Tensor): void {
+    const [a, n] = this.cache;
+
+    // backward_operations:
+    a.backward(dz.mul(n).mul(a.pow(n - 1)));
+  }
+}
+registerOperation('powint', PowInt);
 
 // unary pointwise
 
@@ -78,7 +119,7 @@ function _sum_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   );
 }
 
-{{ unary_op_class("Sum", "sum", ["const result = new Tensor(Array(a.dataLength()).fill(dz.data[0]));", "a.backward(result);"]) }}
+{{ unary_op_class("Sum", "sum", ["const result = new Tensor(Array(a.dataLength()).fill(dz.item()));", "a.backward(result);"]) }}
 
 function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   return new Tensor(
@@ -88,7 +129,7 @@ function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   );
 }
 
-{{ unary_op_class("Mean", "mean", ["const result = new Tensor(Array(a.dataLength()).fill(dz.data[0] / a.dataLength()));", "a.backward(result);"]) }}
+{{ unary_op_class("Mean", "mean", ["const result = new Tensor(Array(a.dataLength()).fill(dz.item() / a.dataLength()));", "a.backward(result);"]) }}
 
 // linalg
 
@@ -97,11 +138,7 @@ const _transpose_kernel = gpu.createKernel(
     const a_index = _get_original_index_from_transposed_index(as, dim0, dim1, this.thread.x);
     return a[a_index];
   },
-  {
-    dynamicOutput: true,
-    pipeline: true,
-    immutable: true
-  }
+  {{ kernel_options() }}
 );
 
 function _transpose_tensor(
@@ -171,11 +208,9 @@ function _matmul_kernel_function(
   return sum;
 }
 
-const _matmul_kernel = gpu.createKernel(_matmul_kernel_function, {
-  dynamicOutput: true,
-  pipeline: true,
-  immutable: true
-});
+const _matmul_kernel = gpu.createKernel(_matmul_kernel_function,
+  {{ kernel_options() }}
+);
 
 function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
   if (a.shape.length == 1 && b.shape.length == 1) {

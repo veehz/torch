@@ -22,8 +22,9 @@ const _add_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -72,8 +73,9 @@ const _sub_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -122,8 +124,9 @@ const _mul_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -172,8 +175,9 @@ const _div_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -218,12 +222,13 @@ const _pow_kernel = gpu.createKernel(
     const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
     const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
 
-    return a[a_index] ** b[b_index];
+    return Math.pow(a[a_index], b[b_index]);
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -272,8 +277,9 @@ const _fmod_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -312,6 +318,49 @@ export class Fmod extends BinaryOperation {
 }
 registerOperation('fmod', Fmod);
 
+function _powint_kernel_function(a: number[], n: number) {
+  return Math.pow(a[this.thread.x], n);
+}
+
+const _powint_kernel = gpu.createKernel(
+  _powint_kernel_function,
+  {
+    dynamicOutput: true,
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
+  }
+);
+
+function _powint_tensor(a: Tensor, n: number, operation: Operation | null = null): Tensor {
+  const kernel = _powint_kernel;
+  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+
+  return new Tensor(
+    kernel(a.data, n) as number[],
+    { requires_grad: a.requires_grad },
+    { operation: operation, shape: a.shape }
+  );
+}
+
+export class PowInt extends Operation {
+  private cache: [Tensor, number];
+  public forward(a: Tensor, n: number): Tensor {
+    if (a.requires_grad) {
+      this.cache = [a, n];
+    }
+
+    return _powint_tensor(a, n, a.requires_grad ? this : null);
+  }
+  public backward(dz: Tensor): void {
+    const [a, n] = this.cache;
+
+    // backward_operations:
+    a.backward(dz.mul(n).mul(a.pow(n - 1)));
+  }
+}
+registerOperation('powint', PowInt);
+
 // unary pointwise
 
 // function generated from unary_op_base("log", "Math.log(a[this.thread.x])")
@@ -322,8 +371,9 @@ const _log_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -363,8 +413,9 @@ const _sqrt_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -404,8 +455,9 @@ const _exp_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -445,8 +497,9 @@ const _abs_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -486,8 +539,9 @@ const _sign_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -527,8 +581,9 @@ const _neg_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -568,8 +623,9 @@ const _reciprocal_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -611,8 +667,9 @@ const _sin_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -652,8 +709,9 @@ const _cos_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -693,8 +751,9 @@ const _tan_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -749,7 +808,7 @@ export class Sum extends UnaryOperation {
     const [a] = this.cache;
 
     // backward_operations:
-    const result = new Tensor(Array(a.dataLength()).fill(dz.data[0]));
+    const result = new Tensor(Array(a.dataLength()).fill(dz.item()));
     a.backward(result);
   }
 }
@@ -776,7 +835,7 @@ export class Mean extends UnaryOperation {
     const [a] = this.cache;
 
     // backward_operations:
-    const result = new Tensor(Array(a.dataLength()).fill(dz.data[0] / a.dataLength()));
+    const result = new Tensor(Array(a.dataLength()).fill(dz.item() / a.dataLength()));
     a.backward(result);
   }
 }
@@ -791,8 +850,9 @@ const _transpose_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -863,11 +923,14 @@ function _matmul_kernel_function(
   return sum;
 }
 
-const _matmul_kernel = gpu.createKernel(_matmul_kernel_function, {
-  dynamicOutput: true,
-  pipeline: true,
-  immutable: true
-});
+const _matmul_kernel = gpu.createKernel(_matmul_kernel_function,
+  {
+    dynamicOutput: true,
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
+  }
+);
 
 function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
   if (a.shape.length == 1 && b.shape.length == 1) {
@@ -962,8 +1025,9 @@ const _lt_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -1011,8 +1075,9 @@ const _gt_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -1060,8 +1125,9 @@ const _le_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -1109,8 +1175,9 @@ const _ge_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -1158,8 +1225,9 @@ const _eq_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
@@ -1207,8 +1275,9 @@ const _ne_kernel = gpu.createKernel(
   },
   {
     dynamicOutput: true,
-    pipeline: true,
-    immutable: true
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
   }
 );
 
