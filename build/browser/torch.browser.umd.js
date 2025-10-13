@@ -19761,6 +19761,9 @@ ${result2.join("")}}`;
     reciprocal() {
       return this._executeUnaryOp("reciprocal");
     }
+    reshape(shape) {
+      return this._executeOpRaw("reshape", shape);
+    }
     // trigonometric
     sin() {
       return this._executeUnaryOp("sin");
@@ -19862,6 +19865,7 @@ ${result2.join("")}}`;
   const sign = generate_unary_function$1("sign");
   const neg = generate_unary_function$1("neg");
   const reciprocal = generate_unary_function$1("reciprocal");
+  const reshape = generate_function$1("reshape");
   const sin = generate_unary_function$1("sin");
   const cos = generate_unary_function$1("cos");
   const tan = generate_unary_function$1("tan");
@@ -20447,6 +20451,31 @@ ${result2.join("")}}`;
   __name(_Reciprocal, "Reciprocal");
   let Reciprocal = _Reciprocal;
   registerOperation("reciprocal", Reciprocal);
+  const _Reshape = class _Reshape extends Operation {
+    cache;
+    forward(a, shape) {
+      const previous_length = a.dataLength();
+      const target_length = shape.reduce((acc, val) => acc * val, 1);
+      if (previous_length !== target_length) {
+        throw new Error("Shape mismatch: " + a.shape + " and " + shape);
+      }
+      if (a.requires_grad) {
+        this.cache = [a];
+      }
+      return new Tensor(
+        a.data,
+        { requires_grad: a.requires_grad },
+        { operation: a.requires_grad ? this : null, shape }
+      );
+    }
+    backward(dz) {
+      const [a] = this.cache;
+      a.backward(dz.reshape(a.shape));
+    }
+  };
+  __name(_Reshape, "Reshape");
+  let Reshape = _Reshape;
+  registerOperation("reshape", Reshape);
   const _sin_kernel = gpu.createKernel(
     function(a) {
       return Math.sin(a[this.thread.x]);
@@ -21295,6 +21324,7 @@ ${result2.join("")}}`;
   exports2.Pow = Pow;
   exports2.PowInt = PowInt;
   exports2.Reciprocal = Reciprocal;
+  exports2.Reshape = Reshape;
   exports2.Sign = Sign;
   exports2.Sin = Sin;
   exports2.Sqrt = Sqrt;
@@ -21330,6 +21360,7 @@ ${result2.join("")}}`;
   exports2.randint = randint;
   exports2.randn = randn;
   exports2.reciprocal = reciprocal;
+  exports2.reshape = reshape;
   exports2.sign = sign;
   exports2.sin = sin;
   exports2.sqrt = sqrt;

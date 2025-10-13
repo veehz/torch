@@ -40,6 +40,7 @@ export declare class Tensor {
     sign(): Tensor;
     neg(): Tensor;
     reciprocal(): Tensor;
+    reshape(shape: number[]): Tensor;
     sin(): Tensor;
     cos(): Tensor;
     tan(): Tensor;

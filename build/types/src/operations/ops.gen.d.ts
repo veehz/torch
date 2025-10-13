@@ -70,6 +70,11 @@ export declare class Reciprocal extends UnaryOperation {
     forward(a: Tensor): Tensor;
     backward(dz: Tensor): void;
 }
+export declare class Reshape extends Operation {
+    private cache;
+    forward(a: Tensor, shape: number[]): Tensor;
+    backward(dz: Tensor): void;
+}
 export declare class Sin extends UnaryOperation {
     private cache;
     forward(a: Tensor): Tensor;

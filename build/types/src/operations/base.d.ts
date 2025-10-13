@@ -1,6 +1,6 @@
 import { Tensor } from '../tensor';
 declare abstract class Operation {
-    abstract forward(...args: (Tensor | number)[]): Tensor;
+    abstract forward(...args: (Tensor | number | number[])[]): Tensor;
     abstract backward(dz: Tensor): void;
 }
 declare abstract class UnaryOperation extends Operation {

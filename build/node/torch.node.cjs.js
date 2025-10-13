@@ -19384,6 +19384,9 @@ class Tensor {
   reciprocal() {
     return this._executeUnaryOp("reciprocal");
   }
+  reshape(shape) {
+    return this._executeOpRaw("reshape", shape);
+  }
   // trigonometric
   sin() {
     return this._executeUnaryOp("sin");
@@ -19474,6 +19477,7 @@ const abs = generate_unary_function$1("abs");
 const sign = generate_unary_function$1("sign");
 const neg = generate_unary_function$1("neg");
 const reciprocal = generate_unary_function$1("reciprocal");
+const reshape = generate_function("reshape");
 const sin = generate_unary_function$1("sin");
 const cos = generate_unary_function$1("cos");
 const tan = generate_unary_function$1("tan");
@@ -20016,6 +20020,29 @@ class Reciprocal extends UnaryOperation {
   }
 }
 registerOperation("reciprocal", Reciprocal);
+class Reshape extends Operation {
+  cache;
+  forward(a, shape) {
+    const previous_length = a.dataLength();
+    const target_length = shape.reduce((acc, val) => acc * val, 1);
+    if (previous_length !== target_length) {
+      throw new Error("Shape mismatch: " + a.shape + " and " + shape);
+    }
+    if (a.requires_grad) {
+      this.cache = [a];
+    }
+    return new Tensor(
+      a.data,
+      { requires_grad: a.requires_grad },
+      { operation: a.requires_grad ? this : null, shape }
+    );
+  }
+  backward(dz) {
+    const [a] = this.cache;
+    a.backward(dz.reshape(a.shape));
+  }
+}
+registerOperation("reshape", Reshape);
 const _sin_kernel = gpu.createKernel(
   function(a) {
     return Math.sin(a[this.thread.x]);
@@ -20781,6 +20808,7 @@ exports.Neg = Neg;
 exports.Pow = Pow;
 exports.PowInt = PowInt;
 exports.Reciprocal = Reciprocal;
+exports.Reshape = Reshape;
 exports.Sign = Sign;
 exports.Sin = Sin;
 exports.Sqrt = Sqrt;
@@ -20816,6 +20844,7 @@ exports.rand = rand;
 exports.randint = randint;
 exports.randn = randn;
 exports.reciprocal = reciprocal;
+exports.reshape = reshape;
 exports.sign = sign;
 exports.sin = sin;
 exports.sqrt = sqrt;
