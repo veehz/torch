@@ -232,7 +232,11 @@ export class Tensor {
   reciprocal(): Tensor {
     return this._executeUnaryOp('reciprocal');
   }
-  
+
+  reshape(shape: number[]): Tensor {
+    return this._executeOpRaw('reshape', shape);
+  }
+ 
   // trigonometric
 
   sin(): Tensor {

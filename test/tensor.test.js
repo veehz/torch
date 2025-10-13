@@ -34,8 +34,6 @@ describe('Tensor', () => {
       const t2 = new Tensor([1]);
       const result = t1.add(t2);
 
-      console.log('shsh', result.shape, result.toArray());
-
       assert.deepStrictEqual(Array.from(result.toArray()), [11, 21, 31]);
       assert.deepStrictEqual(result.shape, [3]);
     });
@@ -100,6 +98,15 @@ describe('Tensor', () => {
 
       assert.deepStrictEqual(Array.from(result.toArray()), expected);
       assert.deepStrictEqual(result.shape, [2, 3]);
+    });
+  });
+
+  describe('Reshape', () => {
+    it('should reshape a tensor', () => {
+      const t = new Tensor([1, 2, 3, 4]);
+      const result = t.reshape([2, 2]);
+      assert.deepStrictEqual(Array.from(result.toArray()), [1, 2, 3, 4]);
+      assert.deepStrictEqual(result.shape, [2, 2]);
     });
   });
 });

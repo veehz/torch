@@ -657,6 +657,35 @@ export class Reciprocal extends UnaryOperation {
 }
 registerOperation('reciprocal', Reciprocal);
 
+export class Reshape extends Operation {
+  private cache: [Tensor];
+  public forward(a: Tensor, shape: number[]) {
+    const previous_length = a.dataLength();
+    const target_length = shape.reduce((acc, val) => acc * val, 1);
+
+    if (previous_length !== target_length) {
+      throw new Error('Shape mismatch: ' + a.shape + ' and ' + shape);
+    }
+
+    if (a.requires_grad) {
+      this.cache = [a];
+    }
+
+    return new Tensor(
+      a.data,
+      { requires_grad: a.requires_grad },
+      { operation: a.requires_grad ? this : null, shape }
+    );
+  }
+  public backward(dz: Tensor) {
+    const [a] = this.cache;
+
+    // backward_operations:
+    a.backward(dz.reshape(a.shape));
+  }
+}
+registerOperation('reshape', Reshape);
+
 // trigonometric
 
 // function generated from unary_op_base("sin", "Math.sin(a[this.thread.x])")

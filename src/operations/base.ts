@@ -1,7 +1,7 @@
 import { Tensor } from '../tensor';
 
 abstract class Operation {
-  abstract forward(...args: (Tensor | number)[]): Tensor;
+  abstract forward(...args: (Tensor | number | number[])[]): Tensor;
   abstract backward(dz: Tensor): void;
 }
 
