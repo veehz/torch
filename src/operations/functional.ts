@@ -53,6 +53,7 @@ export const sign = generate_unary_function('sign');
 export const neg = generate_unary_function('neg');
 export const reciprocal = generate_unary_function('reciprocal');
 export const reshape = generate_function('reshape');
+export const unsqueeze = generate_function('unsqueeze');
 
 // trigonometric
 

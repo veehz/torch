@@ -236,7 +236,11 @@ export class Tensor {
   reshape(shape: number[]): Tensor {
     return this._executeOpRaw('reshape', shape);
   }
- 
+
+  unsqueeze(dim: number): Tensor {
+    return this._executeOpRaw('unsqueeze', dim);
+  }
+
   // trigonometric
 
   sin(): Tensor {

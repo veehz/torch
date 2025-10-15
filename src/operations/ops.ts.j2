@@ -127,6 +127,35 @@ export class Reshape extends Operation {
 }
 registerOperation('reshape', Reshape);
 
+export class Unsqueeze extends Operation {
+  private cache: [Tensor];
+  public forward(a: Tensor, dim: number) {
+    if (a.requires_grad) {
+      this.cache = [a];
+    }
+
+    if (dim < 0) {
+      dim += a.shape.length + 1;
+    }
+
+    const shape = [...a.shape];
+    shape.splice(dim, 0, 1);
+
+    return new Tensor(
+      a.data,
+      { requires_grad: a.requires_grad },
+      { operation: a.requires_grad ? this : null, shape }
+    );
+  }
+  public backward(dz: Tensor) {
+    const [a] = this.cache;
+
+    // backward_operations:
+    a.backward(dz.reshape(a.shape));
+  }
+}
+registerOperation('unsqueeze', Unsqueeze);
+
 // trigonometric
 
 {{ unary_op_base("sin", "Math.sin(a[this.thread.x])") }}

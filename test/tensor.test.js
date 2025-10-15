@@ -108,5 +108,75 @@ describe('Tensor', () => {
       assert.deepStrictEqual(Array.from(result.toArray()), [1, 2, 3, 4]);
       assert.deepStrictEqual(result.shape, [2, 2]);
     });
+
+    it('should not reshape a tensor if the shape is not compatible', () => {
+      const t = new Tensor([1, 2, 3, 4]);
+      assert.throws(() => t.reshape([2, 3]), Error);
+    });
+
+    it('should reshape a tensor with different dimensions', () => {
+      const t = new Tensor([1, 2, 3, 4, 5, 6]);
+      const result = t.reshape([2, 3]);
+      assert.deepStrictEqual(Array.from(result.toArray()), [1, 2, 3, 4, 5, 6]);
+      assert.deepStrictEqual(result.shape, [2, 3]);
+
+      const result2 = t.reshape([3, 2]);
+      assert.deepStrictEqual(Array.from(result2.toArray()), [1, 2, 3, 4, 5, 6]);
+      assert.deepStrictEqual(result2.shape, [3, 2]);
+
+      const result3 = t.reshape([6]);
+      assert.deepStrictEqual(Array.from(result3.toArray()), [1, 2, 3, 4, 5, 6]);
+      assert.deepStrictEqual(result3.shape, [6]);
+
+      const result4 = t.reshape([1, 2, 3]);
+      assert.deepStrictEqual(Array.from(result4.toArray()), [1, 2, 3, 4, 5, 6]);
+      assert.deepStrictEqual(result4.shape, [1, 2, 3]);
+    });
+  });
+
+  describe('Unsqueeze', () => {
+    it('should unsqueeze a tensor', () => {
+      const t = new Tensor([1, 2, 3]);
+      let result = t.unsqueeze(0);
+      assert.deepStrictEqual(Array.from(result.toArray()), [1, 2, 3]);
+      assert.deepStrictEqual(result.shape, [1, 3]);
+
+      let s = new Tensor([1, 2, 3, 4, 5, 6]);
+      s = s.reshape([2, 3]);
+
+      result = s.unsqueeze(0);
+      assert.deepStrictEqual(Array.from(result.toArray()), [1, 2, 3, 4, 5, 6]);
+      assert.deepStrictEqual(result.shape, [1, 2, 3]);
+
+      result = s.unsqueeze(1);
+      assert.deepStrictEqual(Array.from(result.toArray()), [1, 2, 3, 4, 5, 6]);
+      assert.deepStrictEqual(result.shape, [2, 1, 3]);
+
+      result = s.unsqueeze(2);
+      assert.deepStrictEqual(Array.from(result.toArray()), [1, 2, 3, 4, 5, 6]);
+      assert.deepStrictEqual(result.shape, [2, 3, 1]);
+    });
+
+    it('should unsqueeze a tensor with negative dimension', () => {
+      const t = new Tensor([1, 2, 3]);
+      let result = t.unsqueeze(-1);
+      assert.deepStrictEqual(Array.from(result.toArray()), [1, 2, 3]);
+      assert.deepStrictEqual(result.shape, [3, 1]);
+
+      let s = new Tensor([1, 2, 3, 4, 5, 6]);
+      s = s.reshape([2, 3]);
+
+      result = s.unsqueeze(-3);
+      assert.deepStrictEqual(Array.from(result.toArray()), [1, 2, 3, 4, 5, 6]);
+      assert.deepStrictEqual(result.shape, [1, 2, 3]);
+
+      result = s.unsqueeze(-2);
+      assert.deepStrictEqual(Array.from(result.toArray()), [1, 2, 3, 4, 5, 6]);
+      assert.deepStrictEqual(result.shape, [2, 1, 3]);
+
+      result = s.unsqueeze(-1);
+      assert.deepStrictEqual(Array.from(result.toArray()), [1, 2, 3, 4, 5, 6]);
+      assert.deepStrictEqual(result.shape, [2, 3, 1]);
+    });
   });
 });
