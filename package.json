@@ -32,16 +32,20 @@
     "build": "npm run clean && npm run build:node && npm run build:browser",
     "docs": "typedoc --out docs src",
     "generate": "python3 scripts/generate.py",
+    "serve": "http-server -p 8080 -c-1 .",
     "test": "mocha test/**/*.test.ts test/**/*.test.js",
-    "test:watch": "mocha --watch test/**/*.test.ts test/**/*.test.js"
+    "test:watch": "mocha --watch test/**/*.test.ts test/**/*.test.js",
+    "watch": "concurrently \"yarn:build:browser:watch\" \"yarn:build:node:watch\" \"yarn:test:watch\""
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^24.6.2",
     "chai": "^6.2.0",
+    "concurrently": "^9.2.1",
     "eslint": "^9.37.0",
     "eslint-plugin-import": "^2.32.0",
+    "http-server": "^14.1.1",
     "mocha": "^11.7.4",
     "prettier": "^3.6.2",
     "rimraf": "^6.0.1",
