@@ -26,7 +26,9 @@
   "scripts": {
     "clean": "rimraf build",
     "build:browser": "vite build --config vite.config.browser.ts",
+    "build:browser:watch": "vite build --config vite.config.browser.ts --watch",
     "build:node": "vite build --config vite.config.node.ts",
+    "build:node:watch": "vite build --config vite.config.node.ts --watch",
     "build": "npm run clean && npm run build:node && npm run build:browser",
     "docs": "typedoc --out docs src",
     "generate": "python3 scripts/generate.py",
