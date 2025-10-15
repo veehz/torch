@@ -75,6 +75,11 @@ export declare class Reshape extends Operation {
     forward(a: Tensor, shape: number[]): Tensor;
     backward(dz: Tensor): void;
 }
+export declare class Unsqueeze extends Operation {
+    private cache;
+    forward(a: Tensor, dim: number): Tensor;
+    backward(dz: Tensor): void;
+}
 export declare class Sin extends UnaryOperation {
     private cache;
     forward(a: Tensor): Tensor;

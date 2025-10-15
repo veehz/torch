@@ -19764,6 +19764,9 @@ ${result2.join("")}}`;
     reshape(shape) {
       return this._executeOpRaw("reshape", shape);
     }
+    unsqueeze(dim) {
+      return this._executeOpRaw("unsqueeze", dim);
+    }
     // trigonometric
     sin() {
       return this._executeUnaryOp("sin");
@@ -19866,6 +19869,7 @@ ${result2.join("")}}`;
   const neg = generate_unary_function$1("neg");
   const reciprocal = generate_unary_function$1("reciprocal");
   const reshape = generate_function$1("reshape");
+  const unsqueeze = generate_function$1("unsqueeze");
   const sin = generate_unary_function$1("sin");
   const cos = generate_unary_function$1("cos");
   const tan = generate_unary_function$1("tan");
@@ -20476,6 +20480,31 @@ ${result2.join("")}}`;
   __name(_Reshape, "Reshape");
   let Reshape = _Reshape;
   registerOperation("reshape", Reshape);
+  const _Unsqueeze = class _Unsqueeze extends Operation {
+    cache;
+    forward(a, dim) {
+      if (a.requires_grad) {
+        this.cache = [a];
+      }
+      if (dim < 0) {
+        dim += a.shape.length + 1;
+      }
+      const shape = [...a.shape];
+      shape.splice(dim, 0, 1);
+      return new Tensor(
+        a.data,
+        { requires_grad: a.requires_grad },
+        { operation: a.requires_grad ? this : null, shape }
+      );
+    }
+    backward(dz) {
+      const [a] = this.cache;
+      a.backward(dz.reshape(a.shape));
+    }
+  };
+  __name(_Unsqueeze, "Unsqueeze");
+  let Unsqueeze = _Unsqueeze;
+  registerOperation("unsqueeze", Unsqueeze);
   const _sin_kernel = gpu.createKernel(
     function(a) {
       return Math.sin(a[this.thread.x]);
@@ -21032,16 +21061,6 @@ ${result2.join("")}}`;
   __name(_Ne, "Ne");
   let Ne = _Ne;
   registerOperation("ne", Ne);
-  function linspace(start, end, steps) {
-    const data = [];
-    const step = (end - start) / (steps - 1);
-    for (let i = 0; i < steps - 1; i++) {
-      data.push(start + i * step);
-    }
-    data.push(end);
-    return new Tensor(data);
-  }
-  __name(linspace, "linspace");
   function get_shape_from_args(args) {
     if (Array.isArray(args[0])) {
       return args[0];
@@ -21049,20 +21068,6 @@ ${result2.join("")}}`;
     return args;
   }
   __name(get_shape_from_args, "get_shape_from_args");
-  function ones(...args) {
-    const shape = get_shape_from_args(args);
-    const tensor = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(1));
-    tensor.shape = shape;
-    return tensor;
-  }
-  __name(ones, "ones");
-  function zeros(...args) {
-    const shape = get_shape_from_args(args);
-    const tensor = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(0));
-    tensor.shape = shape;
-    return tensor;
-  }
-  __name(zeros, "zeros");
   function randn(...args) {
     const shape = get_shape_from_args(args);
     const tensor = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(Math.random()));
@@ -21085,6 +21090,38 @@ ${result2.join("")}}`;
     return tensor;
   }
   __name(randint, "randint");
+  function ones(...args) {
+    const shape = get_shape_from_args(args);
+    const tensor = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(1));
+    tensor.shape = shape;
+    return tensor;
+  }
+  __name(ones, "ones");
+  function zeros(...args) {
+    const shape = get_shape_from_args(args);
+    const tensor = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(0));
+    tensor.shape = shape;
+    return tensor;
+  }
+  __name(zeros, "zeros");
+  function linspace(start, end, steps) {
+    const data = [];
+    const step = (end - start) / (steps - 1);
+    for (let i = 0; i < steps - 1; i++) {
+      data.push(start + i * step);
+    }
+    data.push(end);
+    return new Tensor(data);
+  }
+  __name(linspace, "linspace");
+  function arange(start, end = void 0, step = 1) {
+    const data = [];
+    for (let i = start; i < end; i += step) {
+      data.push(i);
+    }
+    return new Tensor(data);
+  }
+  __name(arange, "arange");
   const _relu_kernel = gpu.createKernel(
     function(a) {
       return Math.max(a[this.thread.x], 0);
@@ -21333,8 +21370,10 @@ ${result2.join("")}}`;
   exports2.Tan = Tan;
   exports2.Tensor = Tensor;
   exports2.Transpose = Transpose;
+  exports2.Unsqueeze = Unsqueeze;
   exports2.abs = abs;
   exports2.add = add;
+  exports2.arange = arange;
   exports2.cos = cos;
   exports2.div = div;
   exports2.eq = eq;
@@ -21368,6 +21407,7 @@ ${result2.join("")}}`;
   exports2.sum = sum;
   exports2.tan = tan;
   exports2.transpose = transpose;
+  exports2.unsqueeze = unsqueeze;
   exports2.zeros = zeros;
   Object.defineProperty(exports2, Symbol.toStringTag, { value: "Module" });
 }));

@@ -13,6 +13,7 @@ export declare const sign: (a: Tensor | number) => Tensor;
 export declare const neg: (a: Tensor | number) => Tensor;
 export declare const reciprocal: (a: Tensor | number) => Tensor;
 export declare const reshape: (...args: (Tensor | number)[]) => Tensor;
+export declare const unsqueeze: (...args: (Tensor | number)[]) => Tensor;
 export declare const sin: (a: Tensor | number) => Tensor;
 export declare const cos: (a: Tensor | number) => Tensor;
 export declare const tan: (a: Tensor | number) => Tensor;
