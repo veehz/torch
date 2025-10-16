@@ -9,15 +9,15 @@
   "files": [
     "build"
   ],
-  "main": "./build/node/torch.node.cjs.js",
-  "module": "./build/node/torch.node.es.js",
+  "main": "./build/node/torch.node.cjs",
+  "module": "./build/node/torch.node.es.mjs",
   "types": "./build/types/src/index.d.ts",
   "exports": {
     ".": {
       "types": "./build/types/src/index.d.ts",
       "browser": "./build/browser/torch.browser.es.js",
-      "import": "./build/node/torch.node.es.js",
-      "require": "./build/node/torch.node.cjs.js"
+      "import": "./build/node/torch.node.es.mjs",
+      "require": "./build/node/torch.node.cjs"
     }
   },
   "mocha": {
