@@ -86,6 +86,9 @@ registerOperation('powint', PowInt);
 {{ unary_op_base("exp", "Math.exp(a[this.thread.x])") }}
 {{ unary_op_class("Exp", "exp", ["a.backward(dz.mul(a.exp()));"]) }}
 
+{{ unary_op_base("square", "a[this.thread.x] * a[this.thread.x]") }}
+{{ unary_op_class("Square", "square", ["a.backward(dz.mul(a).mul(new Tensor(2)));"]) }}
+
 {{ unary_op_base("abs", "Math.abs(a[this.thread.x])") }}
 {{ unary_op_class("Abs", "abs", ["a.backward(dz.mul(functional.sign(a)));"]) }}
 

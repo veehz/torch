@@ -48,6 +48,7 @@ export const fmod = generate_binary_function('fmod');
 export const log = generate_unary_function('log');
 export const sqrt = generate_unary_function('sqrt');
 export const exp = generate_unary_function('exp');
+export const square = generate_unary_function('square');
 export const abs = generate_unary_function('abs');
 export const sign = generate_unary_function('sign');
 export const neg = generate_unary_function('neg');

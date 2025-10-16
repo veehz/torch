@@ -217,6 +217,10 @@ export class Tensor {
     return this._executeUnaryOp('exp');
   }
 
+  square(): Tensor {
+    return this._executeUnaryOp('square');
+  }
+
   abs(): Tensor {
     return this._executeUnaryOp('abs');
   }

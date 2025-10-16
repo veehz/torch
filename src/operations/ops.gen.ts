@@ -489,6 +489,48 @@ export class Exp extends UnaryOperation {
 }
 registerOperation('exp', Exp);
 
+// function generated from unary_op_base("square", "a[this.thread.x] * a[this.thread.x]")
+
+const _square_kernel = gpu.createKernel(
+  function (a: number[]) {
+    return a[this.thread.x] * a[this.thread.x];
+  },
+  {
+    dynamicOutput: true,
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
+  }
+);
+
+function _square_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+  const kernel = _square_kernel;
+  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+
+  return new Tensor(
+    kernel(a.data) as number[],
+    { requires_grad: a.requires_grad },
+    { operation: operation, shape: a.shape }
+  );
+}
+// class generated from unary_op_class("Square", "square", backward_operations)
+export class Square extends UnaryOperation {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
+    if (a.requires_grad) {
+      this.cache = [a];
+    }
+    return _square_tensor(a, a.requires_grad ? this : null);
+  }
+  public backward(dz: Tensor): void {
+    const [a] = this.cache;
+
+    // backward_operations:
+    a.backward(dz.mul(a).mul(new Tensor(2)));
+  }
+}
+registerOperation('square', Square);
+
 // function generated from unary_op_base("abs", "Math.abs(a[this.thread.x])")
 
 const _abs_kernel = gpu.createKernel(
