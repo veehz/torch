@@ -57,6 +57,9 @@ jobs:
         - name: Copy build to docs/build
           run: cp -r build docs/build
 
+        - name: Copy examples to docs/examples
+          run: cp -r examples docs/examples
+
         - name: Deploy docs
           uses: peaceiris/actions-gh-pages@v4
           with:
