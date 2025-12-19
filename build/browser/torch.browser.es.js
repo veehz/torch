@@ -19745,6 +19745,9 @@ const _Tensor = class _Tensor {
   exp() {
     return this._executeUnaryOp("exp");
   }
+  square() {
+    return this._executeUnaryOp("square");
+  }
   abs() {
     return this._executeUnaryOp("abs");
   }
@@ -19860,6 +19863,7 @@ const fmod = generate_binary_function$1("fmod");
 const log = generate_unary_function$1("log");
 const sqrt = generate_unary_function$1("sqrt");
 const exp = generate_unary_function$1("exp");
+const square = generate_unary_function$1("square");
 const abs = generate_unary_function$1("abs");
 const sign = generate_unary_function$1("sign");
 const neg = generate_unary_function$1("neg");
@@ -20304,6 +20308,43 @@ const _Exp = class _Exp extends UnaryOperation {
 __name(_Exp, "Exp");
 let Exp = _Exp;
 registerOperation("exp", Exp);
+const _square_kernel = gpu.createKernel(
+  function(a) {
+    return a[this.thread.x] * a[this.thread.x];
+  },
+  {
+    dynamicOutput: true,
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
+  }
+);
+function _square_tensor(a, operation = null) {
+  const kernel = _square_kernel;
+  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  return new Tensor(
+    kernel(a.data),
+    { requires_grad: a.requires_grad },
+    { operation, shape: a.shape }
+  );
+}
+__name(_square_tensor, "_square_tensor");
+const _Square = class _Square extends UnaryOperation {
+  cache;
+  forward(a) {
+    if (a.requires_grad) {
+      this.cache = [a];
+    }
+    return _square_tensor(a, a.requires_grad ? this : null);
+  }
+  backward(dz) {
+    const [a] = this.cache;
+    a.backward(dz.mul(a).mul(new Tensor(2)));
+  }
+};
+__name(_Square, "Square");
+let Square = _Square;
+registerOperation("square", Square);
 const _abs_kernel = gpu.createKernel(
   function(a) {
     return Math.abs(a[this.thread.x]);
@@ -21363,6 +21404,7 @@ export {
   Sign,
   Sin,
   Sqrt,
+  Square,
   Sub,
   Sum,
   Tan,
@@ -21401,6 +21443,7 @@ export {
   sign,
   sin,
   sqrt,
+  square,
   sub,
   sum,
   tan,

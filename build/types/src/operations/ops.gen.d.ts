@@ -50,6 +50,11 @@ export declare class Exp extends UnaryOperation {
     forward(a: Tensor): Tensor;
     backward(dz: Tensor): void;
 }
+export declare class Square extends UnaryOperation {
+    private cache;
+    forward(a: Tensor): Tensor;
+    backward(dz: Tensor): void;
+}
 export declare class Abs extends UnaryOperation {
     private cache;
     forward(a: Tensor): Tensor;

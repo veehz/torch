@@ -8,6 +8,7 @@ export declare const fmod: (a: Tensor | number, b: Tensor | number) => Tensor;
 export declare const log: (a: Tensor | number) => Tensor;
 export declare const sqrt: (a: Tensor | number) => Tensor;
 export declare const exp: (a: Tensor | number) => Tensor;
+export declare const square: (a: Tensor | number) => Tensor;
 export declare const abs: (a: Tensor | number) => Tensor;
 export declare const sign: (a: Tensor | number) => Tensor;
 export declare const neg: (a: Tensor | number) => Tensor;

@@ -36,6 +36,7 @@ export declare class Tensor {
     log(): Tensor;
     sqrt(): Tensor;
     exp(): Tensor;
+    square(): Tensor;
     abs(): Tensor;
     sign(): Tensor;
     neg(): Tensor;

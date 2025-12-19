@@ -1,7 +1,21 @@
 # This is a very rough draft.
 
 # assume js_torch is available
-from pyodide.ffi import JsProxy
+from pyodide.ffi import JsProxy, to_js
+
+def _transform(obj):
+    if isinstance(obj, Tensor):
+        return obj.get_tensor()
+    elif isinstance(obj, list) or isinstance(obj, tuple):
+        return torch_utils.to_js_list(obj)
+    else:
+        return obj
+
+def _transform_args(args):
+    return list(map(_transform, args))
+
+def _transform_kwargs(kwargs):
+    return to_js({k: _transform(v) for k, v in kwargs.items()})
 
 class Tensor:
     # dealing with when .grad is None
@@ -96,23 +110,17 @@ class Tensor:
 
     def __getattr__(self, name):
         return lambda *args, **kwargs: Tensor(self.get_tensor().__getattribute__(name)(
-            *_transform_args(args),
-            *_transform_args(kwargs)
+            *_transform_args(args), _transform_kwargs(kwargs)
         ))
 
 class _NoGrad:
     def __enter__(self):
-        self.enabled = js_torch.getGradientTrackingEnabled()
-        js_torch.setGradientTrackingEnabled(False)
+        pass
 
     def __exit__(self, type, value, traceback):
-        js_torch.setGradientTrackingEnabled(self.enabled)
+        pass
 
 class _Torch:
-    _operations = [
-        "sin", "mean", "square", "abs", "relu", "ones_like", "linspace", "ones",
-    ]
-
     no_grad = _NoGrad
 
     @property
@@ -121,8 +129,7 @@ class _Torch:
 
     def __getattr__(self, name):
         return lambda *args, **kwargs: Tensor(js_torch.__getattribute__(name)(
-            *_transform_args(args),
-            *_transform_args(kwargs)
+            *_transform_args(args), _transform_kwargs(kwargs)
         ))
 
     def Size(self, shape):
