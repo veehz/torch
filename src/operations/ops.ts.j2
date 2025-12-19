@@ -305,6 +305,11 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null
   const padded_b_shape = _pad_shape(b_shape, broadcast_shape);
 
   const kernel = _matmul_kernel;
+
+  {#- if(broadcast_shape.length < 2) { // shouldn't happen, but just in case
+    throw new Error('Shape mismatch: ' + a.shape + ' and ' + b.shape);
+  } #}
+
   kernel.setConstants({
     lp: loop_iterations,
     // assumes that _get_original_index_kernel reads from the front
