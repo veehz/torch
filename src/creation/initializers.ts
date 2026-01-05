@@ -14,3 +14,11 @@ export function zeros(...args: number[] | number[][]): Tensor {
   tensor.shape = shape;
   return tensor;
 }
+
+export function ones_like(tensor: Tensor): Tensor {
+  return ones(tensor.shape);
+}
+
+export function zeros_like(tensor: Tensor): Tensor {
+  return zeros(tensor.shape);
+}
