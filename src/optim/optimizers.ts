@@ -1,7 +1,6 @@
 import { Optimizer } from "./base";
 import { Parameter } from "../nn/module";
 import { Tensor } from "../tensor";
-import { zeros } from "../creation";
 
 export class SGD extends Optimizer {
   private state: Map<Parameter, { velocity: Tensor }> = new Map();
@@ -38,20 +37,21 @@ export class SGD extends Optimizer {
       }
 
       if (this.momentum != 0) {
-        let dampening = this.dampening;
-        if(!this.state.has(param)) {
-          this.state.set(param, { velocity: zeros(param.shape) });
-          dampening = 0;
+        if (this.state.has(param)) {
+          let buf = this.state.get(param)!.velocity;
+          buf = buf.mul(this.momentum)
+          buf = buf.add(g.mul(1 - this.dampening));
+          this.state.set(param, { velocity: buf });
+        } else {
+          this.state.set(param, { velocity: g });
         }
 
         let buf = this.state.get(param)!.velocity;
-        buf = buf.mul(this.momentum)
-        buf = buf.add(g.mul(dampening));
 
         if (this.nesterov) {
           g = g.add(buf.mul(this.momentum));
         } else {
-          g = g.add(buf);
+          g = buf;
         }
 
         this.state.set(param, { velocity: buf });
