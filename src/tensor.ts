@@ -203,6 +203,14 @@ export class Tensor {
     return this._executeBinaryOp('fmod', other);
   }
 
+  maximum(other: Tensor | number): Tensor {
+    return this._executeBinaryOp('maximum', other);
+  }
+
+  minimum(other: Tensor | number): Tensor {
+    return this._executeBinaryOp('minimum', other);
+  }
+
   // unary pointwise
 
   log(): Tensor {

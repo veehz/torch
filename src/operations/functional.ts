@@ -42,6 +42,8 @@ export const mul = generate_binary_function('mul');
 export const div = generate_binary_function('div');
 export const pow = generate_binary_function('pow');
 export const fmod = generate_binary_function('fmod');
+export const maximum = generate_binary_function('maximum');
+export const minimum = generate_binary_function('minimum');
 
 // unary pointwise
 

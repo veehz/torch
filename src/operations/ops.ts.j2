@@ -34,6 +34,13 @@ import { registerOperation } from './registry';
 {{ binary_op_base("fmod", "a[a_index] % b[b_index]") }}
 {{ binary_op_class("Fmod", "fmod", ["a.backward(dz);"]) }}
 
+{{ binary_op_base("maximum", "Math.max(a[a_index], b[b_index])") }}
+{{ binary_op_class("Maximum", "maximum", ["a.backward(dz.mul(a.ge(b)));", "b.backward(dz.mul(b.gt(a)));"]) }}
+
+{{ binary_op_base("minimum", "Math.min(a[a_index], b[b_index])") }}
+{{ binary_op_class("Minimum", "minimum", ["a.backward(dz.mul(a.le(b)));", "b.backward(dz.mul(b.lt(a)));"]) }}
+
+
 function _powint_kernel_function(a: number[], n: number) {
   return Math.pow(a[this.thread.x], n);
 }

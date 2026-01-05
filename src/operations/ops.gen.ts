@@ -318,6 +318,109 @@ export class Fmod extends BinaryOperation {
 }
 registerOperation('fmod', Fmod);
 
+const _maximum_kernel = gpu.createKernel(
+  function (a: number[], as: number[], b: number[], bs: number[], bcs: number[]) {
+    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
+    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
+
+    return Math.max(a[a_index], b[b_index]);
+  },
+  {
+    dynamicOutput: true,
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
+  }
+);
+
+function _maximum_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
+  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
+  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
+  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
+
+  const kernel = _maximum_kernel;
+  kernel.setConstants({
+    shape_length: broadcast_shape.length
+  });
+  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+
+  return new Tensor(
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
+    { requires_grad: a.requires_grad || b.requires_grad },
+    { operation: operation, shape: broadcast_shape }
+  );
+}
+// class generated from binary_op_class("Maximum", "maximum", backward_operations)
+export class Maximum extends BinaryOperation {
+  private cache: [Tensor, Tensor];
+  public forward(a: Tensor, b: Tensor): Tensor {
+    if (a.requires_grad || b.requires_grad) {
+      this.cache = [a, b];
+    }
+    return _maximum_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
+  }
+  public backward(dz: Tensor): void {
+    const [a, b] = this.cache;
+
+    // backward_operations:
+    a.backward(dz.mul(a.ge(b)));
+    b.backward(dz.mul(b.gt(a)));
+  }
+}
+registerOperation('maximum', Maximum);
+
+const _minimum_kernel = gpu.createKernel(
+  function (a: number[], as: number[], b: number[], bs: number[], bcs: number[]) {
+    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
+    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
+
+    return Math.min(a[a_index], b[b_index]);
+  },
+  {
+    dynamicOutput: true,
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
+  }
+);
+
+function _minimum_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
+  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
+  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
+  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
+
+  const kernel = _minimum_kernel;
+  kernel.setConstants({
+    shape_length: broadcast_shape.length
+  });
+  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+
+  return new Tensor(
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
+    { requires_grad: a.requires_grad || b.requires_grad },
+    { operation: operation, shape: broadcast_shape }
+  );
+}
+// class generated from binary_op_class("Minimum", "minimum", backward_operations)
+export class Minimum extends BinaryOperation {
+  private cache: [Tensor, Tensor];
+  public forward(a: Tensor, b: Tensor): Tensor {
+    if (a.requires_grad || b.requires_grad) {
+      this.cache = [a, b];
+    }
+    return _minimum_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
+  }
+  public backward(dz: Tensor): void {
+    const [a, b] = this.cache;
+
+    // backward_operations:
+    a.backward(dz.mul(a.le(b)));
+    b.backward(dz.mul(b.lt(a)));
+  }
+}
+registerOperation('minimum', Minimum);
+
+
 function _powint_kernel_function(a: number[], n: number) {
   return Math.pow(a[this.thread.x], n);
 }
