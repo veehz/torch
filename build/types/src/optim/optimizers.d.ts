@@ -11,3 +11,16 @@ export declare class SGD extends Optimizer {
     constructor(params: Parameter[], lr?: number, momentum?: number, dampening?: number, weight_decay?: number, nesterov?: boolean, maximize?: boolean);
     step(): void;
 }
+export declare class Adam extends Optimizer {
+    private state;
+    private step_count;
+    private lr;
+    private beta1;
+    private beta2;
+    private eps;
+    private weight_decay;
+    private amsgrad;
+    private maximize;
+    constructor(params: Parameter[], lr?: number, betas?: [number, number], eps?: number, weight_decay?: number, amsgrad?: boolean, maximize?: boolean);
+    step(): void;
+}

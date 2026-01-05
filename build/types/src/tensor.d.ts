@@ -33,6 +33,8 @@ export declare class Tensor {
     div(other: Tensor | number): Tensor;
     pow(other: Tensor | number): Tensor;
     fmod(other: Tensor | number): Tensor;
+    maximum(other: Tensor | number): Tensor;
+    minimum(other: Tensor | number): Tensor;
     log(): Tensor;
     sqrt(): Tensor;
     exp(): Tensor;

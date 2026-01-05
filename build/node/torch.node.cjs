@@ -254,6 +254,12 @@ class Tensor {
   fmod(other) {
     return this._executeBinaryOp("fmod", other);
   }
+  maximum(other) {
+    return this._executeBinaryOp("maximum", other);
+  }
+  minimum(other) {
+    return this._executeBinaryOp("minimum", other);
+  }
   // unary pointwise
   log() {
     return this._executeUnaryOp("log");
@@ -368,6 +374,8 @@ const mul = generate_binary_function("mul");
 const div = generate_binary_function("div");
 const pow = generate_binary_function("pow");
 const fmod = generate_binary_function("fmod");
+const maximum = generate_binary_function("maximum");
+const minimum = generate_binary_function("minimum");
 const log = generate_unary_function$1("log");
 const sqrt = generate_unary_function$1("sqrt");
 const exp = generate_unary_function$1("exp");
@@ -648,6 +656,92 @@ class Fmod extends BinaryOperation {
   }
 }
 registerOperation("fmod", Fmod);
+const _maximum_kernel = gpu.createKernel(
+  function(a, as, b, bs, bcs) {
+    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
+    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
+    return Math.max(a[a_index], b[b_index]);
+  },
+  {
+    dynamicOutput: true,
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
+  }
+);
+function _maximum_tensor(a, b, operation = null) {
+  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
+  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
+  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
+  const kernel = _maximum_kernel;
+  kernel.setConstants({
+    shape_length: broadcast_shape.length
+  });
+  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  return new Tensor(
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    { requires_grad: a.requires_grad || b.requires_grad },
+    { operation, shape: broadcast_shape }
+  );
+}
+class Maximum extends BinaryOperation {
+  cache;
+  forward(a, b) {
+    if (a.requires_grad || b.requires_grad) {
+      this.cache = [a, b];
+    }
+    return _maximum_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
+  }
+  backward(dz) {
+    const [a, b] = this.cache;
+    a.backward(dz.mul(a.ge(b)));
+    b.backward(dz.mul(b.gt(a)));
+  }
+}
+registerOperation("maximum", Maximum);
+const _minimum_kernel = gpu.createKernel(
+  function(a, as, b, bs, bcs) {
+    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
+    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
+    return Math.min(a[a_index], b[b_index]);
+  },
+  {
+    dynamicOutput: true,
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
+  }
+);
+function _minimum_tensor(a, b, operation = null) {
+  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
+  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
+  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
+  const kernel = _minimum_kernel;
+  kernel.setConstants({
+    shape_length: broadcast_shape.length
+  });
+  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  return new Tensor(
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    { requires_grad: a.requires_grad || b.requires_grad },
+    { operation, shape: broadcast_shape }
+  );
+}
+class Minimum extends BinaryOperation {
+  cache;
+  forward(a, b) {
+    if (a.requires_grad || b.requires_grad) {
+      this.cache = [a, b];
+    }
+    return _minimum_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
+  }
+  backward(dz) {
+    const [a, b] = this.cache;
+    a.backward(dz.mul(a.le(b)));
+    b.backward(dz.mul(b.lt(a)));
+  }
+}
+registerOperation("minimum", Minimum);
 function _powint_kernel_function(a, n) {
   return Math.pow(a[this.thread.x], n);
 }
@@ -1553,6 +1647,12 @@ function zeros(...args) {
   tensor.shape = shape;
   return tensor;
 }
+function ones_like(tensor) {
+  return ones(tensor.shape);
+}
+function zeros_like(tensor) {
+  return zeros(tensor.shape);
+}
 function linspace(start, end, steps) {
   const data = [];
   const step = (end - start) / (steps - 1);
@@ -1722,22 +1822,23 @@ class SGD extends Optimizer {
   step() {
     for (const param of this.params) {
       let g = this.maximize ? param.grad.mul(-1) : param.grad;
-      if (this.weight_decay != 0) {
+      if (this.weight_decay !== 0) {
         g = g.add(param.mul(this.weight_decay));
       }
-      if (this.momentum != 0) {
-        let dampening = this.dampening;
-        if (!this.state.has(param)) {
-          this.state.set(param, { velocity: zeros(param.shape) });
-          dampening = 0;
+      if (this.momentum !== 0) {
+        if (this.state.has(param)) {
+          let buf2 = this.state.get(param).velocity;
+          buf2 = buf2.mul(this.momentum);
+          buf2 = buf2.add(g.mul(1 - this.dampening));
+          this.state.set(param, { velocity: buf2 });
+        } else {
+          this.state.set(param, { velocity: g });
         }
         let buf = this.state.get(param).velocity;
-        buf = buf.mul(this.momentum);
-        buf = buf.add(g.mul(dampening));
         if (this.nesterov) {
           g = g.add(buf.mul(this.momentum));
         } else {
-          g = g.add(buf);
+          g = buf;
         }
         this.state.set(param, { velocity: buf });
       }
@@ -1746,8 +1847,62 @@ class SGD extends Optimizer {
     }
   }
 }
+class Adam extends Optimizer {
+  state = /* @__PURE__ */ new Map();
+  step_count = 0;
+  lr;
+  beta1;
+  beta2;
+  eps;
+  weight_decay;
+  amsgrad;
+  maximize;
+  constructor(params, lr = 1e-3, betas = [0.9, 0.999], eps = 1e-8, weight_decay = 0, amsgrad = false, maximize = false) {
+    super(params, {});
+    this.lr = lr;
+    this.beta1 = betas[0];
+    this.beta2 = betas[1];
+    this.eps = eps;
+    this.weight_decay = weight_decay;
+    this.amsgrad = amsgrad;
+    this.maximize = maximize;
+  }
+  step() {
+    this.step_count += 1;
+    for (const param of this.params) {
+      let grad = this.maximize ? param.grad.mul(-1) : param.grad;
+      if (this.weight_decay !== 0) {
+        grad = grad.add(param.mul(this.weight_decay));
+      }
+      if (!this.state.has(param)) {
+        this.state.set(param, {
+          m: zeros_like(param),
+          v: zeros_like(param),
+          vmax: zeros_like(param)
+        });
+      }
+      const state = this.state.get(param);
+      state.m = state.m.mul(this.beta1).add(grad.mul(1 - this.beta1));
+      state.v = state.v.mul(this.beta2).add(grad.mul(grad).mul(1 - this.beta2));
+      const biasCorrection1 = 1 - Math.pow(this.beta1, this.step_count);
+      const biasCorrection2 = 1 - Math.pow(this.beta2, this.step_count);
+      let vhat;
+      const mhat = state.m.div(biasCorrection1);
+      if (this.amsgrad) {
+        state.vmax = state.vmax.maximum(state.v);
+        vhat = state.vmax.div(biasCorrection2);
+      } else {
+        vhat = state.v.div(biasCorrection2);
+      }
+      const update = mhat.div(vhat.sqrt().add(this.eps)).mul(this.lr);
+      const newParam = param.sub(update);
+      param.data = newParam.data;
+    }
+  }
+}
 const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
+  Adam,
   Optimizer,
   SGD
 }, Symbol.toStringTag, { value: "Module" }));
@@ -1768,7 +1923,9 @@ exports.Le = Le;
 exports.Log = Log;
 exports.Lt = Lt;
 exports.Matmul = Matmul;
+exports.Maximum = Maximum;
 exports.Mean = Mean;
+exports.Minimum = Minimum;
 exports.Mul = Mul;
 exports.Ne = Ne;
 exports.Neg = Neg;
@@ -1802,12 +1959,15 @@ exports.linspace = linspace;
 exports.log = log;
 exports.lt = lt;
 exports.matmul = matmul;
+exports.maximum = maximum;
 exports.mean = mean;
+exports.minimum = minimum;
 exports.mul = mul;
 exports.ne = ne;
 exports.neg = neg;
 exports.nn = index$1;
 exports.ones = ones;
+exports.ones_like = ones_like;
 exports.optim = index;
 exports.pow = pow;
 exports.rand = rand;
@@ -1825,3 +1985,4 @@ exports.tan = tan;
 exports.transpose = transpose;
 exports.unsqueeze = unsqueeze;
 exports.zeros = zeros;
+exports.zeros_like = zeros_like;

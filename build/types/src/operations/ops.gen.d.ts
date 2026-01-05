@@ -30,6 +30,16 @@ export declare class Fmod extends BinaryOperation {
     forward(a: Tensor, b: Tensor): Tensor;
     backward(dz: Tensor): void;
 }
+export declare class Maximum extends BinaryOperation {
+    private cache;
+    forward(a: Tensor, b: Tensor): Tensor;
+    backward(dz: Tensor): void;
+}
+export declare class Minimum extends BinaryOperation {
+    private cache;
+    forward(a: Tensor, b: Tensor): Tensor;
+    backward(dz: Tensor): void;
+}
 export declare class PowInt extends Operation {
     private cache;
     forward(a: Tensor, n: number): Tensor;
