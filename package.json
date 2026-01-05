@@ -29,7 +29,7 @@
     "build:browser:watch": "vite build --config vite.config.browser.ts --watch",
     "build:node": "vite build --config vite.config.node.ts",
     "build:node:watch": "vite build --config vite.config.node.ts --watch",
-    "build": "npm run clean && npm run build:node && npm run build:browser",
+    "build": "yarn clean && yarn build:node && yarn build:browser",
     "docs": "typedoc --out docs src",
     "generate": "python3 scripts/generate.py",
     "serve": "http-server -p 8080 -c-1",
