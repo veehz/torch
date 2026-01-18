@@ -60,8 +60,11 @@ jobs:
         - name: Copy examples to docs/examples
           run: cp -r examples docs/examples
 
+        - name: Copy vendor files to docs/vendor
+          run: cp -r vendor docs/vendor
+
         - name: Deploy docs
           uses: peaceiris/actions-gh-pages@v4
           with:
-            github_token: ${{ secrets.GITHUB_TOKEN }} 
+            github_token: ${{ secrets.GITHUB_TOKEN }}
             publish_dir: ./docs # The folder the action should deploy.
