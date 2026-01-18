@@ -30,10 +30,9 @@ class Tensor:
         if isinstance(data, JsProxy):
             self.data = data
         else:
-            print("creating tensor from data", data)
+            # print("creating tensor from data", data)
             self.data = torch_utils.create_tensor_from_python_data(data, requires_grad)
-            print("created tensor", self.tolist())
-            # print("created tensor", self.data._data)
+            # print("created tensor", self.tolist())
 
     def __repr__(self):
         return f"Tensor(data={self.tolist()}{', requires_grad=True' if self.get_tensor().requires_grad else ''})"
