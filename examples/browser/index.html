@@ -7,8 +7,8 @@
   <title>torch.js browser backprop example</title>
 
   <!-- torch UMD bundle exposes global `torch` -->
-  <script src="../../vendor/gpu-browser.min.js"></script>
-  <script src="../../build/browser/torch.browser.umd.js"></script>
+  <script src="../../vendor/gpu-browser.min.js" onerror="console.log('GPU.js loading failed');"></script>
+  <script src="../../build/browser/torch.browser.umd.js" onerror="console.log('torch.js loading failed');"></script>
 </head>
 
 <body>
