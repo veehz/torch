@@ -7,7 +7,9 @@
   "repository": "git@github.com/source-academy/torch.git",
   "license": "Apache-2.0",
   "files": [
-    "build"
+    "build",
+    "examples",
+    "vendor"
   ],
   "main": "./build/node/torch.node.cjs",
   "module": "./build/node/torch.node.es.mjs",
@@ -47,6 +49,7 @@
     "eslint-plugin-import": "^2.32.0",
     "http-server": "^14.1.1",
     "mocha": "^11.7.4",
+    "pkg-pr-new": "^0.0.62",
     "prettier": "^3.6.2",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
