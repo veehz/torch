@@ -5,3 +5,8 @@ export declare class Relu extends UnaryOperation {
     forward(a: Tensor): Tensor;
     backward(dz: Tensor): void;
 }
+export declare class Sigmoid extends UnaryOperation {
+    private cache;
+    forward(a: Tensor): Tensor;
+    backward(dz: Tensor): void;
+}

@@ -981,7 +981,7 @@ class Sign extends UnaryOperation {
 registerOperation("sign", Sign);
 const _neg_kernel = gpu.createKernel(
   function(a) {
-    return Math.sign(a[this.thread.x]) * a[this.thread.x];
+    return -a[this.thread.x];
   },
   {
     dynamicOutput: true,
@@ -1702,6 +1702,40 @@ class Relu extends UnaryOperation {
   }
 }
 registerOperation("relu", Relu);
+const _sigmoid_kernel = gpu.createKernel(
+  function(a) {
+    return 1 / (1 + Math.exp(-a[this.thread.x]));
+  },
+  {
+    dynamicOutput: true,
+    dynamicArguments: true
+    // pipeline: true,
+    // immutable: true
+  }
+);
+function _sigmoid_tensor(a, operation = null) {
+  const kernel = _sigmoid_kernel;
+  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  return new Tensor(
+    kernel(a.data),
+    { requires_grad: a.requires_grad },
+    { operation, shape: a.shape }
+  );
+}
+let Sigmoid$1 = class Sigmoid extends UnaryOperation {
+  cache;
+  forward(a) {
+    if (a.requires_grad) {
+      this.cache = [a];
+    }
+    return _sigmoid_tensor(a, a.requires_grad ? this : null);
+  }
+  backward(dz) {
+    const [a] = this.cache;
+    a.backward(dz.mul(a.exp().add(1).pow(-2).reciprocal().mul(a.exp()).mul(-1)));
+  }
+};
+registerOperation("sigmoid", Sigmoid$1);
 class Parameter extends Tensor {
   constructor(data, options = {
     requires_grad: true
@@ -1766,6 +1800,53 @@ class ReLU extends Module {
     return relu(input);
   }
 }
+class Sigmoid2 extends Module {
+  constructor() {
+    super();
+  }
+  forward(input) {
+    return sigmoid(input);
+  }
+}
+class Loss {
+}
+class MSELoss extends Loss {
+  constructor() {
+    super();
+  }
+  forward(input, target) {
+    return input.sub(target).pow(2).mean();
+  }
+}
+class L1Loss extends Loss {
+  constructor() {
+    super();
+  }
+  forward(input, target) {
+    return input.sub(target).abs().mean();
+  }
+}
+class BCELoss extends Loss {
+  weight;
+  constructor(weight = null) {
+    super();
+    this.weight = weight;
+  }
+  forward(input, target) {
+    const left = target.mul(input.log());
+    console.log("input", input);
+    console.log("input.log()", input.log());
+    console.log("target", target);
+    console.log("LEFT", left);
+    const right = target.neg().add(1).mul(input.neg().add(1).log());
+    console.log("RIGHT", right);
+    const loss = left.add(right).neg().mean();
+    if (this.weight) {
+      return loss.mul(this.weight);
+    }
+    return loss;
+  }
+}
 function generate_unary_function(opname) {
   return (a) => {
     if (typeof a == "number") {
@@ -1776,16 +1857,22 @@ function generate_unary_function(opname) {
   };
 }
 const relu = generate_unary_function("relu");
+const sigmoid = generate_unary_function("sigmoid");
 const functional = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  relu
+  relu,
+  sigmoid
 }, Symbol.toStringTag, { value: "Module" }));
 const index$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
+  BCELoss,
+  L1Loss,
   Linear,
+  MSELoss,
   Module,
   Parameter,
   ReLU,
+  Sigmoid: Sigmoid2,
   functional
 }, Symbol.toStringTag, { value: "Module" }));
 class Optimizer {

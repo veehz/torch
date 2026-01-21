@@ -28,3 +28,7 @@ export declare class ReLU extends Module {
     constructor();
     forward(input: Tensor): Tensor;
 }
+export declare class Sigmoid extends Module {
+    constructor();
+    forward(input: Tensor): Tensor;
+}
