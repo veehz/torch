@@ -88,3 +88,13 @@ export class ReLU extends Module {
     return functional.relu(input);
   }
 }
+
+export class Sigmoid extends Module {
+  constructor() {
+    super();
+  }
+
+  forward(input: Tensor) {
+    return functional.sigmoid(input);
+  }
+}

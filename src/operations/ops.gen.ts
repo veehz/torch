@@ -718,11 +718,11 @@ export class Sign extends UnaryOperation {
 }
 registerOperation('sign', Sign);
 
-// function generated from unary_op_base("neg", "Math.sign(a[this.thread.x]) * a[this.thread.x]")
+// function generated from unary_op_base("neg", "-a[this.thread.x]")
 
 const _neg_kernel = gpu.createKernel(
   function (a: number[]) {
-    return Math.sign(a[this.thread.x]) * a[this.thread.x];
+    return -a[this.thread.x];
   },
   {
     dynamicOutput: true,

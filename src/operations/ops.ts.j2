@@ -102,7 +102,7 @@ registerOperation('powint', PowInt);
 {{ unary_op_base("sign", "Math.sign(a[this.thread.x])") }}
 {{ unary_op_class("Sign", "sign", []) }}
 
-{{ unary_op_base("neg", "Math.sign(a[this.thread.x]) * a[this.thread.x]") }}
+{{ unary_op_base("neg", "-a[this.thread.x]") }}
 {{ unary_op_class("Neg", "neg", ["a.backward(dz.mul(new Tensor(-1)));"]) }}
 
 {{ unary_op_base("reciprocal", "1 / a[this.thread.x]") }}

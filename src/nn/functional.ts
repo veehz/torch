@@ -35,3 +35,4 @@ function generate_binary_function(opname: string) {
 }
 
 export const relu = generate_unary_function('relu');
+export const sigmoid = generate_unary_function('sigmoid');

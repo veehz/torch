@@ -51,3 +51,45 @@ export class Relu extends UnaryOperation {
   }
 }
 registerOperation('relu', Relu);
+
+// function generated from unary_op_base("sigmoid", "1 / (1 + Math.exp(-a[this.thread.x]))")
+
+const _sigmoid_kernel = gpu.createKernel(
+  function (a: number[]) {
+    return 1 / (1 + Math.exp(-a[this.thread.x]));
+  },
+  {
+    dynamicOutput: true,
+    dynamicArguments: true,
+    // pipeline: true,
+    // immutable: true
+  }
+);
+
+function _sigmoid_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+  const kernel = _sigmoid_kernel;
+  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+
+  return new Tensor(
+    kernel(a.data) as number[],
+    { requires_grad: a.requires_grad },
+    { operation: operation, shape: a.shape }
+  );
+}
+// class generated from unary_op_class("Sigmoid", "sigmoid", backward_operations)
+export class Sigmoid extends UnaryOperation {
+  private cache: [Tensor];
+  public forward(a: Tensor): Tensor {
+    if (a.requires_grad) {
+      this.cache = [a];
+    }
+    return _sigmoid_tensor(a, a.requires_grad ? this : null);
+  }
+  public backward(dz: Tensor): void {
+    const [a] = this.cache;
+
+    // backward_operations:
+    a.backward(dz.mul(a.exp().add(1).pow(-2).reciprocal().mul(a.exp()).mul(-1)));
+  }
+}
+registerOperation('sigmoid', Sigmoid);
