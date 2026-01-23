@@ -1,14 +1,13 @@
 import { Operation } from './operations/base';
-import { Texture } from './gpu';
 type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
 export type NestedNumberArray = number | TypedArray | NestedNumberArray[];
 export declare class Tensor {
-    data: number[] | Texture;
+    data: number[];
     _shape: number[];
     operation: Operation | null;
     grad: Tensor | null;
     requires_grad: boolean;
-    constructor(data: NestedNumberArray | Texture, options?: {
+    constructor(data: NestedNumberArray, options?: {
         requires_grad?: boolean;
     }, internal_options?: {
         operation?: Operation;

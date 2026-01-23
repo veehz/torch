@@ -144,9 +144,9 @@ class Tensor {
   grad = null;
   requires_grad;
   constructor(data, options = {}, internal_options = {}) {
-    this.data = data instanceof gpu_js.Texture ? data : _flatten(data);
+    this.data = _flatten(data);
     this.requires_grad = options.requires_grad ?? false;
-    this._shape = internal_options.shape ?? _get_shape(data instanceof gpu_js.Texture ? data.toArray() : data);
+    this._shape = internal_options.shape ?? _get_shape(data);
     this.operation = internal_options.operation ?? null;
   }
   // TODO: Somehow having a shape of [] will have a weird error:
@@ -157,14 +157,9 @@ class Tensor {
     return this._shape.length === 0 ? [1] : this._shape;
   }
   toArray_() {
-    if (this.data instanceof gpu_js.Texture) {
-      this.data = this.data.toArray();
-    }
+    return;
   }
   toArray() {
-    if (this.data instanceof gpu_js.Texture) {
-      return this.data.toArray();
-    }
     return this.data;
   }
   dataLength() {
@@ -368,6 +363,8 @@ function generate_binary_function(opname) {
     return operation.forward(a, b);
   };
 }
+const __left_index__ = generate_binary_function("__left_index__");
+const __right_index__ = generate_binary_function("__right_index__");
 const add = generate_binary_function("add");
 const sub = generate_binary_function("sub");
 const mul = generate_binary_function("mul");
@@ -399,30 +396,91 @@ const le = generate_binary_function("le");
 const ge = generate_binary_function("ge");
 const eq = generate_binary_function("eq");
 const ne = generate_binary_function("ne");
-const _add_kernel = gpu.createKernel(
-  function(a, as, b, bs, bcs) {
-    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-    return a[a_index] + b[b_index];
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const ___left_index___kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    const a_index = _get_original_index(as, bcs, x);
+    _get_original_index(bs, bcs, x);
+    res[x] = a_index;
   }
-);
+  return res;
+};
+function ___left_index___tensor(a, b, operation = null) {
+  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
+  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
+  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
+  const kernel = ___left_index___kernel;
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
+  return new Tensor(
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
+    { requires_grad: a.requires_grad || b.requires_grad },
+    { operation, shape: broadcast_shape }
+  );
+}
+class __Left_index__ extends BinaryOperation {
+  cache;
+  forward(a, b) {
+    if (a.requires_grad || b.requires_grad) {
+      this.cache = [a, b];
+    }
+    return ___left_index___tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
+  }
+  backward(dz) {
+    const [a, b] = this.cache;
+  }
+}
+registerOperation("__left_index__", __Left_index__);
+const ___right_index___kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    _get_original_index(as, bcs, x);
+    const b_index = _get_original_index(bs, bcs, x);
+    res[x] = b_index;
+  }
+  return res;
+};
+function ___right_index___tensor(a, b, operation = null) {
+  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
+  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
+  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
+  const kernel = ___right_index___kernel;
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
+  return new Tensor(
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
+    { requires_grad: a.requires_grad || b.requires_grad },
+    { operation, shape: broadcast_shape }
+  );
+}
+class __Right_index__ extends BinaryOperation {
+  cache;
+  forward(a, b) {
+    if (a.requires_grad || b.requires_grad) {
+      this.cache = [a, b];
+    }
+    return ___right_index___tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
+  }
+  backward(dz) {
+    const [a, b] = this.cache;
+  }
+}
+registerOperation("__right_index__", __Right_index__);
+const _add_kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    const a_index = _get_original_index(as, bcs, x);
+    const b_index = _get_original_index(bs, bcs, x);
+    res[x] = a[a_index] + b[b_index];
+  }
+  return res;
+};
 function _add_tensor(a, b, operation = null) {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = _add_kernel;
-  kernel.setConstants({
-    shape_length: broadcast_shape.length
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation, shape: broadcast_shape }
   );
@@ -442,30 +500,23 @@ class Add extends BinaryOperation {
   }
 }
 registerOperation("add", Add);
-const _sub_kernel = gpu.createKernel(
-  function(a, as, b, bs, bcs) {
-    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-    return a[a_index] - b[b_index];
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _sub_kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    const a_index = _get_original_index(as, bcs, x);
+    const b_index = _get_original_index(bs, bcs, x);
+    res[x] = a[a_index] - b[b_index];
   }
-);
+  return res;
+};
 function _sub_tensor(a, b, operation = null) {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = _sub_kernel;
-  kernel.setConstants({
-    shape_length: broadcast_shape.length
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation, shape: broadcast_shape }
   );
@@ -485,30 +536,23 @@ class Sub extends BinaryOperation {
   }
 }
 registerOperation("sub", Sub);
-const _mul_kernel = gpu.createKernel(
-  function(a, as, b, bs, bcs) {
-    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-    return a[a_index] * b[b_index];
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _mul_kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    const a_index = _get_original_index(as, bcs, x);
+    const b_index = _get_original_index(bs, bcs, x);
+    res[x] = a[a_index] * b[b_index];
   }
-);
+  return res;
+};
 function _mul_tensor(a, b, operation = null) {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = _mul_kernel;
-  kernel.setConstants({
-    shape_length: broadcast_shape.length
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation, shape: broadcast_shape }
   );
@@ -528,30 +572,23 @@ class Mul extends BinaryOperation {
   }
 }
 registerOperation("mul", Mul);
-const _div_kernel = gpu.createKernel(
-  function(a, as, b, bs, bcs) {
-    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-    return a[a_index] / b[b_index];
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _div_kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    const a_index = _get_original_index(as, bcs, x);
+    const b_index = _get_original_index(bs, bcs, x);
+    res[x] = a[a_index] / b[b_index];
   }
-);
+  return res;
+};
 function _div_tensor(a, b, operation = null) {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = _div_kernel;
-  kernel.setConstants({
-    shape_length: broadcast_shape.length
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation, shape: broadcast_shape }
   );
@@ -571,30 +608,23 @@ class Div extends BinaryOperation {
   }
 }
 registerOperation("div", Div);
-const _pow_kernel = gpu.createKernel(
-  function(a, as, b, bs, bcs) {
-    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-    return Math.pow(a[a_index], b[b_index]);
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _pow_kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    const a_index = _get_original_index(as, bcs, x);
+    const b_index = _get_original_index(bs, bcs, x);
+    res[x] = Math.pow(a[a_index], b[b_index]);
   }
-);
+  return res;
+};
 function _pow_tensor(a, b, operation = null) {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = _pow_kernel;
-  kernel.setConstants({
-    shape_length: broadcast_shape.length
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation, shape: broadcast_shape }
   );
@@ -614,30 +644,23 @@ class Pow extends BinaryOperation {
   }
 }
 registerOperation("pow", Pow);
-const _fmod_kernel = gpu.createKernel(
-  function(a, as, b, bs, bcs) {
-    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-    return a[a_index] % b[b_index];
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _fmod_kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    const a_index = _get_original_index(as, bcs, x);
+    const b_index = _get_original_index(bs, bcs, x);
+    res[x] = a[a_index] % b[b_index];
   }
-);
+  return res;
+};
 function _fmod_tensor(a, b, operation = null) {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = _fmod_kernel;
-  kernel.setConstants({
-    shape_length: broadcast_shape.length
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation, shape: broadcast_shape }
   );
@@ -656,30 +679,23 @@ class Fmod extends BinaryOperation {
   }
 }
 registerOperation("fmod", Fmod);
-const _maximum_kernel = gpu.createKernel(
-  function(a, as, b, bs, bcs) {
-    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-    return Math.max(a[a_index], b[b_index]);
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _maximum_kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    const a_index = _get_original_index(as, bcs, x);
+    const b_index = _get_original_index(bs, bcs, x);
+    res[x] = Math.max(a[a_index], b[b_index]);
   }
-);
+  return res;
+};
 function _maximum_tensor(a, b, operation = null) {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = _maximum_kernel;
-  kernel.setConstants({
-    shape_length: broadcast_shape.length
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation, shape: broadcast_shape }
   );
@@ -699,30 +715,23 @@ class Maximum extends BinaryOperation {
   }
 }
 registerOperation("maximum", Maximum);
-const _minimum_kernel = gpu.createKernel(
-  function(a, as, b, bs, bcs) {
-    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-    return Math.min(a[a_index], b[b_index]);
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _minimum_kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    const a_index = _get_original_index(as, bcs, x);
+    const b_index = _get_original_index(bs, bcs, x);
+    res[x] = Math.min(a[a_index], b[b_index]);
   }
-);
+  return res;
+};
 function _minimum_tensor(a, b, operation = null) {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = _minimum_kernel;
-  kernel.setConstants({
-    shape_length: broadcast_shape.length
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation, shape: broadcast_shape }
   );
@@ -742,23 +751,13 @@ class Minimum extends BinaryOperation {
   }
 }
 registerOperation("minimum", Minimum);
-function _powint_kernel_function(a, n) {
-  return Math.pow(a[this.thread.x], n);
-}
-const _powint_kernel = gpu.createKernel(
-  _powint_kernel_function,
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
-  }
-);
 function _powint_tensor(a, n, operation = null) {
-  const kernel = _powint_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const data = new Array(a.dataLength());
+  for (let i = 0; i < data.length; i++) {
+    data[i] = Math.pow(a.data[i], n);
+  }
   return new Tensor(
-    kernel(a.data, n),
+    data,
     { requires_grad: a.requires_grad },
     { operation, shape: a.shape }
   );
@@ -777,22 +776,18 @@ class PowInt extends Operation {
   }
 }
 registerOperation("powint", PowInt);
-const _log_kernel = gpu.createKernel(
-  function(a) {
-    return Math.log(a[this.thread.x]);
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _log_kernel = function(a, output) {
+  const res = new Array(output);
+  for (let x = 0; x < output; x++) {
+    res[x] = Math.log(a[x]);
   }
-);
+  return res;
+};
 function _log_tensor(a, operation = null) {
   const kernel = _log_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const output = a.shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data),
+    kernel(a.data, output),
     { requires_grad: a.requires_grad },
     { operation, shape: a.shape }
   );
@@ -811,22 +806,18 @@ class Log extends UnaryOperation {
   }
 }
 registerOperation("log", Log);
-const _sqrt_kernel = gpu.createKernel(
-  function(a) {
-    return Math.sqrt(a[this.thread.x]);
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _sqrt_kernel = function(a, output) {
+  const res = new Array(output);
+  for (let x = 0; x < output; x++) {
+    res[x] = Math.sqrt(a[x]);
   }
-);
+  return res;
+};
 function _sqrt_tensor(a, operation = null) {
   const kernel = _sqrt_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const output = a.shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data),
+    kernel(a.data, output),
     { requires_grad: a.requires_grad },
     { operation, shape: a.shape }
   );
@@ -845,22 +836,18 @@ class Sqrt extends UnaryOperation {
   }
 }
 registerOperation("sqrt", Sqrt);
-const _exp_kernel = gpu.createKernel(
-  function(a) {
-    return Math.exp(a[this.thread.x]);
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _exp_kernel = function(a, output) {
+  const res = new Array(output);
+  for (let x = 0; x < output; x++) {
+    res[x] = Math.exp(a[x]);
   }
-);
+  return res;
+};
 function _exp_tensor(a, operation = null) {
   const kernel = _exp_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const output = a.shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data),
+    kernel(a.data, output),
     { requires_grad: a.requires_grad },
     { operation, shape: a.shape }
   );
@@ -879,22 +866,18 @@ class Exp extends UnaryOperation {
   }
 }
 registerOperation("exp", Exp);
-const _square_kernel = gpu.createKernel(
-  function(a) {
-    return a[this.thread.x] * a[this.thread.x];
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _square_kernel = function(a, output) {
+  const res = new Array(output);
+  for (let x = 0; x < output; x++) {
+    res[x] = a[x] * a[x];
   }
-);
+  return res;
+};
 function _square_tensor(a, operation = null) {
   const kernel = _square_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const output = a.shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data),
+    kernel(a.data, output),
     { requires_grad: a.requires_grad },
     { operation, shape: a.shape }
   );
@@ -913,22 +896,18 @@ class Square extends UnaryOperation {
   }
 }
 registerOperation("square", Square);
-const _abs_kernel = gpu.createKernel(
-  function(a) {
-    return Math.abs(a[this.thread.x]);
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _abs_kernel = function(a, output) {
+  const res = new Array(output);
+  for (let x = 0; x < output; x++) {
+    res[x] = Math.abs(a[x]);
   }
-);
+  return res;
+};
 function _abs_tensor(a, operation = null) {
   const kernel = _abs_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const output = a.shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data),
+    kernel(a.data, output),
     { requires_grad: a.requires_grad },
     { operation, shape: a.shape }
   );
@@ -947,22 +926,18 @@ class Abs extends UnaryOperation {
   }
 }
 registerOperation("abs", Abs);
-const _sign_kernel = gpu.createKernel(
-  function(a) {
-    return Math.sign(a[this.thread.x]);
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _sign_kernel = function(a, output) {
+  const res = new Array(output);
+  for (let x = 0; x < output; x++) {
+    res[x] = Math.sign(a[x]);
   }
-);
+  return res;
+};
 function _sign_tensor(a, operation = null) {
   const kernel = _sign_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const output = a.shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data),
+    kernel(a.data, output),
     { requires_grad: a.requires_grad },
     { operation, shape: a.shape }
   );
@@ -980,22 +955,18 @@ class Sign extends UnaryOperation {
   }
 }
 registerOperation("sign", Sign);
-const _neg_kernel = gpu.createKernel(
-  function(a) {
-    return -a[this.thread.x];
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _neg_kernel = function(a, output) {
+  const res = new Array(output);
+  for (let x = 0; x < output; x++) {
+    res[x] = -a[x];
   }
-);
+  return res;
+};
 function _neg_tensor(a, operation = null) {
   const kernel = _neg_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const output = a.shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data),
+    kernel(a.data, output),
     { requires_grad: a.requires_grad },
     { operation, shape: a.shape }
   );
@@ -1014,22 +985,18 @@ class Neg extends UnaryOperation {
   }
 }
 registerOperation("neg", Neg);
-const _reciprocal_kernel = gpu.createKernel(
-  function(a) {
-    return 1 / a[this.thread.x];
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _reciprocal_kernel = function(a, output) {
+  const res = new Array(output);
+  for (let x = 0; x < output; x++) {
+    res[x] = 1 / a[x];
   }
-);
+  return res;
+};
 function _reciprocal_tensor(a, operation = null) {
   const kernel = _reciprocal_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const output = a.shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data),
+    kernel(a.data, output),
     { requires_grad: a.requires_grad },
     { operation, shape: a.shape }
   );
@@ -1094,22 +1061,18 @@ class Unsqueeze extends Operation {
   }
 }
 registerOperation("unsqueeze", Unsqueeze);
-const _sin_kernel = gpu.createKernel(
-  function(a) {
-    return Math.sin(a[this.thread.x]);
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _sin_kernel = function(a, output) {
+  const res = new Array(output);
+  for (let x = 0; x < output; x++) {
+    res[x] = Math.sin(a[x]);
   }
-);
+  return res;
+};
 function _sin_tensor(a, operation = null) {
   const kernel = _sin_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const output = a.shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data),
+    kernel(a.data, output),
     { requires_grad: a.requires_grad },
     { operation, shape: a.shape }
   );
@@ -1128,22 +1091,18 @@ class Sin extends UnaryOperation {
   }
 }
 registerOperation("sin", Sin);
-const _cos_kernel = gpu.createKernel(
-  function(a) {
-    return Math.cos(a[this.thread.x]);
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _cos_kernel = function(a, output) {
+  const res = new Array(output);
+  for (let x = 0; x < output; x++) {
+    res[x] = Math.cos(a[x]);
   }
-);
+  return res;
+};
 function _cos_tensor(a, operation = null) {
   const kernel = _cos_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const output = a.shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data),
+    kernel(a.data, output),
     { requires_grad: a.requires_grad },
     { operation, shape: a.shape }
   );
@@ -1162,22 +1121,18 @@ class Cos extends UnaryOperation {
   }
 }
 registerOperation("cos", Cos);
-const _tan_kernel = gpu.createKernel(
-  function(a) {
-    return Math.tan(a[this.thread.x]);
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _tan_kernel = function(a, output) {
+  const res = new Array(output);
+  for (let x = 0; x < output; x++) {
+    res[x] = Math.tan(a[x]);
   }
-);
+  return res;
+};
 function _tan_tensor(a, operation = null) {
   const kernel = _tan_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const output = a.shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data),
+    kernel(a.data, output),
     { requires_grad: a.requires_grad },
     { operation, shape: a.shape }
   );
@@ -1240,30 +1195,39 @@ class Mean extends UnaryOperation {
   }
 }
 registerOperation("mean", Mean);
-const _transpose_kernel = gpu.createKernel(
-  function(a, as, dim0, dim1) {
-    const a_index = _get_original_index_from_transposed_index(as, dim0, dim1, this.thread.x);
-    return a[a_index];
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
-  }
-);
 function _transpose_tensor(a, dim0, dim1, operation = null) {
-  const kernel = _transpose_kernel;
-  kernel.setConstants({
-    shape_length: a.shape.length
-  });
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
-  const swapped_shape = [...a.shape];
-  [swapped_shape[dim0], swapped_shape[dim1]] = [swapped_shape[dim1], swapped_shape[dim0]];
+  const output_shape = [...a.shape];
+  [output_shape[dim0], output_shape[dim1]] = [output_shape[dim1], output_shape[dim0]];
+  const size = a.dataLength();
+  const data = new Array(size);
+  const a_strides = new Array(a.shape.length);
+  const out_strides = new Array(output_shape.length);
+  for (let i = a.shape.length - 1, s = 1; i >= 0; i--) {
+    a_strides[i] = s;
+    s *= a.shape[i];
+  }
+  for (let i = output_shape.length - 1, s = 1; i >= 0; i--) {
+    out_strides[i] = s;
+    s *= output_shape[i];
+  }
+  for (let i = 0; i < size; i++) {
+    let idx = i;
+    let input_idx = 0;
+    for (let d = 0; d < output_shape.length; d++) {
+      const stride = out_strides[d];
+      const coord = Math.floor(idx / stride);
+      idx %= stride;
+      let input_d = d;
+      if (d === dim0) input_d = dim1;
+      else if (d === dim1) input_d = dim0;
+      input_idx += coord * a_strides[input_d];
+    }
+    data[i] = a.data[input_idx];
+  }
   return new Tensor(
-    kernel(a.data, a.shape, dim0, dim1),
+    data,
     { requires_grad: a.requires_grad },
-    { operation, shape: swapped_shape }
+    { operation, shape: output_shape }
   );
 }
 class Transpose extends Operation {
@@ -1278,32 +1242,6 @@ class Transpose extends Operation {
   }
 }
 registerOperation("transpose", Transpose);
-function _matmul_kernel_function(a, as, b, bs, bcs) {
-  let a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-  let b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-  const l = this.constants.shape_length;
-  const tmp1 = bcs[l] * bcs[l + 1];
-  const position = this.thread.x % tmp1;
-  a_index = a_index * as[l] * as[l + 1] + Math.floor(position / bcs[l + 1]) * as[l + 1];
-  b_index = b_index * bs[l] * bs[l + 1] + position % bcs[l + 1];
-  const b_stride = bs[l + 1];
-  let sum2 = 0;
-  for (let i = 0; i < this.constants.lp; i++) {
-    sum2 = sum2 + a[a_index] * b[b_index];
-    a_index = a_index + 1;
-    b_index = b_index + b_stride;
-  }
-  return sum2;
-}
-const _matmul_kernel = gpu.createKernel(
-  _matmul_kernel_function,
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
-  }
-);
 function _matmul_tensor(a, b, operation = null) {
   if (a.shape.length == 1 && b.shape.length == 1) {
     return a.mul(b).sum();
@@ -1315,23 +1253,29 @@ function _matmul_tensor(a, b, operation = null) {
   if (a_shape[a_shape.length - 1] != b_shape[b_shape.length - 2]) {
     throw new Error("Shape mismatch: " + a.shape + " and " + b.shape);
   }
-  const loop_iterations = a_shape[a_shape.length - 1];
-  if (loop_iterations > 1e3) {
-    throw new Error("Loop iterations too large: " + loop_iterations);
-  }
   const broadcast_shape = _broadcast_shape(a_shape.slice(0, -2), b_shape.slice(0, -2)).concat([
     a_shape[a_shape.length - 2],
     b_shape[b_shape.length - 1]
   ]);
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
+  const data = new Array(output_size).fill(0);
   const padded_a_shape = _pad_shape(a_shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b_shape, broadcast_shape);
-  const kernel = _matmul_kernel;
-  kernel.setConstants({
-    lp: loop_iterations,
-    // assumes that _get_original_index_kernel reads from the front
-    shape_length: broadcast_shape.length - 2
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  const dim_M = broadcast_shape[broadcast_shape.length - 2];
+  const dim_N = broadcast_shape[broadcast_shape.length - 1];
+  const dim_K = a_shape[a_shape.length - 1];
+  for (let i = 0; i < output_size; i++) {
+    const mn_idx = i % (dim_M * dim_N);
+    const m = Math.floor(mn_idx / dim_N);
+    const n = mn_idx % dim_N;
+    let base_a = _get_original_index(padded_a_shape, broadcast_shape, i - n);
+    let base_b = _get_original_index(padded_b_shape, broadcast_shape, i - m * dim_N);
+    let sum2 = 0;
+    for (let k = 0; k < dim_K; k++) {
+      sum2 += a.data[base_a + k] * b.data[base_b + k * dim_N];
+    }
+    data[i] = sum2;
+  }
   let shape_after_removing_extra_dims = [...broadcast_shape];
   if (a_1d) {
     shape_after_removing_extra_dims = shape_after_removing_extra_dims.slice(0, -2).concat([broadcast_shape[broadcast_shape.length - 1]]);
@@ -1340,13 +1284,7 @@ function _matmul_tensor(a, b, operation = null) {
     shape_after_removing_extra_dims = shape_after_removing_extra_dims.slice(0, -1);
   }
   return new Tensor(
-    kernel(
-      a.data,
-      padded_a_shape,
-      b.data,
-      padded_b_shape,
-      broadcast_shape
-    ),
+    data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation, shape: shape_after_removing_extra_dims }
   );
@@ -1364,30 +1302,23 @@ class Matmul extends BinaryOperation {
   }
 }
 registerOperation("matmul", Matmul);
-const _lt_kernel = gpu.createKernel(
-  function(a, as, b, bs, bcs) {
-    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-    return a[a_index] < b[b_index] ? 1 : 0;
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _lt_kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    const a_index = _get_original_index(as, bcs, x);
+    const b_index = _get_original_index(bs, bcs, x);
+    res[x] = a[a_index] < b[b_index] ? 1 : 0;
   }
-);
+  return res;
+};
 function _lt_tensor(a, b, operation = null) {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = _lt_kernel;
-  kernel.setConstants({
-    shape_length: broadcast_shape.length
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation, shape: broadcast_shape }
   );
@@ -1405,30 +1336,23 @@ class Lt extends BinaryOperation {
   }
 }
 registerOperation("lt", Lt);
-const _gt_kernel = gpu.createKernel(
-  function(a, as, b, bs, bcs) {
-    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-    return a[a_index] > b[b_index] ? 1 : 0;
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _gt_kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    const a_index = _get_original_index(as, bcs, x);
+    const b_index = _get_original_index(bs, bcs, x);
+    res[x] = a[a_index] > b[b_index] ? 1 : 0;
   }
-);
+  return res;
+};
 function _gt_tensor(a, b, operation = null) {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = _gt_kernel;
-  kernel.setConstants({
-    shape_length: broadcast_shape.length
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation, shape: broadcast_shape }
   );
@@ -1446,30 +1370,23 @@ class Gt extends BinaryOperation {
   }
 }
 registerOperation("gt", Gt);
-const _le_kernel = gpu.createKernel(
-  function(a, as, b, bs, bcs) {
-    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-    return a[a_index] <= b[b_index] ? 1 : 0;
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _le_kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    const a_index = _get_original_index(as, bcs, x);
+    const b_index = _get_original_index(bs, bcs, x);
+    res[x] = a[a_index] <= b[b_index] ? 1 : 0;
   }
-);
+  return res;
+};
 function _le_tensor(a, b, operation = null) {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = _le_kernel;
-  kernel.setConstants({
-    shape_length: broadcast_shape.length
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation, shape: broadcast_shape }
   );
@@ -1487,30 +1404,23 @@ class Le extends BinaryOperation {
   }
 }
 registerOperation("le", Le);
-const _ge_kernel = gpu.createKernel(
-  function(a, as, b, bs, bcs) {
-    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-    return a[a_index] >= b[b_index] ? 1 : 0;
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _ge_kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    const a_index = _get_original_index(as, bcs, x);
+    const b_index = _get_original_index(bs, bcs, x);
+    res[x] = a[a_index] >= b[b_index] ? 1 : 0;
   }
-);
+  return res;
+};
 function _ge_tensor(a, b, operation = null) {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = _ge_kernel;
-  kernel.setConstants({
-    shape_length: broadcast_shape.length
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation, shape: broadcast_shape }
   );
@@ -1528,30 +1438,23 @@ class Ge extends BinaryOperation {
   }
 }
 registerOperation("ge", Ge);
-const _eq_kernel = gpu.createKernel(
-  function(a, as, b, bs, bcs) {
-    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-    return a[a_index] == b[b_index] ? 1 : 0;
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _eq_kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    const a_index = _get_original_index(as, bcs, x);
+    const b_index = _get_original_index(bs, bcs, x);
+    res[x] = a[a_index] == b[b_index] ? 1 : 0;
   }
-);
+  return res;
+};
 function _eq_tensor(a, b, operation = null) {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = _eq_kernel;
-  kernel.setConstants({
-    shape_length: broadcast_shape.length
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation, shape: broadcast_shape }
   );
@@ -1569,30 +1472,23 @@ class Eq extends BinaryOperation {
   }
 }
 registerOperation("eq", Eq);
-const _ne_kernel = gpu.createKernel(
-  function(a, as, b, bs, bcs) {
-    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-    return a[a_index] != b[b_index] ? 1 : 0;
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _ne_kernel = function(a, as, b, bs, bcs, output_size) {
+  const res = Array(output_size);
+  for (let x = 0; x < output_size; x++) {
+    const a_index = _get_original_index(as, bcs, x);
+    const b_index = _get_original_index(bs, bcs, x);
+    res[x] = a[a_index] != b[b_index] ? 1 : 0;
   }
-);
+  return res;
+};
 function _ne_tensor(a, b, operation = null) {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
   const kernel = _ne_kernel;
-  kernel.setConstants({
-    shape_length: broadcast_shape.length
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
+  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape),
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation, shape: broadcast_shape }
   );
@@ -1669,22 +1565,18 @@ function arange(start, end = void 0, step = 1) {
   }
   return new Tensor(data);
 }
-const _relu_kernel = gpu.createKernel(
-  function(a) {
-    return Math.max(a[this.thread.x], 0);
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _relu_kernel = function(a, output) {
+  const res = new Array(output);
+  for (let x = 0; x < output; x++) {
+    res[x] = Math.max(a[x], 0);
   }
-);
+  return res;
+};
 function _relu_tensor(a, operation = null) {
   const kernel = _relu_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const output = a.shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data),
+    kernel(a.data, output),
     { requires_grad: a.requires_grad },
     { operation, shape: a.shape }
   );
@@ -1703,22 +1595,18 @@ class Relu extends UnaryOperation {
   }
 }
 registerOperation("relu", Relu);
-const _sigmoid_kernel = gpu.createKernel(
-  function(a) {
-    return 1 / (1 + Math.exp(-a[this.thread.x]));
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true
-    // pipeline: true,
-    // immutable: true
+const _sigmoid_kernel = function(a, output) {
+  const res = new Array(output);
+  for (let x = 0; x < output; x++) {
+    res[x] = 1 / (1 + Math.exp(-a[x]));
   }
-);
+  return res;
+};
 function _sigmoid_tensor(a, operation = null) {
   const kernel = _sigmoid_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const output = a.shape.reduce((acc, val) => acc * val, 1);
   return new Tensor(
-    kernel(a.data),
+    kernel(a.data, output),
     { requires_grad: a.requires_grad },
     { operation, shape: a.shape }
   );
@@ -1835,12 +1723,7 @@ class BCELoss extends Loss {
   }
   forward(input, target) {
     const left = target.mul(input.log());
-    console.log("input", input);
-    console.log("input.log()", input.log());
-    console.log("target", target);
-    console.log("LEFT", left);
     const right = target.neg().add(1).mul(input.neg().add(1).log());
-    console.log("RIGHT", right);
     const loss = left.add(right).neg().mean();
     if (this.weight) {
       return loss.mul(this.weight);
@@ -2030,6 +1913,10 @@ exports.Tan = Tan;
 exports.Tensor = Tensor;
 exports.Transpose = Transpose;
 exports.Unsqueeze = Unsqueeze;
+exports.__Left_index__ = __Left_index__;
+exports.__Right_index__ = __Right_index__;
+exports.__left_index__ = __left_index__;
+exports.__right_index__ = __right_index__;
 exports.abs = abs;
 exports.add = add;
 exports.arange = arange;

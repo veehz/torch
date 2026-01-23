@@ -1,5 +1,15 @@
 import { Tensor } from '../tensor';
 import { Operation, BinaryOperation, UnaryOperation } from './base';
+export declare class __Left_index__ extends BinaryOperation {
+    private cache;
+    forward(a: Tensor, b: Tensor): Tensor;
+    backward(dz: Tensor): void;
+}
+export declare class __Right_index__ extends BinaryOperation {
+    private cache;
+    forward(a: Tensor, b: Tensor): Tensor;
+    backward(dz: Tensor): void;
+}
 export declare class Add extends BinaryOperation {
     private cache;
     forward(a: Tensor, b: Tensor): Tensor;

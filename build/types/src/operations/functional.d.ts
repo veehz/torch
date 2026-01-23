@@ -1,4 +1,6 @@
 import { Tensor } from '../tensor';
+export declare const __left_index__: (a: Tensor | number, b: Tensor | number) => Tensor;
+export declare const __right_index__: (a: Tensor | number, b: Tensor | number) => Tensor;
 export declare const add: (a: Tensor | number, b: Tensor | number) => Tensor;
 export declare const sub: (a: Tensor | number, b: Tensor | number) => Tensor;
 export declare const mul: (a: Tensor | number, b: Tensor | number) => Tensor;
