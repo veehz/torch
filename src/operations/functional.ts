@@ -34,6 +34,11 @@ function generate_binary_function(opname: string) {
   };
 }
 
+// debug operations
+
+export const __left_index__ = generate_binary_function('__left_index__');
+export const __right_index__ = generate_binary_function('__right_index__');
+
 // binary pointwise
 
 export const add = generate_binary_function('add');

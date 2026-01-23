@@ -1,22 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Mocha Tests</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="https://unpkg.com/mocha/mocha.css" />
-  </head>
-  <body>
-    <div id="mocha"></div>
 
-    <script src="https://unpkg.com/chai@4/chai.js"></script>
-    <script src="https://unpkg.com/mocha/mocha.js"></script>
+<head>
+  <meta charset="utf-8" />
+  <title>Mocha Tests</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/mocha/mocha.css" />
+</head>
 
-    <script class="mocha-init">
-      mocha.setup("bdd");
-      mocha.checkLeaks();
-    </script>
-    <script type="importmap">
+<body>
+  <div id="mocha"></div>
+
+  <script src="https://unpkg.com/chai@4/chai.js"></script>
+  <script src="https://unpkg.com/mocha/mocha.js"></script>
+
+  <script class="mocha-init">
+    mocha.setup("bdd");
+    mocha.checkLeaks();
+  </script>
+  <script type="importmap">
       {
         "imports": {
           "torch": "../build/browser/torch.browser.es.js",
@@ -24,14 +26,18 @@
         }
       }
     </script>
-    <script type="module">
-      import "./backward.test.js";
-      import "./functional.test.js";
-      import "./module.test.js";
-      import "./nn_functional.test.js";
-      import "./optimizers.test.js";
-      import "./tensor.test.js";
-      mocha.run();
-    </script>
-  </body>
+  <script type="module">
+    import "./backward.test.js";
+    import "./broadcast.test.js"
+    import "./custom_operations.test.js"
+    import "./functional.test.js";
+    import "./loss.test.js";
+    import "./module.test.js";
+    import "./nn_functional.test.js";
+    import "./optimizers.test.js";
+    import "./tensor.test.js";
+    mocha.run();
+  </script>
+</body>
+
 </html>

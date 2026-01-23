@@ -34,12 +34,7 @@ export class BCELoss extends Loss {
 
   forward(input: Tensor, target: Tensor) {
     const left = target.mul(input.log());
-    console.log("input", input);
-    console.log("input.log()", input.log());
-    console.log("target", target);
-    console.log("LEFT", left);
     const right = target.neg().add(1).mul(input.neg().add(1).log());
-    console.log("RIGHT", right);
     const loss = left.add(right).neg().mean();
     if (this.weight) {
       return loss.mul(this.weight);

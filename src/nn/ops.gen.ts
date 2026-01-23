@@ -10,26 +10,22 @@ import gpu from '../gpu';
 import { Operation, BinaryOperation, UnaryOperation } from '../operations/base';
 import { registerOperation } from '../operations/registry';
 
-// function generated from unary_op_base("relu", "Math.max(a[this.thread.x], 0)")
+// function generated from unary_op_base("relu", "Math.max(a[x], 0)")
 
-const _relu_kernel = gpu.createKernel(
-  function (a: number[]) {
-    return Math.max(a[this.thread.x], 0);
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true,
-    // pipeline: true,
-    // immutable: true
+const _relu_kernel = function (a: number[], output: number) {
+  const res = new Array(output);
+  for(let x = 0; x < output; x++) {
+    res[x] = Math.max(a[x], 0);
   }
-);
+  return res;
+};
 
 function _relu_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   const kernel = _relu_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const output = a.shape.reduce((acc, val) => acc * val, 1);
 
   return new Tensor(
-    kernel(a.data) as number[],
+    kernel(a.data, output) as number[],
     { requires_grad: a.requires_grad },
     { operation: operation, shape: a.shape }
   );
@@ -52,26 +48,22 @@ export class Relu extends UnaryOperation {
 }
 registerOperation('relu', Relu);
 
-// function generated from unary_op_base("sigmoid", "1 / (1 + Math.exp(-a[this.thread.x]))")
+// function generated from unary_op_base("sigmoid", "1 / (1 + Math.exp(-a[x]))")
 
-const _sigmoid_kernel = gpu.createKernel(
-  function (a: number[]) {
-    return 1 / (1 + Math.exp(-a[this.thread.x]));
-  },
-  {
-    dynamicOutput: true,
-    dynamicArguments: true,
-    // pipeline: true,
-    // immutable: true
+const _sigmoid_kernel = function (a: number[], output: number) {
+  const res = new Array(output);
+  for(let x = 0; x < output; x++) {
+    res[x] = 1 / (1 + Math.exp(-a[x]));
   }
-);
+  return res;
+};
 
 function _sigmoid_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   const kernel = _sigmoid_kernel;
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+  const output = a.shape.reduce((acc, val) => acc * val, 1);
 
   return new Tensor(
-    kernel(a.data) as number[],
+    kernel(a.data, output) as number[],
     { requires_grad: a.requires_grad },
     { operation: operation, shape: a.shape }
   );

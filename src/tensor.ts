@@ -45,7 +45,7 @@ function _flatten(data: NestedNumberArray): number[] {
 }
 
 export class Tensor {
-  data: number[] | Texture;
+  data: number[];
   _shape: number[];
   operation: Operation | null = null;
   public grad: Tensor | null = null;
@@ -53,14 +53,14 @@ export class Tensor {
   requires_grad: boolean;
 
   constructor(
-    data: NestedNumberArray | Texture,
+    data: NestedNumberArray,
     options: { requires_grad?: boolean } = {},
     internal_options: { operation?: Operation; shape?: number[] } = {}
   ) {
-    this.data = data instanceof Texture ? data : _flatten(data);
+    this.data = _flatten(data);
     this.requires_grad = options.requires_grad ?? false;
 
-    this._shape = internal_options.shape ?? _get_shape(data instanceof Texture ? data.toArray() : data);
+    this._shape = internal_options.shape ?? _get_shape(data);
     this.operation = internal_options.operation ?? null;
   }
 
@@ -74,15 +74,10 @@ export class Tensor {
   }
 
   toArray_(): void {
-    if (this.data instanceof Texture) {
-      this.data = this.data.toArray() as number[];
-    }
+    return;
   }
 
   toArray(): number[] {
-    if (this.data instanceof Texture) {
-      return this.data.toArray() as number[];
-    }
     return this.data;
   }
 

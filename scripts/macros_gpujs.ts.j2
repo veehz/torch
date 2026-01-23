@@ -1,17 +1,22 @@
 {% macro kernel_options() -%}
-  {}
+  {
+    dynamicOutput: true,
+    dynamicArguments: true,
+    // pipeline: true,
+    immutable: true
+  }
 {%- endmacro %}
 
 {% macro binary_op_base(name, operation) -%}
-const _{{ name }}_kernel = function (a: number[], as: number[], b: number[], bs: number[], bcs: number[], output_size: number) {
-  const res = Array(output_size);
-  for(let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = {{ operation }};
-  }
-  return res;
-};
+const _{{ name }}_kernel = gpu.createKernel(
+  function (a: number[], as: number[], b: number[], bs: number[], bcs: number[]) {
+    const a_index = _get_original_index_kernel(as, bcs, this.thread.x);
+    const b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
+
+    return {{ operation }};
+  },
+  {{ kernel_options() }}
+);
 
 function _{{ name }}_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
@@ -19,10 +24,13 @@ function _{{ name }}_tensor(a: Tensor, b: Tensor, operation: Operation | null = 
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
 
   const kernel = _{{ name }}_kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
+  kernel.setConstants({
+    shape_length: broadcast_shape.length
+  });
+  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
 
   return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size) as number[],
+    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape) as number[],
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: broadcast_shape }
   );
@@ -32,20 +40,20 @@ function _{{ name }}_tensor(a: Tensor, b: Tensor, operation: Operation | null = 
 {% macro unary_op_base(name, operation) -%}
 // function generated from unary_op_base("{{ name }}", "{{ operation }}")
 
-const _{{ name }}_kernel = function (a: number[], output: number) {
-  const res = new Array(output);
-  for(let x = 0; x < output; x++) {
-    res[x] = {{ operation }};
-  }
-  return res;
-};
+const _{{ name }}_kernel = gpu.createKernel(
+  function (a: number[]) {
+    const x = this.thread.x;
+    return {{ operation }};
+  },
+  {{ kernel_options() }}
+);
 
 function _{{ name }}_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   const kernel = _{{ name }}_kernel;
-  const output = a.shape.reduce((acc, val) => acc * val, 1);
+  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
 
   return new Tensor(
-    kernel(a.data, output) as number[],
+    kernel(a.data) as number[],
     { requires_grad: a.requires_grad },
     { operation: operation, shape: a.shape }
   );
@@ -93,13 +101,24 @@ registerOperation('{{ opname }}', {{ classname }});
 {%- endmacro %}
 
 {% macro powint_op_base() -%}
+function _powint_kernel_function(a: number[], n: number) {
+  return Math.pow(a[this.thread.x], n);
+}
+
+const _powint_kernel = gpu.createKernel(
+  _powint_kernel_function,
+  {{ kernel_options() }}
+);
+
 function _powint_tensor(a: Tensor, n: number, operation: Operation | null = null): Tensor {
-  const data = new Array(a.dataLength());
-  for (let i = 0; i < data.length; i++) {
-    data[i] = Math.pow(a.data[i], n);
-  }
+  const kernel = _powint_kernel;
+  /* kernel.setConstants({
+    n: n
+  }); */
+  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
+
   return new Tensor(
-    data,
+    kernel(a.data, n) as number[],
     { requires_grad: a.requires_grad },
     { operation: operation, shape: a.shape }
   );
@@ -127,49 +146,33 @@ registerOperation('powint', PowInt);
 {%- endmacro %}
 
 {% macro transpose_op_base() -%}
+const _transpose_kernel = gpu.createKernel(
+  function (a: number[], as: number[], dim0: number, dim1: number) {
+    const a_index = _get_original_index_from_transposed_index(as, dim0, dim1, this.thread.x);
+    return a[a_index];
+  },
+  {{ kernel_options() }}
+);
+
 function _transpose_tensor(
   a: Tensor,
   dim0: number,
   dim1: number,
   operation: Operation | null = null
 ): Tensor {
-  const output_shape = [...a.shape];
-  [output_shape[dim0], output_shape[dim1]] = [output_shape[dim1], output_shape[dim0]];
-  const size = a.dataLength();
-  const data = new Array(size);
+  const kernel = _transpose_kernel;
+  kernel.setConstants({
+    shape_length: a.shape.length
+  });
+  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
 
-  const a_strides = new Array(a.shape.length);
-  const out_strides = new Array(output_shape.length);
-  for (let i = a.shape.length - 1, s = 1; i >= 0; i--) {
-    a_strides[i] = s;
-    s *= a.shape[i];
-  }
-  for (let i = output_shape.length - 1, s = 1; i >= 0; i--) {
-    out_strides[i] = s;
-    s *= output_shape[i];
-  }
-
-  for(let i=0; i<size; i++) {
-    let idx = i;
-    let input_idx = 0;
-    for (let d = 0; d < output_shape.length; d++) {
-      const stride = out_strides[d];
-      const coord = Math.floor(idx / stride);
-      idx %= stride;
-
-      let input_d = d;
-      if (d === dim0) input_d = dim1;
-      else if (d === dim1) input_d = dim0;
-
-      input_idx += coord * a_strides[input_d];
-    }
-    data[i] = a.data[input_idx];
-  }
+  const swapped_shape = [...a.shape];
+  [swapped_shape[dim0], swapped_shape[dim1]] = [swapped_shape[dim1], swapped_shape[dim0]];
 
   return new Tensor(
-    data,
+    kernel(a.data, a.shape, dim0, dim1) as number[],
     { requires_grad: a.requires_grad },
-    { operation: operation, shape: output_shape }
+    { operation: operation, shape: swapped_shape }
   );
 }
 {%- endmacro %}
@@ -192,6 +195,40 @@ registerOperation('transpose', Transpose);
 {%- endmacro %}
 
 {% macro matmul_op_base() -%}
+function _matmul_kernel_function(
+  a: number[],
+  as: number[],
+  b: number[],
+  bs: number[],
+  bcs: number[]
+) {
+  let a_index = _get_original_index_kernel(as, bcs, this.thread.x);
+  let b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
+
+  const l = this.constants.shape_length;
+
+  const tmp1 = bcs[l] * bcs[l + 1];
+  const position = this.thread.x % tmp1;
+
+  a_index = a_index * as[l] * as[l + 1] + Math.floor(position / bcs[l + 1]) * as[l + 1];
+  b_index = b_index * bs[l] * bs[l + 1] + (position % bcs[l + 1]);
+
+  const b_stride = bs[l + 1];
+
+  let sum = 0;
+  for (let i = 0; i < this.constants.lp; i++) {
+    sum = sum + a[a_index] * b[b_index];
+    a_index = a_index + 1;
+    b_index = b_index + b_stride;
+  }
+
+  return sum;
+}
+
+const _matmul_kernel = gpu.createKernel(_matmul_kernel_function,
+  {{ kernel_options() }}
+);
+
 function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
   if (a.shape.length == 1 && b.shape.length == 1) {
     return a.mul(b).sum();
@@ -204,7 +241,15 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null
   const b_shape = b_1d ? [b.shape[0], 1] : b.shape;
 
   if (a_shape[a_shape.length - 1] != b_shape[b_shape.length - 2]) {
+    // TODO: check what error pytorch throws
     throw new Error('Shape mismatch: ' + a.shape + ' and ' + b.shape);
+  }
+
+  const loop_iterations = a_shape[a_shape.length - 1];
+
+  if (loop_iterations > 1000) {
+    // TODO: can try fixing with maxLoopIterations by gpu.js
+    throw new Error('Loop iterations too large: ' + loop_iterations);
   }
 
   const broadcast_shape = _broadcast_shape(a_shape.slice(0, -2), b_shape.slice(0, -2)).concat([
@@ -212,30 +257,21 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null
     b_shape[b_shape.length - 1]
   ]);
 
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  const data = new Array(output_size).fill(0);
-
   const padded_a_shape = _pad_shape(a_shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b_shape, broadcast_shape);
 
-  const dim_M = broadcast_shape[broadcast_shape.length - 2];
-  const dim_N = broadcast_shape[broadcast_shape.length - 1];
-  const dim_K = a_shape[a_shape.length - 1]; // or b_shape[b_shape.length - 2]
+  const kernel = _matmul_kernel;
 
-  for (let i = 0; i < output_size; i++) {
-    const mn_idx = i % (dim_M * dim_N);
-    const m = Math.floor(mn_idx / dim_N);
-    const n = mn_idx % dim_N;
+  {#- if(broadcast_shape.length < 2) { // shouldn't happen, but just in case
+    throw new Error('Shape mismatch: ' + a.shape + ' and ' + b.shape);
+  } #}
 
-    let base_a = _get_original_index(padded_a_shape, broadcast_shape, i - n);
-    let base_b = _get_original_index(padded_b_shape, broadcast_shape, i - m * dim_N);
-
-    let sum = 0;
-    for(let k=0; k < dim_K; k++) {
-      sum += a.data[base_a + k] * b.data[base_b + k * dim_N];
-    }
-    data[i] = sum;
-  }
+  kernel.setConstants({
+    lp: loop_iterations,
+    // assumes that _get_original_index_kernel reads from the front
+    shape_length: broadcast_shape.length - 2
+  });
+  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
 
   let shape_after_removing_extra_dims = [...broadcast_shape];
 
@@ -250,7 +286,13 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null
   }
 
   return new Tensor(
-    data,
+    kernel(
+      a.data,
+      padded_a_shape,
+      b.data,
+      padded_b_shape,
+      broadcast_shape
+    ) as number[],
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: shape_after_removing_extra_dims }
   );

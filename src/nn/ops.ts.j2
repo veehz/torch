@@ -10,8 +10,8 @@ import gpu from '../gpu';
 import { Operation, BinaryOperation, UnaryOperation } from '../operations/base';
 import { registerOperation } from '../operations/registry';
 
-{{ unary_op_base("relu", "Math.max(a[this.thread.x], 0)") }}
+{{ unary_op_base("relu", "Math.max(a[x], 0)") }}
 {{ unary_op_class("Relu", "relu", ["a.backward(dz.mul(a.gt(0)));"]) }}
 
-{{ unary_op_base("sigmoid", "1 / (1 + Math.exp(-a[this.thread.x]))") }}
+{{ unary_op_base("sigmoid", "1 / (1 + Math.exp(-a[x]))") }}
 {{ unary_op_class("Sigmoid", "sigmoid", ["a.backward(dz.mul(a.exp().add(1).pow(-2).reciprocal().mul(a.exp()).mul(-1)));"]) }}

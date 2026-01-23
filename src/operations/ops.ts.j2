@@ -1,8 +1,9 @@
-{% from 'scripts/macros.ts.j2' import binary_op_base, unary_op_base, binary_op_class, unary_op_class, kernel_options %}
+{% from 'scripts/macros.ts.j2' import binary_op_base, unary_op_base, binary_op_class, unary_op_class, kernel_options, powint_op_base, powint_op_class, transpose_op_base, transpose_op_class, matmul_op_base %}
 import { Tensor } from '../tensor';
 import {
   _broadcast_shape,
   _get_original_index_from_transposed_index,
+  _get_original_index,
   _get_original_index_kernel,
   _pad_shape
 } from '../broadcasting';
@@ -10,6 +11,14 @@ import gpu, { Texture } from '../gpu';
 import { Operation, BinaryOperation, UnaryOperation } from './base';
 import * as functional from './functional';
 import { registerOperation } from './registry';
+
+// debug operations
+
+{{ binary_op_base("__left_index__", "a_index") }}
+{{ binary_op_class("__Left_index__", "__left_index__", []) }}
+
+{{ binary_op_base("__right_index__", "b_index") }}
+{{ binary_op_class("__Right_index__", "__right_index__", []) }}
 
 // binary pointwise
 
@@ -41,71 +50,33 @@ import { registerOperation } from './registry';
 {{ binary_op_class("Minimum", "minimum", ["a.backward(dz.mul(a.le(b)));", "b.backward(dz.mul(b.lt(a)));"]) }}
 
 
-function _powint_kernel_function(a: number[], n: number) {
-  return Math.pow(a[this.thread.x], n);
-}
-
-const _powint_kernel = gpu.createKernel(
-  _powint_kernel_function,
-  {{ kernel_options() }}
-);
-
-function _powint_tensor(a: Tensor, n: number, operation: Operation | null = null): Tensor {
-  const kernel = _powint_kernel;
-  {# kernel.setConstants({
-    n: n
-  }); #}
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
-
-  return new Tensor(
-    kernel(a.data, n) as number[],
-    { requires_grad: a.requires_grad },
-    { operation: operation, shape: a.shape }
-  );
-}
-
-export class PowInt extends Operation {
-  private cache: [Tensor, number];
-  public forward(a: Tensor, n: number): Tensor {
-    if (a.requires_grad) {
-      this.cache = [a, n];
-    }
-
-    return _powint_tensor(a, n, a.requires_grad ? this : null);
-  }
-  public backward(dz: Tensor): void {
-    const [a, n] = this.cache;
-
-    // backward_operations:
-    a.backward(dz.mul(n).mul(a.pow(n - 1)));
-  }
-}
-registerOperation('powint', PowInt);
+{{ powint_op_base() }}
+{{ powint_op_class() }}
 
 // unary pointwise
 
-{{ unary_op_base("log", "Math.log(a[this.thread.x])") }}
+{{ unary_op_base("log", "Math.log(a[x])") }}
 {{ unary_op_class("Log", "log", ["a.backward(new Tensor(1).div(a));"]) }}
 
-{{ unary_op_base("sqrt", "Math.sqrt(a[this.thread.x])") }}
+{{ unary_op_base("sqrt", "Math.sqrt(a[x])") }}
 {{ unary_op_class("Sqrt", "sqrt", ["a.backward(new Tensor(1).div(a.sqrt()).div(2));"]) }}
 
-{{ unary_op_base("exp", "Math.exp(a[this.thread.x])") }}
+{{ unary_op_base("exp", "Math.exp(a[x])") }}
 {{ unary_op_class("Exp", "exp", ["a.backward(dz.mul(a.exp()));"]) }}
 
-{{ unary_op_base("square", "a[this.thread.x] * a[this.thread.x]") }}
+{{ unary_op_base("square", "a[x] * a[x]") }}
 {{ unary_op_class("Square", "square", ["a.backward(dz.mul(a).mul(new Tensor(2)));"]) }}
 
-{{ unary_op_base("abs", "Math.abs(a[this.thread.x])") }}
+{{ unary_op_base("abs", "Math.abs(a[x])") }}
 {{ unary_op_class("Abs", "abs", ["a.backward(dz.mul(functional.sign(a)));"]) }}
 
-{{ unary_op_base("sign", "Math.sign(a[this.thread.x])") }}
+{{ unary_op_base("sign", "Math.sign(a[x])") }}
 {{ unary_op_class("Sign", "sign", []) }}
 
-{{ unary_op_base("neg", "-a[this.thread.x]") }}
+{{ unary_op_base("neg", "-a[x]") }}
 {{ unary_op_class("Neg", "neg", ["a.backward(dz.mul(new Tensor(-1)));"]) }}
 
-{{ unary_op_base("reciprocal", "1 / a[this.thread.x]") }}
+{{ unary_op_base("reciprocal", "1 / a[x]") }}
 {{ unary_op_class("Reciprocal", "reciprocal", ["a.backward(dz.mul(a.pow(-2)));"]) }}
 
 export class Reshape extends Operation {
@@ -168,13 +139,13 @@ registerOperation('unsqueeze', Unsqueeze);
 
 // trigonometric
 
-{{ unary_op_base("sin", "Math.sin(a[this.thread.x])") }}
+{{ unary_op_base("sin", "Math.sin(a[x])") }}
 {{ unary_op_class("Sin", "sin", ["a.backward(dz.mul(a.cos()));"]) }}
 
-{{ unary_op_base("cos", "Math.cos(a[this.thread.x])") }}
+{{ unary_op_base("cos", "Math.cos(a[x])") }}
 {{ unary_op_class("Cos", "cos", ["a.backward(dz.mul(a.sin().neg()));"]) }}
 
-{{ unary_op_base("tan", "Math.tan(a[this.thread.x])") }}
+{{ unary_op_base("tan", "Math.tan(a[x])") }}
 {{ unary_op_class("Tan", "tan", ["a.backward(dz.mul(a.cos().pow(-2)));"]) }}
 
 // reduction
@@ -201,154 +172,10 @@ function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 
 // linalg
 
-const _transpose_kernel = gpu.createKernel(
-  function (a: number[], as: number[], dim0: number, dim1: number) {
-    const a_index = _get_original_index_from_transposed_index(as, dim0, dim1, this.thread.x);
-    return a[a_index];
-  },
-  {{ kernel_options() }}
-);
+{{ transpose_op_base() }}
+{{ transpose_op_class() }}
 
-function _transpose_tensor(
-  a: Tensor,
-  dim0: number,
-  dim1: number,
-  operation: Operation | null = null
-): Tensor {
-  const kernel = _transpose_kernel;
-  kernel.setConstants({
-    shape_length: a.shape.length
-  });
-  kernel.setOutput([a.shape.reduce((acc, val) => acc * val, 1)]);
-
-  const swapped_shape = [...a.shape];
-  [swapped_shape[dim0], swapped_shape[dim1]] = [swapped_shape[dim1], swapped_shape[dim0]];
-
-  return new Tensor(
-    kernel(a.data, a.shape, dim0, dim1) as number[],
-    { requires_grad: a.requires_grad },
-    { operation: operation, shape: swapped_shape }
-  );
-}
-
-export class Transpose extends Operation {
-  cache: [Tensor, number, number];
-  forward(a: Tensor, dim0: number, dim1: number): Tensor {
-    this.cache = [a, dim0, dim1];
-    return _transpose_tensor(a, dim0, dim1, this);
-  }
-  backward(dz: Tensor): void {
-    const [a, dim0, dim1] = this.cache;
-
-    // backward_operations:
-    a.backward(dz.transpose(dim0, dim1));
-  }
-}
-registerOperation('transpose', Transpose);
-
-function _matmul_kernel_function(
-  a: number[],
-  as: number[],
-  b: number[],
-  bs: number[],
-  bcs: number[]
-) {
-  let a_index = _get_original_index_kernel(as, bcs, this.thread.x);
-  let b_index = _get_original_index_kernel(bs, bcs, this.thread.x);
-
-  const l = this.constants.shape_length;
-
-  const tmp1 = bcs[l] * bcs[l + 1];
-  const position = this.thread.x % tmp1;
-
-  a_index = a_index * as[l] * as[l + 1] + Math.floor(position / bcs[l + 1]) * as[l + 1];
-  b_index = b_index * bs[l] * bs[l + 1] + (position % bcs[l + 1]);
-
-  const b_stride = bs[l + 1];
-
-  let sum = 0;
-  for (let i = 0; i < this.constants.lp; i++) {
-    sum = sum + a[a_index] * b[b_index];
-    a_index = a_index + 1;
-    b_index = b_index + b_stride;
-  }
-
-  return sum;
-}
-
-const _matmul_kernel = gpu.createKernel(_matmul_kernel_function,
-  {{ kernel_options() }}
-);
-
-function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
-  if (a.shape.length == 1 && b.shape.length == 1) {
-    return a.mul(b).sum();
-  }
-
-  const a_1d = a.shape.length == 1;
-  const b_1d = b.shape.length == 1;
-
-  const a_shape = a_1d ? [1, a.shape[0]] : a.shape;
-  const b_shape = b_1d ? [b.shape[0], 1] : b.shape;
-
-  if (a_shape[a_shape.length - 1] != b_shape[b_shape.length - 2]) {
-    // TODO: check what error pytorch throws
-    throw new Error('Shape mismatch: ' + a.shape + ' and ' + b.shape);
-  }
-
-  const loop_iterations = a_shape[a_shape.length - 1];
-
-  if (loop_iterations > 1000) {
-    // TODO: can try fixing with maxLoopIterations by gpu.js
-    throw new Error('Loop iterations too large: ' + loop_iterations);
-  }
-
-  const broadcast_shape = _broadcast_shape(a_shape.slice(0, -2), b_shape.slice(0, -2)).concat([
-    a_shape[a_shape.length - 2],
-    b_shape[b_shape.length - 1]
-  ]);
-
-  const padded_a_shape = _pad_shape(a_shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b_shape, broadcast_shape);
-
-  const kernel = _matmul_kernel;
-
-  {#- if(broadcast_shape.length < 2) { // shouldn't happen, but just in case
-    throw new Error('Shape mismatch: ' + a.shape + ' and ' + b.shape);
-  } #}
-
-  kernel.setConstants({
-    lp: loop_iterations,
-    // assumes that _get_original_index_kernel reads from the front
-    shape_length: broadcast_shape.length - 2
-  });
-  kernel.setOutput([broadcast_shape.reduce((acc, val) => acc * val, 1)]);
-
-  let shape_after_removing_extra_dims = [...broadcast_shape];
-
-  if (a_1d) {
-    shape_after_removing_extra_dims = shape_after_removing_extra_dims
-      .slice(0, -2)
-      .concat([broadcast_shape[broadcast_shape.length - 1]]);
-  }
-
-  if (b_1d) {
-    shape_after_removing_extra_dims = shape_after_removing_extra_dims.slice(0, -1);
-  }
-
-  return new Tensor(
-    kernel(
-      a.data,
-      padded_a_shape,
-      b.data,
-      padded_b_shape,
-      broadcast_shape
-    ) as number[],
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation: operation, shape: shape_after_removing_extra_dims }
-  );
-}
-
+{{ matmul_op_base() }}
 {{ binary_op_class("Matmul", "matmul", []) }}
 
 // comparison

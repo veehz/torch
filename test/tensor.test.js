@@ -49,13 +49,58 @@ describe('Tensor', () => {
   });
 
   describe('Multiplication', () => {
-    it('should multiply two tensors with same shape', () => {
+    it('should multiply two tensors with same shape, scalar', () => {
       const t1 = new Tensor([10]);
       const t2 = new Tensor([20]);
       const result = t1.mul(t2);
 
       assert.deepStrictEqual(Array.from(result.toArray()), [200]);
       assert.deepStrictEqual(result.shape, [1]);
+    });
+
+    it('should multiply two tensors with same shape, scalar 2', () => {
+      const t1 = new Tensor([-1.0604]);
+      const t2 = new Tensor([0.7560]);
+      const result = t1.mul(t2);
+
+      assert.closeTo(Array.from(result.toArray())[0], -0.8016, 0.001);
+      assert.deepStrictEqual(result.shape, [1]);
+    });
+
+    it('should multiply two tensors with the same shape, integers', () => {
+      const i1 = [[2, 3], [5, 7], [11, 13]]
+      const t1 = new Tensor(i1);
+
+      const i2 = [[1, 2], [3, 4], [5, 6]]
+      const t2 = new Tensor(i2);
+
+      const result = t1.mul(t2);
+      const expected = [[2, 6], [15, 28], [55, 78]]
+
+      for(let i=0;i<expected.length;i++){
+        for(let j=0;j<expected[i].length;j++){
+          assert.closeTo(result.data[i*expected[i].length+j], expected[i][j], 0.001);
+        }
+      }
+    });
+
+    it('should multiply two tensors with the same shape', () => {
+      const i1 = [[-0.4583, -0.2220], [-1.3351, -1.0604], [-0.4482, -1.3160]]
+      const t1 = new Tensor(i1);
+
+      const i2 = [[0.8340, 0.4923], [0.7729, 0.7560], [0.5616, 0.0999]];
+      const t2 = new Tensor(i2);
+
+      const result = t1.mul(t2);
+      const expected = [[-0.3822, -0.1093], [-1.0319, -0.8016], [-0.2517, -0.1315]]
+
+      for(let i=0;i<expected.length;i++){
+        for(let j=0;j<expected[i].length;j++){
+          assert.closeTo(result.data[i*expected[i].length+j], expected[i][j], 0.001);
+        }
+      }
+
+      assert.deepStrictEqual(result.shape, [3, 2]);
     });
   });
 
@@ -178,5 +223,27 @@ describe('Tensor', () => {
       assert.deepStrictEqual(Array.from(result.toArray()), [1, 2, 3, 4, 5, 6]);
       assert.deepStrictEqual(result.shape, [2, 3, 1]);
     });
+  });
+
+  describe('Unary Operations', () => {
+    describe('Neg', () => {
+      it('should negate a tensor', () => {
+        const t = new Tensor([1, 2, 3, -4]);
+        const result = t.neg();
+        assert.deepStrictEqual(Array.from(result.toArray()), [-1, -2, -3, 4]);
+        assert.deepStrictEqual(result.shape, [4]);
+      });
+    });
+
+    describe('Exp', () => {
+      const input = [1, 2, 3, -4, 2.5, -6.7];
+      const t = new Tensor(input);
+      const result = t.exp();
+      const expected = input.map((x) => Math.exp(x));
+      for (let i = 0; i < expected.length; i++) {
+        assert.closeTo(result.data[i], expected[i], 0.0001);
+      }
+      assert.deepStrictEqual(result.shape, [6]);
+    })
   });
 });
