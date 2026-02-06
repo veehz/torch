@@ -4,7 +4,7 @@ import { Tensor } from 'torch';
 describe('Custom Operations', () => {
 
   describe('Matmul', () => {
-    it('should perform matrix multiplication on 2D tensors', () => {
+    it('should perform matrix multiplication on 2D tensors (1)', () => {
       const t1 = new Tensor([
         [1, 2, 3],
         [4, 5, 6]
@@ -18,6 +18,26 @@ describe('Custom Operations', () => {
       const result = t1.matmul(t2);
       assert.deepStrictEqual(result.shape, [2, 2]);
       assert.deepStrictEqual(Array.from(result.toArray()), [31, 19, 85, 55]);
+    });
+
+    it('should perform matrix multiplication on 2D tensors (2)', () => {
+      const t1 = new Tensor([
+        [1, 2, 3],
+        [4, 5, 6]
+      ]);
+
+      const t2 = new Tensor([
+        [9, 9, 1],
+        [6, 4, 3],
+        [5, 5, 6]
+      ]);
+
+      const result = t1.matmul(t2);
+
+      const expected = [36, 32, 25, 96, 86, 55];
+
+      assert.deepStrictEqual(Array.from(result.toArray()), expected);
+      assert.deepStrictEqual(result.shape, [2, 3]);
     });
 
     it('should perform dot product on 1D tensors', () => {

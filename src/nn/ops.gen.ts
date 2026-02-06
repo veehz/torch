@@ -6,7 +6,7 @@ import {
   _get_original_index_kernel,
   _pad_shape
 } from '../broadcasting';
-import { Operation, BinaryOperation, UnaryOperation } from '../operations/base';
+import { Operation, BinaryOperation, UnaryOperation, nullOp, AccumulateGrad } from '../operations/base';
 import { registerOperation } from '../operations/registry';
 
 // function generated from unary_op_base("relu", "Math.max(a[x], 0)")
@@ -31,18 +31,19 @@ function _relu_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 }
 // class generated from unary_op_class("Relu", "relu", backward_operations)
 export class Relu extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _relu_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(a.gt(0)));
+    aFn.backward(dz.mul(a.gt(0)));
   }
 }
 registerOperation('relu', Relu);
@@ -69,18 +70,19 @@ function _sigmoid_tensor(a: Tensor, operation: Operation | null = null): Tensor 
 }
 // class generated from unary_op_class("Sigmoid", "sigmoid", backward_operations)
 export class Sigmoid extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _sigmoid_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(a.exp().add(1).pow(-2).reciprocal().mul(a.exp()).mul(-1)));
+    aFn.backward(dz.mul(a.exp().add(1).pow(-2).reciprocal().mul(a.exp()).mul(-1)));
   }
 }
 registerOperation('sigmoid', Sigmoid);

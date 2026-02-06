@@ -1,5 +1,5 @@
 import { _get_original_index } from './broadcasting';
-import { Operation } from './operations/base';
+import { AccumulateGrad, Operation } from './operations/base';
 import { getOperation, getOperationCache } from './operations/registry';
 
 /*
@@ -46,7 +46,7 @@ function _flatten(data: NestedNumberArray): number[] {
 export class Tensor {
   data: number[];
   _shape: number[];
-  operation: Operation | null = null;
+  grad_fn: Operation | null = null;
   public grad: Tensor | null = null;
 
   requires_grad: boolean;
@@ -60,7 +60,13 @@ export class Tensor {
     this.requires_grad = options.requires_grad ?? false;
 
     this._shape = internal_options.shape ?? _get_shape(data);
-    this.operation = internal_options.operation ?? null;
+    this.grad_fn = internal_options.operation ?? null;
+
+    if (this.requires_grad && !this.grad_fn) {
+      const acc = new AccumulateGrad();
+      acc.variable = this;
+      this.grad_fn = acc;
+    }
   }
 
   // TODO: Somehow having a shape of [] will have a weird error:
@@ -120,11 +126,21 @@ export class Tensor {
   detach_(): void {
     this.requires_grad = false;
     this.grad = null;
-    this.operation = null;
+    this.grad_fn = null;
   }
 
   zero_(): void {
     this.data = Array(this.dataLength()).fill(0);
+  }
+
+  private is_retain_grad: boolean = false;
+  retain_grad(): void {
+    // leaf node -> no-op
+    if (this.grad_fn instanceof AccumulateGrad) return;
+    if (this.is_retain_grad) return;
+    this.is_retain_grad = true;
+
+    this.grad_fn._retained_tensors.push(this);
   }
 
   backward(grad?: Tensor | null): void {
@@ -143,19 +159,8 @@ export class Tensor {
       grad.toArray_();
     }
 
-    if (!this.grad) {
-      this.grad = new Tensor(Array(this.dataLength()).fill(0));
-    }
-
-    this.grad.toArray_();
-
-    // this.grad += grad
-    for (let i = 0; i < grad.dataLength(); i++) {
-      this.grad.data[_get_original_index(this.shape, grad.shape, i)] += grad.data[i];
-    }
-
-    if (this.operation) {
-      this.operation.backward(grad);
+    if (this.grad_fn) {
+      this.grad_fn.backward(grad);
     }
   }
 

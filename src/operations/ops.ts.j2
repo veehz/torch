@@ -7,7 +7,7 @@ import {
   _get_original_index_kernel,
   _pad_shape
 } from '../broadcasting';
-import { Operation, BinaryOperation, UnaryOperation } from './base';
+import { Operation, BinaryOperation, UnaryOperation, nullOp, AccumulateGrad } from './base';
 import * as functional from './functional';
 import { registerOperation } from './registry';
 
@@ -22,31 +22,31 @@ import { registerOperation } from './registry';
 // binary pointwise
 
 {{ binary_op_base("add", "a[a_index] + b[b_index]") }}
-{{ binary_op_class("Add", "add", ["a.backward(dz);", "b.backward(dz);"]) }}
+{{ binary_op_class("Add", "add", ["aFn.backward(dz);", "bFn.backward(dz);"]) }}
 
 {{ binary_op_base("sub", "a[a_index] - b[b_index]") }}
-{{ binary_op_class("Sub", "sub", ["a.backward(dz);", "b.backward(dz.mul(new Tensor(-1)));"]) }}
+{{ binary_op_class("Sub", "sub", ["aFn.backward(dz);", "bFn.backward(dz.mul(new Tensor(-1)));"]) }}
 
 {{ binary_op_base("mul", "a[a_index] * b[b_index]") }}
-{{ binary_op_class("Mul", "mul", ["a.backward(dz.mul(b));", "b.backward(dz.mul(a));"]) }}
+{{ binary_op_class("Mul", "mul", ["aFn.backward(dz.mul(b));", "bFn.backward(dz.mul(a));"]) }}
 
 {{ binary_op_base("div", "a[a_index] / b[b_index]") }}
-{{ binary_op_class("Div", "div", ["a.backward(dz.div(b));", "b.backward(dz.mul(a).mul(new Tensor(-1)).div(b).div(b));"]) }}
+{{ binary_op_class("Div", "div", ["aFn.backward(dz.div(b));", "bFn.backward(dz.mul(a).mul(new Tensor(-1)).div(b).div(b));"]) }}
 
 {{ binary_op_base("pow", "Math.pow(a[a_index], b[b_index])") }}
 {{ binary_op_class("Pow", "pow", [
-  "a.backward(dz.mul(b).mul(a.pow(b.sub(new Tensor(1)))));",
-  "b.backward(dz.mul(a.pow(b)).mul(a.log()));"
+  "aFn.backward(dz.mul(b).mul(a.pow(b.sub(new Tensor(1)))));",
+  "bFn.backward(dz.mul(a.pow(b)).mul(a.log()));"
 ])}}
 
 {{ binary_op_base("fmod", "a[a_index] % b[b_index]") }}
-{{ binary_op_class("Fmod", "fmod", ["a.backward(dz);"]) }}
+{{ binary_op_class("Fmod", "fmod", ["aFn.backward(dz);"]) }}
 
 {{ binary_op_base("maximum", "Math.max(a[a_index], b[b_index])") }}
-{{ binary_op_class("Maximum", "maximum", ["a.backward(dz.mul(a.ge(b)));", "b.backward(dz.mul(b.gt(a)));"]) }}
+{{ binary_op_class("Maximum", "maximum", ["aFn.backward(dz.mul(a.ge(b)));", "bFn.backward(dz.mul(b.gt(a)));"]) }}
 
 {{ binary_op_base("minimum", "Math.min(a[a_index], b[b_index])") }}
-{{ binary_op_class("Minimum", "minimum", ["a.backward(dz.mul(a.le(b)));", "b.backward(dz.mul(b.lt(a)));"]) }}
+{{ binary_op_class("Minimum", "minimum", ["aFn.backward(dz.mul(a.le(b)));", "bFn.backward(dz.mul(b.lt(a)));"]) }}
 
 
 {{ powint_op_base() }}
@@ -55,31 +55,30 @@ import { registerOperation } from './registry';
 // unary pointwise
 
 {{ unary_op_base("log", "Math.log(a[x])") }}
-{{ unary_op_class("Log", "log", ["a.backward(new Tensor(1).div(a));"]) }}
+{{ unary_op_class("Log", "log", ["aFn.backward(new Tensor(1).div(a));"]) }}
 
 {{ unary_op_base("sqrt", "Math.sqrt(a[x])") }}
-{{ unary_op_class("Sqrt", "sqrt", ["a.backward(new Tensor(1).div(a.sqrt()).div(2));"]) }}
+{{ unary_op_class("Sqrt", "sqrt", ["aFn.backward(new Tensor(1).div(a.sqrt()).div(2));"]) }}
 
 {{ unary_op_base("exp", "Math.exp(a[x])") }}
-{{ unary_op_class("Exp", "exp", ["a.backward(dz.mul(a.exp()));"]) }}
+{{ unary_op_class("Exp", "exp", ["aFn.backward(dz.mul(a.exp()));"]) }}
 
 {{ unary_op_base("square", "a[x] * a[x]") }}
-{{ unary_op_class("Square", "square", ["a.backward(dz.mul(a).mul(new Tensor(2)));"]) }}
+{{ unary_op_class("Square", "square", ["aFn.backward(dz.mul(a).mul(new Tensor(2)));"]) }}
 
 {{ unary_op_base("abs", "Math.abs(a[x])") }}
-{{ unary_op_class("Abs", "abs", ["a.backward(dz.mul(functional.sign(a)));"]) }}
+{{ unary_op_class("Abs", "abs", ["aFn.backward(dz.mul(functional.sign(a)));"]) }}
 
 {{ unary_op_base("sign", "Math.sign(a[x])") }}
 {{ unary_op_class("Sign", "sign", []) }}
 
 {{ unary_op_base("neg", "-a[x]") }}
-{{ unary_op_class("Neg", "neg", ["a.backward(dz.mul(new Tensor(-1)));"]) }}
+{{ unary_op_class("Neg", "neg", ["aFn.backward(dz.mul(new Tensor(-1)));"]) }}
 
 {{ unary_op_base("reciprocal", "1 / a[x]") }}
-{{ unary_op_class("Reciprocal", "reciprocal", ["a.backward(dz.mul(a.pow(-2)));"]) }}
+{{ unary_op_class("Reciprocal", "reciprocal", ["aFn.backward(dz.mul(a.pow(-2)));"]) }}
 
 export class Reshape extends Operation {
-  private cache: [Tensor];
   protected _forward(a: Tensor, shape: number[]) {
     const previous_length = a.dataLength();
     const target_length = shape.reduce((acc, val) => acc * val, 1);
@@ -89,7 +88,16 @@ export class Reshape extends Operation {
     }
 
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
+    }
+    if (a.grad_fn) {
+      this.next_functions.push(a.grad_fn);
+    } else if (a.requires_grad) {
+      const acc = new AccumulateGrad();
+      acc.variable = a;
+      this.next_functions.push(acc);
+    } else {
+      this.next_functions.push(nullOp);
     }
 
     return new Tensor(
@@ -99,19 +107,28 @@ export class Reshape extends Operation {
     );
   }
   protected _backward(dz: Tensor) {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.reshape(a.shape));
+    aFn.backward(dz.reshape(a.shape));
   }
 }
 registerOperation('reshape', Reshape);
 
 export class Unsqueeze extends Operation {
-  private cache: [Tensor];
   protected _forward(a: Tensor, dim: number) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
+    }
+    if (a.grad_fn) {
+      this.next_functions.push(a.grad_fn);
+    } else if (a.requires_grad) {
+      const acc = new AccumulateGrad();
+      acc.variable = a;
+      this.next_functions.push(acc);
+    } else {
+      this.next_functions.push(nullOp);
     }
 
     if (dim < 0) {
@@ -128,10 +145,11 @@ export class Unsqueeze extends Operation {
     );
   }
   protected _backward(dz: Tensor) {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.reshape(a.shape));
+    aFn.backward(dz.reshape(a.shape));
   }
 }
 registerOperation('unsqueeze', Unsqueeze);
@@ -139,13 +157,13 @@ registerOperation('unsqueeze', Unsqueeze);
 // trigonometric
 
 {{ unary_op_base("sin", "Math.sin(a[x])") }}
-{{ unary_op_class("Sin", "sin", ["a.backward(dz.mul(a.cos()));"]) }}
+{{ unary_op_class("Sin", "sin", ["aFn.backward(dz.mul(a.cos()));"]) }}
 
 {{ unary_op_base("cos", "Math.cos(a[x])") }}
-{{ unary_op_class("Cos", "cos", ["a.backward(dz.mul(a.sin().neg()));"]) }}
+{{ unary_op_class("Cos", "cos", ["aFn.backward(dz.mul(a.sin().neg()));"]) }}
 
 {{ unary_op_base("tan", "Math.tan(a[x])") }}
-{{ unary_op_class("Tan", "tan", ["a.backward(dz.mul(a.cos().pow(-2)));"]) }}
+{{ unary_op_class("Tan", "tan", ["aFn.backward(dz.mul(a.cos().pow(-2)));"]) }}
 
 // reduction
 
@@ -157,7 +175,7 @@ function _sum_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   );
 }
 
-{{ unary_op_class("Sum", "sum", ["const result = new Tensor(Array(a.dataLength()).fill(dz.item()));", "a.backward(result);"]) }}
+{{ unary_op_class("Sum", "sum", ["const result = new Tensor(Array(a.dataLength()).fill(dz.item()));", "aFn.backward(result);"]) }}
 
 function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   return new Tensor(
@@ -167,7 +185,7 @@ function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   );
 }
 
-{{ unary_op_class("Mean", "mean", ["const result = new Tensor(Array(a.dataLength()).fill(dz.item() / a.dataLength()));", "a.backward(result);"]) }}
+{{ unary_op_class("Mean", "mean", ["const result = new Tensor(Array(a.dataLength()).fill(dz.item() / a.dataLength()));", "aFn.backward(result);"]) }}
 
 // linalg
 

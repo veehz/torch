@@ -7,8 +7,7 @@ import {
   _get_original_index_kernel,
   _pad_shape
 } from '../broadcasting';
-// import gpu, { Texture } from '../gpu';
-import { Operation, BinaryOperation, UnaryOperation } from './base';
+import { Operation, BinaryOperation, UnaryOperation, nullOp, AccumulateGrad } from './base';
 import * as functional from './functional';
 import { registerOperation } from './registry';
 
@@ -40,15 +39,17 @@ function ___left_index___tensor(a: Tensor, b: Tensor, operation: Operation | nul
 }
 // class generated from binary_op_class("__Left_index__", "__left_index__", backward_operations)
 export class __Left_index__ extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return ___left_index___tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
     
@@ -82,15 +83,17 @@ function ___right_index___tensor(a: Tensor, b: Tensor, operation: Operation | nu
 }
 // class generated from binary_op_class("__Right_index__", "__right_index__", backward_operations)
 export class __Right_index__ extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return ___right_index___tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
     
@@ -126,19 +129,21 @@ function _add_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 }
 // class generated from binary_op_class("Add", "add", backward_operations)
 export class Add extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _add_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz);
-    b.backward(dz);
+    aFn.backward(dz);
+    bFn.backward(dz);
   }
 }
 registerOperation('add', Add);
@@ -169,19 +174,21 @@ function _sub_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 }
 // class generated from binary_op_class("Sub", "sub", backward_operations)
 export class Sub extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _sub_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz);
-    b.backward(dz.mul(new Tensor(-1)));
+    aFn.backward(dz);
+    bFn.backward(dz.mul(new Tensor(-1)));
   }
 }
 registerOperation('sub', Sub);
@@ -212,19 +219,21 @@ function _mul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 }
 // class generated from binary_op_class("Mul", "mul", backward_operations)
 export class Mul extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _mul_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(b));
-    b.backward(dz.mul(a));
+    aFn.backward(dz.mul(b));
+    bFn.backward(dz.mul(a));
   }
 }
 registerOperation('mul', Mul);
@@ -255,19 +264,21 @@ function _div_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 }
 // class generated from binary_op_class("Div", "div", backward_operations)
 export class Div extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _div_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.div(b));
-    b.backward(dz.mul(a).mul(new Tensor(-1)).div(b).div(b));
+    aFn.backward(dz.div(b));
+    bFn.backward(dz.mul(a).mul(new Tensor(-1)).div(b).div(b));
   }
 }
 registerOperation('div', Div);
@@ -298,19 +309,21 @@ function _pow_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 }
 // class generated from binary_op_class("Pow", "pow", backward_operations)
 export class Pow extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _pow_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(b).mul(a.pow(b.sub(new Tensor(1)))));
-    b.backward(dz.mul(a.pow(b)).mul(a.log()));
+    aFn.backward(dz.mul(b).mul(a.pow(b.sub(new Tensor(1)))));
+    bFn.backward(dz.mul(a.pow(b)).mul(a.log()));
   }
 }
 registerOperation('pow', Pow);
@@ -341,18 +354,20 @@ function _fmod_tensor(a: Tensor, b: Tensor, operation: Operation | null = null):
 }
 // class generated from binary_op_class("Fmod", "fmod", backward_operations)
 export class Fmod extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _fmod_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz);
+    aFn.backward(dz);
   }
 }
 registerOperation('fmod', Fmod);
@@ -383,19 +398,21 @@ function _maximum_tensor(a: Tensor, b: Tensor, operation: Operation | null = nul
 }
 // class generated from binary_op_class("Maximum", "maximum", backward_operations)
 export class Maximum extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _maximum_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(a.ge(b)));
-    b.backward(dz.mul(b.gt(a)));
+    aFn.backward(dz.mul(a.ge(b)));
+    bFn.backward(dz.mul(b.gt(a)));
   }
 }
 registerOperation('maximum', Maximum);
@@ -426,19 +443,21 @@ function _minimum_tensor(a: Tensor, b: Tensor, operation: Operation | null = nul
 }
 // class generated from binary_op_class("Minimum", "minimum", backward_operations)
 export class Minimum extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _minimum_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(a.le(b)));
-    b.backward(dz.mul(b.lt(a)));
+    aFn.backward(dz.mul(a.le(b)));
+    bFn.backward(dz.mul(b.lt(a)));
   }
 }
 registerOperation('minimum', Minimum);
@@ -456,19 +475,23 @@ function _powint_tensor(a: Tensor, n: number, operation: Operation | null = null
   );
 }
 export class PowInt extends Operation {
-  private cache: [Tensor, number];
+  private n: number;
   protected _forward(a: Tensor, n: number): Tensor {
     if (a.requires_grad) {
-      this.cache = [a, n];
+      this.saved_tensors = [a];
+      this.n = n;
     }
 
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _powint_tensor(a, n, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, n] = this.cache;
+    const [a] = this.saved_tensors;
+    const n = this.n;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(n).mul(a.pow(n - 1)));
+    aFn.backward(dz.mul(n).mul(a.pow(n - 1)));
   }
 }
 registerOperation('powint', PowInt);
@@ -497,18 +520,19 @@ function _log_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 }
 // class generated from unary_op_class("Log", "log", backward_operations)
 export class Log extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _log_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(new Tensor(1).div(a));
+    aFn.backward(new Tensor(1).div(a));
   }
 }
 registerOperation('log', Log);
@@ -535,18 +559,19 @@ function _sqrt_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 }
 // class generated from unary_op_class("Sqrt", "sqrt", backward_operations)
 export class Sqrt extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _sqrt_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(new Tensor(1).div(a.sqrt()).div(2));
+    aFn.backward(new Tensor(1).div(a.sqrt()).div(2));
   }
 }
 registerOperation('sqrt', Sqrt);
@@ -573,18 +598,19 @@ function _exp_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 }
 // class generated from unary_op_class("Exp", "exp", backward_operations)
 export class Exp extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _exp_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(a.exp()));
+    aFn.backward(dz.mul(a.exp()));
   }
 }
 registerOperation('exp', Exp);
@@ -611,18 +637,19 @@ function _square_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 }
 // class generated from unary_op_class("Square", "square", backward_operations)
 export class Square extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _square_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(a).mul(new Tensor(2)));
+    aFn.backward(dz.mul(a).mul(new Tensor(2)));
   }
 }
 registerOperation('square', Square);
@@ -649,18 +676,19 @@ function _abs_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 }
 // class generated from unary_op_class("Abs", "abs", backward_operations)
 export class Abs extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _abs_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(functional.sign(a)));
+    aFn.backward(dz.mul(functional.sign(a)));
   }
 }
 registerOperation('abs', Abs);
@@ -687,15 +715,16 @@ function _sign_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 }
 // class generated from unary_op_class("Sign", "sign", backward_operations)
 export class Sign extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _sign_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
     
@@ -725,18 +754,19 @@ function _neg_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 }
 // class generated from unary_op_class("Neg", "neg", backward_operations)
 export class Neg extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _neg_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(new Tensor(-1)));
+    aFn.backward(dz.mul(new Tensor(-1)));
   }
 }
 registerOperation('neg', Neg);
@@ -763,24 +793,24 @@ function _reciprocal_tensor(a: Tensor, operation: Operation | null = null): Tens
 }
 // class generated from unary_op_class("Reciprocal", "reciprocal", backward_operations)
 export class Reciprocal extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _reciprocal_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(a.pow(-2)));
+    aFn.backward(dz.mul(a.pow(-2)));
   }
 }
 registerOperation('reciprocal', Reciprocal);
 
 export class Reshape extends Operation {
-  private cache: [Tensor];
   protected _forward(a: Tensor, shape: number[]) {
     const previous_length = a.dataLength();
     const target_length = shape.reduce((acc, val) => acc * val, 1);
@@ -790,7 +820,16 @@ export class Reshape extends Operation {
     }
 
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
+    }
+    if (a.grad_fn) {
+      this.next_functions.push(a.grad_fn);
+    } else if (a.requires_grad) {
+      const acc = new AccumulateGrad();
+      acc.variable = a;
+      this.next_functions.push(acc);
+    } else {
+      this.next_functions.push(nullOp);
     }
 
     return new Tensor(
@@ -800,19 +839,28 @@ export class Reshape extends Operation {
     );
   }
   protected _backward(dz: Tensor) {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.reshape(a.shape));
+    aFn.backward(dz.reshape(a.shape));
   }
 }
 registerOperation('reshape', Reshape);
 
 export class Unsqueeze extends Operation {
-  private cache: [Tensor];
   protected _forward(a: Tensor, dim: number) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
+    }
+    if (a.grad_fn) {
+      this.next_functions.push(a.grad_fn);
+    } else if (a.requires_grad) {
+      const acc = new AccumulateGrad();
+      acc.variable = a;
+      this.next_functions.push(acc);
+    } else {
+      this.next_functions.push(nullOp);
     }
 
     if (dim < 0) {
@@ -829,10 +877,11 @@ export class Unsqueeze extends Operation {
     );
   }
   protected _backward(dz: Tensor) {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.reshape(a.shape));
+    aFn.backward(dz.reshape(a.shape));
   }
 }
 registerOperation('unsqueeze', Unsqueeze);
@@ -861,18 +910,19 @@ function _sin_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 }
 // class generated from unary_op_class("Sin", "sin", backward_operations)
 export class Sin extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _sin_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(a.cos()));
+    aFn.backward(dz.mul(a.cos()));
   }
 }
 registerOperation('sin', Sin);
@@ -899,18 +949,19 @@ function _cos_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 }
 // class generated from unary_op_class("Cos", "cos", backward_operations)
 export class Cos extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _cos_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(a.sin().neg()));
+    aFn.backward(dz.mul(a.sin().neg()));
   }
 }
 registerOperation('cos', Cos);
@@ -937,18 +988,19 @@ function _tan_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 }
 // class generated from unary_op_class("Tan", "tan", backward_operations)
 export class Tan extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _tan_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(a.cos().pow(-2)));
+    aFn.backward(dz.mul(a.cos().pow(-2)));
   }
 }
 registerOperation('tan', Tan);
@@ -965,19 +1017,20 @@ function _sum_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 
 // class generated from unary_op_class("Sum", "sum", backward_operations)
 export class Sum extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _sum_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
     const result = new Tensor(Array(a.dataLength()).fill(dz.item()));
-    a.backward(result);
+    aFn.backward(result);
   }
 }
 registerOperation('sum', Sum);
@@ -992,19 +1045,20 @@ function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 
 // class generated from unary_op_class("Mean", "mean", backward_operations)
 export class Mean extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _mean_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
     const result = new Tensor(Array(a.dataLength()).fill(dz.item() / a.dataLength()));
-    a.backward(result);
+    aFn.backward(result);
   }
 }
 registerOperation('mean', Mean);
@@ -1057,16 +1111,25 @@ function _transpose_tensor(
   );
 }
 export class Transpose extends Operation {
-  cache: [Tensor, number, number];
+  private dim0: number;
+  private dim1: number;
   protected _forward(a: Tensor, dim0: number, dim1: number): Tensor {
-    this.cache = [a, dim0, dim1];
+    if (a.requires_grad) {
+        this.saved_tensors = [a];
+        this.dim0 = dim0;
+        this.dim1 = dim1;
+    }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _transpose_tensor(a, dim0, dim1, this);
   }
   protected _backward(dz: Tensor): void {
-    const [a, dim0, dim1] = this.cache;
+    const [a] = this.saved_tensors;
+    const dim0 = this.dim0;
+    const dim1 = this.dim1;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.transpose(dim0, dim1));
+    aFn.backward(dz.transpose(dim0, dim1));
   }
 }
 registerOperation('transpose', Transpose);
@@ -1136,15 +1199,17 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null
 }
 // class generated from binary_op_class("Matmul", "matmul", backward_operations)
 export class Matmul extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _matmul_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
     
@@ -1180,15 +1245,17 @@ function _lt_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 }
 // class generated from binary_op_class("Lt", "lt", backward_operations)
 export class Lt extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _lt_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
     
@@ -1222,15 +1289,17 @@ function _gt_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 }
 // class generated from binary_op_class("Gt", "gt", backward_operations)
 export class Gt extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _gt_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
     
@@ -1264,15 +1333,17 @@ function _le_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 }
 // class generated from binary_op_class("Le", "le", backward_operations)
 export class Le extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _le_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
     
@@ -1306,15 +1377,17 @@ function _ge_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 }
 // class generated from binary_op_class("Ge", "ge", backward_operations)
 export class Ge extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _ge_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
     
@@ -1348,15 +1421,17 @@ function _eq_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 }
 // class generated from binary_op_class("Eq", "eq", backward_operations)
 export class Eq extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _eq_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
     
@@ -1390,15 +1465,17 @@ function _ne_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 }
 // class generated from binary_op_class("Ne", "ne", backward_operations)
 export class Ne extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _ne_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
     

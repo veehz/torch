@@ -42,9 +42,6 @@ describe('Autograd', () => {
 
     y.backward();
 
-    assert.strictEqual(y1.grad?.item(), 1.0);
-    assert.strictEqual(y2.grad?.item(), 1.0);
-
     assert.strictEqual(x.grad?.item(), 6.0);
     assert.strictEqual(x.item(), 2.0);
   });
@@ -55,5 +52,37 @@ describe('Autograd', () => {
     assert.strictEqual(y.item(), 8.0);
     y.backward();
     assert.strictEqual(x.grad?.item(), 6.0);
+  });
+
+  it('Intermediate tensors do not store grad by default', () => {
+    const x = new Tensor([2.0], { requires_grad: true });
+
+    const y1 = x.pow(new Tensor(2.0));
+    const y2 = x.mul(new Tensor(2.0));
+
+    const y = y1.add(y2);
+
+    y.backward();
+
+    // Intermediate gradients are not retained by default
+    assert.strictEqual(y1.grad, null);
+    assert.strictEqual(y2.grad, null);
+  });
+
+  it('Intermediate tensors store grads after retain_grad', () => {
+    const x = new Tensor([2.0], { requires_grad: true });
+
+    const y1 = x.pow(new Tensor(2.0));
+    const y2 = x.mul(new Tensor(2.0));
+
+    const y = y1.add(y2);
+
+    y1.retain_grad();
+    y2.retain_grad();
+
+    y.backward();
+
+    assert.strictEqual(y1.grad.item(), 1.0);
+    assert.strictEqual(y2.grad.item(), 1.0);
   });
 });
