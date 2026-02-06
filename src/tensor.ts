@@ -1,7 +1,6 @@
 import { _get_original_index } from './broadcasting';
 import { Operation } from './operations/base';
 import { getOperation, getOperationCache } from './operations/registry';
-import { Texture } from './gpu';
 
 /*
  * TODO:
@@ -82,9 +81,6 @@ export class Tensor {
   }
 
   dataLength(): number {
-    if (this.data instanceof Texture) {
-      return this.shape.reduce((acc, val) => acc * val, 1);
-    }
     return this.data.length;
   }
 
@@ -153,17 +149,13 @@ export class Tensor {
 
     this.grad.toArray_();
 
-    // Add grad to this.grad
+    // this.grad += grad
     for (let i = 0; i < grad.dataLength(); i++) {
       this.grad.data[_get_original_index(this.shape, grad.shape, i)] += grad.data[i];
     }
 
     if (this.operation) {
-      // Propagate only the incoming local gradient, not the accumulated one,
-      // to avoid double-counting when a tensor receives gradients from
-      // multiple downstream paths.
-      // this.operation.backward(grad);
-      this.operation.backward(this.grad);
+      this.operation.backward(grad);
     }
   }
 
@@ -253,11 +245,11 @@ export class Tensor {
   sin(): Tensor {
     return this._executeUnaryOp('sin');
   }
-  
+
   cos(): Tensor {
     return this._executeUnaryOp('cos');
   }
-  
+
   tan(): Tensor {
     return this._executeUnaryOp('tan');
   }
@@ -299,7 +291,7 @@ export class Tensor {
   ge(other: Tensor | number): Tensor {
     return this._executeBinaryOp('ge', other);
   }
-  
+
   eq(other: Tensor | number): Tensor {
     return this._executeBinaryOp('eq', other);
   }

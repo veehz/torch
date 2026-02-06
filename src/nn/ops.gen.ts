@@ -6,7 +6,6 @@ import {
   _get_original_index_kernel,
   _pad_shape
 } from '../broadcasting';
-import gpu from '../gpu';
 import { Operation, BinaryOperation, UnaryOperation } from '../operations/base';
 import { registerOperation } from '../operations/registry';
 

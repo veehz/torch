@@ -7,7 +7,7 @@ import {
   _get_original_index_kernel,
   _pad_shape
 } from '../broadcasting';
-import gpu, { Texture } from '../gpu';
+// import gpu, { Texture } from '../gpu';
 import { Operation, BinaryOperation, UnaryOperation } from './base';
 import * as functional from './functional';
 import { registerOperation } from './registry';
