@@ -1,12 +1,10 @@
 import { Tensor } from '../tensor';
 import { UnaryOperation } from '../operations/base';
 export declare class Relu extends UnaryOperation {
-    private cache;
-    forward(a: Tensor): Tensor;
-    backward(dz: Tensor): void;
+    protected _forward(a: Tensor): Tensor;
+    protected _backward(dz: Tensor): void;
 }
 export declare class Sigmoid extends UnaryOperation {
-    private cache;
-    forward(a: Tensor): Tensor;
-    backward(dz: Tensor): void;
+    protected _forward(a: Tensor): Tensor;
+    protected _backward(dz: Tensor): void;
 }

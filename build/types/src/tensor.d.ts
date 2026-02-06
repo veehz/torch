@@ -4,7 +4,7 @@ export type NestedNumberArray = number | TypedArray | NestedNumberArray[];
 export declare class Tensor {
     data: number[];
     _shape: number[];
-    operation: Operation | null;
+    grad_fn: Operation | null;
     grad: Tensor | null;
     requires_grad: boolean;
     constructor(data: NestedNumberArray, options?: {
@@ -25,6 +25,8 @@ export declare class Tensor {
     detach(): Tensor;
     detach_(): void;
     zero_(): void;
+    private is_retain_grad;
+    retain_grad(): void;
     backward(grad?: Tensor | null): void;
     add(other: Tensor | number): Tensor;
     sub(other: Tensor | number): Tensor;

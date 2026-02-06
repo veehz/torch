@@ -1,102 +1,52 @@
 "use strict";
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-const gpu_js = require("@veehz/gpu.js");
-function _broadcast_shape(a_shape, b_shape) {
-  const result_length = Math.max(a_shape.length, b_shape.length);
-  const padded_a_shape = [...Array(result_length - a_shape.length).fill(1), ...a_shape];
-  const padded_b_shape = [...Array(result_length - b_shape.length).fill(1), ...b_shape];
-  const result_shape = [];
-  for (let i = 0; i < result_length; i++) {
-    if (padded_a_shape[i] !== padded_b_shape[i] && padded_a_shape[i] !== 1 && padded_b_shape[i] !== 1) {
-      throw new Error(`Shape mismatch: ${a_shape} and ${b_shape}`);
-    }
-    result_shape.push(Math.max(padded_a_shape[i], padded_b_shape[i]));
+const opBus = new EventTarget();
+class Operation {
+  next_functions = [];
+  saved_tensors = [];
+  _retained_tensors = [];
+  forward(...args) {
+    const result = this._forward(...args);
+    opBus.dispatchEvent(new CustomEvent("forward", { detail: { operation: this, args, result } }));
+    return result;
   }
-  return result_shape;
+  backward(dz) {
+    opBus.dispatchEvent(new CustomEvent("backward", { detail: { operation: this, dz } }));
+    for (const x of this._retained_tensors) {
+      if (!x.grad) {
+        x.grad = new Tensor(new Array(x.dataLength()).fill(0));
+      }
+      x.grad = x.grad.add(dz);
+    }
+    this._backward(dz);
+  }
 }
-function _pad_shape(shape, broadcast_shape) {
-  if (shape.length >= broadcast_shape.length) {
-    return shape;
+class NullOp extends Operation {
+  _forward(...args) {
+    throw new Error("NullOp should not be called");
   }
-  return [...Array(broadcast_shape.length - shape.length).fill(1), ...shape];
+  _backward(dz) {
+    return;
+  }
 }
-function _get_original_index(original_shape, new_shape, index2) {
-  let original_index = 0;
-  let cur_stride = 1;
-  let temp_index = index2;
-  for (let i = original_shape.length - 1; i >= 0; i--) {
-    if (original_shape[i] > 1) {
-      const dim_index = temp_index % new_shape[i];
-      original_index = original_index + dim_index * cur_stride;
-    }
-    cur_stride *= original_shape[i];
-    temp_index = Math.floor(temp_index / new_shape[i]);
-  }
-  return original_index;
+const nullOp = new NullOp();
+class UnaryOperation extends Operation {
 }
-function _get_original_index_kernel(original_shape, new_shape, index2) {
-  let original_index = 0;
-  let cur_stride = 1;
-  let temp_index = index2;
-  for (let i = this.constants.shape_length - 1; i >= 0; i--) {
-    if (original_shape[i] > 1) {
-      const dim_index = temp_index % new_shape[i];
-      original_index = original_index + dim_index * cur_stride;
-    }
-    cur_stride = cur_stride * original_shape[i];
-    temp_index = Math.floor(temp_index / new_shape[i]);
-  }
-  return original_index;
+class BinaryOperation extends Operation {
 }
-function _get_original_index_from_transposed_index(original_shape, dim0, dim1, transposed_index) {
-  let original_index = 0;
-  let cur_stride = 1;
-  let temp_index = transposed_index;
-  let dim0_index = 0;
-  let dim1_index = 0;
-  for (let i = this.constants.shape_length - 1; i >= 0; i--) {
-    const dim_index = temp_index % original_shape[i];
-    if (i == dim0) {
-      dim0_index = dim_index;
-    }
-    if (i == dim1) {
-      dim1_index = dim_index;
-    }
-    temp_index = Math.floor(temp_index / original_shape[i]);
+class AccumulateGrad extends UnaryOperation {
+  variable;
+  _forward(variable) {
+    this.variable = variable;
+    return variable;
   }
-  temp_index = transposed_index;
-  for (let j = this.constants.shape_length - 1; j >= 0; j--) {
-    const dim_index = temp_index % original_shape[j];
-    if (j == dim0) {
-      original_index = original_index + dim1_index * cur_stride;
-    } else if (j == dim1) {
-      original_index = original_index + dim0_index * cur_stride;
-    } else {
-      original_index = original_index + dim_index * cur_stride;
+  _backward(dz) {
+    if (!this.variable.grad) {
+      this.variable.grad = new Tensor(new Array(this.variable.dataLength()).fill(0));
     }
-    cur_stride = cur_stride * original_shape[j];
-    temp_index = Math.floor(temp_index / original_shape[j]);
+    this.variable.grad = this.variable.grad.add(dz);
   }
-  return original_index;
 }
-const gpu = new gpu_js.GPU({ mode: "cpu" });
-gpu.addFunction(_get_original_index_kernel, {
-  returnType: "Integer",
-  argumentTypes: {
-    original_shape: "Array",
-    new_shape: "Array",
-    index: "Integer"
-  }
-});
-gpu.addFunction(_get_original_index_from_transposed_index, {
-  returnType: "Integer",
-  argumentTypes: {
-    original_shape: "Array",
-    dim0: "Integer",
-    dim1: "Integer",
-    transposed_index: "Integer"
-  }
-});
 const operations = /* @__PURE__ */ new Map();
 const operations_cache = /* @__PURE__ */ new Map();
 function registerOperation(name, func) {
@@ -140,14 +90,19 @@ function _flatten(data) {
 class Tensor {
   data;
   _shape;
-  operation = null;
+  grad_fn = null;
   grad = null;
   requires_grad;
   constructor(data, options = {}, internal_options = {}) {
     this.data = _flatten(data);
     this.requires_grad = options.requires_grad ?? false;
     this._shape = internal_options.shape ?? _get_shape(data);
-    this.operation = internal_options.operation ?? null;
+    this.grad_fn = internal_options.operation ?? null;
+    if (this.requires_grad && !this.grad_fn) {
+      const acc = new AccumulateGrad();
+      acc.variable = this;
+      this.grad_fn = acc;
+    }
   }
   // TODO: Somehow having a shape of [] will have a weird error:
   // TypeError: Cannot read properties of undefined (reading 'length')
@@ -163,9 +118,6 @@ class Tensor {
     return this.data;
   }
   dataLength() {
-    if (this.data instanceof gpu_js.Texture) {
-      return this.shape.reduce((acc, val) => acc * val, 1);
-    }
     return this.data.length;
   }
   set shape(shape) {
@@ -198,10 +150,17 @@ class Tensor {
   detach_() {
     this.requires_grad = false;
     this.grad = null;
-    this.operation = null;
+    this.grad_fn = null;
   }
   zero_() {
     this.data = Array(this.dataLength()).fill(0);
+  }
+  is_retain_grad = false;
+  retain_grad() {
+    if (this.grad_fn instanceof AccumulateGrad) return;
+    if (this.is_retain_grad) return;
+    this.is_retain_grad = true;
+    this.grad_fn._retained_tensors.push(this);
   }
   backward(grad) {
     if (!this.requires_grad) {
@@ -215,15 +174,8 @@ class Tensor {
     } else {
       grad.toArray_();
     }
-    if (!this.grad) {
-      this.grad = new Tensor(Array(this.dataLength()).fill(0));
-    }
-    this.grad.toArray_();
-    for (let i = 0; i < grad.dataLength(); i++) {
-      this.grad.data[_get_original_index(this.shape, grad.shape, i)] += grad.data[i];
-    }
-    if (this.operation) {
-      this.operation.backward(this.grad);
+    if (this.grad_fn) {
+      this.grad_fn.backward(grad);
     }
   }
   // operations
@@ -330,11 +282,38 @@ class Tensor {
     return this._executeBinaryOp("ne", other);
   }
 }
-class Operation {
+function _broadcast_shape(a_shape, b_shape) {
+  const result_length = Math.max(a_shape.length, b_shape.length);
+  const padded_a_shape = [...Array(result_length - a_shape.length).fill(1), ...a_shape];
+  const padded_b_shape = [...Array(result_length - b_shape.length).fill(1), ...b_shape];
+  const result_shape = [];
+  for (let i = 0; i < result_length; i++) {
+    if (padded_a_shape[i] !== padded_b_shape[i] && padded_a_shape[i] !== 1 && padded_b_shape[i] !== 1) {
+      throw new Error(`Shape mismatch: ${a_shape} and ${b_shape}`);
+    }
+    result_shape.push(Math.max(padded_a_shape[i], padded_b_shape[i]));
+  }
+  return result_shape;
 }
-class UnaryOperation extends Operation {
+function _pad_shape(shape, broadcast_shape) {
+  if (shape.length >= broadcast_shape.length) {
+    return shape;
+  }
+  return [...Array(broadcast_shape.length - shape.length).fill(1), ...shape];
 }
-class BinaryOperation extends Operation {
+function _get_original_index(original_shape, new_shape, index2) {
+  let original_index = 0;
+  let cur_stride = 1;
+  let temp_index = index2;
+  for (let i = original_shape.length - 1; i >= 0; i--) {
+    if (original_shape[i] > 1) {
+      const dim_index = temp_index % new_shape[i];
+      original_index = original_index + dim_index * cur_stride;
+    }
+    cur_stride *= original_shape[i];
+    temp_index = Math.floor(temp_index / new_shape[i]);
+  }
+  return original_index;
 }
 function generate_function(opname) {
   return (...args) => {
@@ -418,15 +397,17 @@ function ___left_index___tensor(a, b, operation = null) {
   );
 }
 class __Left_index__ extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return ___left_index___tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
   }
 }
 registerOperation("__left_index__", __Left_index__);
@@ -452,15 +433,17 @@ function ___right_index___tensor(a, b, operation = null) {
   );
 }
 class __Right_index__ extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return ___right_index___tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
   }
 }
 registerOperation("__right_index__", __Right_index__);
@@ -486,17 +469,19 @@ function _add_tensor(a, b, operation = null) {
   );
 }
 class Add extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _add_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
-    a.backward(dz);
-    b.backward(dz);
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
+    aFn.backward(dz);
+    bFn.backward(dz);
   }
 }
 registerOperation("add", Add);
@@ -522,17 +507,19 @@ function _sub_tensor(a, b, operation = null) {
   );
 }
 class Sub extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _sub_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
-    a.backward(dz);
-    b.backward(dz.mul(new Tensor(-1)));
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
+    aFn.backward(dz);
+    bFn.backward(dz.mul(new Tensor(-1)));
   }
 }
 registerOperation("sub", Sub);
@@ -558,17 +545,19 @@ function _mul_tensor(a, b, operation = null) {
   );
 }
 class Mul extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _mul_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
-    a.backward(dz.mul(b));
-    b.backward(dz.mul(a));
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
+    aFn.backward(dz.mul(b));
+    bFn.backward(dz.mul(a));
   }
 }
 registerOperation("mul", Mul);
@@ -594,17 +583,19 @@ function _div_tensor(a, b, operation = null) {
   );
 }
 class Div extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _div_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
-    a.backward(dz.div(b));
-    b.backward(dz.mul(a).mul(new Tensor(-1)).div(b).div(b));
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
+    aFn.backward(dz.div(b));
+    bFn.backward(dz.mul(a).mul(new Tensor(-1)).div(b).div(b));
   }
 }
 registerOperation("div", Div);
@@ -630,17 +621,19 @@ function _pow_tensor(a, b, operation = null) {
   );
 }
 class Pow extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _pow_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
-    a.backward(dz.mul(b).mul(a.pow(b.sub(new Tensor(1)))));
-    b.backward(dz.mul(a.pow(b)).mul(a.log()));
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
+    aFn.backward(dz.mul(b).mul(a.pow(b.sub(new Tensor(1)))));
+    bFn.backward(dz.mul(a.pow(b)).mul(a.log()));
   }
 }
 registerOperation("pow", Pow);
@@ -666,16 +659,18 @@ function _fmod_tensor(a, b, operation = null) {
   );
 }
 class Fmod extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _fmod_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
-    a.backward(dz);
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
+    aFn.backward(dz);
   }
 }
 registerOperation("fmod", Fmod);
@@ -701,17 +696,19 @@ function _maximum_tensor(a, b, operation = null) {
   );
 }
 class Maximum extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _maximum_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
-    a.backward(dz.mul(a.ge(b)));
-    b.backward(dz.mul(b.gt(a)));
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
+    aFn.backward(dz.mul(a.ge(b)));
+    bFn.backward(dz.mul(b.gt(a)));
   }
 }
 registerOperation("maximum", Maximum);
@@ -737,17 +734,19 @@ function _minimum_tensor(a, b, operation = null) {
   );
 }
 class Minimum extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _minimum_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
-    a.backward(dz.mul(a.le(b)));
-    b.backward(dz.mul(b.lt(a)));
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
+    aFn.backward(dz.mul(a.le(b)));
+    bFn.backward(dz.mul(b.lt(a)));
   }
 }
 registerOperation("minimum", Minimum);
@@ -763,16 +762,20 @@ function _powint_tensor(a, n, operation = null) {
   );
 }
 class PowInt extends Operation {
-  cache;
-  forward(a, n) {
+  n;
+  _forward(a, n) {
     if (a.requires_grad) {
-      this.cache = [a, n];
+      this.saved_tensors = [a];
+      this.n = n;
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _powint_tensor(a, n, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, n] = this.cache;
-    a.backward(dz.mul(n).mul(a.pow(n - 1)));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const n = this.n;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.mul(n).mul(a.pow(n - 1)));
   }
 }
 registerOperation("powint", PowInt);
@@ -793,16 +796,17 @@ function _log_tensor(a, operation = null) {
   );
 }
 class Log extends UnaryOperation {
-  cache;
-  forward(a) {
+  _forward(a) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _log_tensor(a, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a] = this.cache;
-    a.backward(new Tensor(1).div(a));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(new Tensor(1).div(a));
   }
 }
 registerOperation("log", Log);
@@ -823,16 +827,17 @@ function _sqrt_tensor(a, operation = null) {
   );
 }
 class Sqrt extends UnaryOperation {
-  cache;
-  forward(a) {
+  _forward(a) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _sqrt_tensor(a, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a] = this.cache;
-    a.backward(new Tensor(1).div(a.sqrt()).div(2));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(new Tensor(1).div(a.sqrt()).div(2));
   }
 }
 registerOperation("sqrt", Sqrt);
@@ -853,16 +858,17 @@ function _exp_tensor(a, operation = null) {
   );
 }
 class Exp extends UnaryOperation {
-  cache;
-  forward(a) {
+  _forward(a) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _exp_tensor(a, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a] = this.cache;
-    a.backward(dz.mul(a.exp()));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.mul(a.exp()));
   }
 }
 registerOperation("exp", Exp);
@@ -883,16 +889,17 @@ function _square_tensor(a, operation = null) {
   );
 }
 class Square extends UnaryOperation {
-  cache;
-  forward(a) {
+  _forward(a) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _square_tensor(a, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a] = this.cache;
-    a.backward(dz.mul(a).mul(new Tensor(2)));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.mul(a).mul(new Tensor(2)));
   }
 }
 registerOperation("square", Square);
@@ -913,16 +920,17 @@ function _abs_tensor(a, operation = null) {
   );
 }
 class Abs extends UnaryOperation {
-  cache;
-  forward(a) {
+  _forward(a) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _abs_tensor(a, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a] = this.cache;
-    a.backward(dz.mul(sign(a)));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.mul(sign(a)));
   }
 }
 registerOperation("abs", Abs);
@@ -943,15 +951,16 @@ function _sign_tensor(a, operation = null) {
   );
 }
 class Sign extends UnaryOperation {
-  cache;
-  forward(a) {
+  _forward(a) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _sign_tensor(a, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a] = this.cache;
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
   }
 }
 registerOperation("sign", Sign);
@@ -972,16 +981,17 @@ function _neg_tensor(a, operation = null) {
   );
 }
 class Neg extends UnaryOperation {
-  cache;
-  forward(a) {
+  _forward(a) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _neg_tensor(a, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a] = this.cache;
-    a.backward(dz.mul(new Tensor(-1)));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.mul(new Tensor(-1)));
   }
 }
 registerOperation("neg", Neg);
@@ -1002,29 +1012,38 @@ function _reciprocal_tensor(a, operation = null) {
   );
 }
 class Reciprocal extends UnaryOperation {
-  cache;
-  forward(a) {
+  _forward(a) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _reciprocal_tensor(a, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a] = this.cache;
-    a.backward(dz.mul(a.pow(-2)));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.mul(a.pow(-2)));
   }
 }
 registerOperation("reciprocal", Reciprocal);
 class Reshape extends Operation {
-  cache;
-  forward(a, shape) {
+  _forward(a, shape) {
     const previous_length = a.dataLength();
     const target_length = shape.reduce((acc, val) => acc * val, 1);
     if (previous_length !== target_length) {
       throw new Error("Shape mismatch: " + a.shape + " and " + shape);
     }
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
+    }
+    if (a.grad_fn) {
+      this.next_functions.push(a.grad_fn);
+    } else if (a.requires_grad) {
+      const acc = new AccumulateGrad();
+      acc.variable = a;
+      this.next_functions.push(acc);
+    } else {
+      this.next_functions.push(nullOp);
     }
     return new Tensor(
       a.data,
@@ -1032,17 +1051,26 @@ class Reshape extends Operation {
       { operation: a.requires_grad ? this : null, shape }
     );
   }
-  backward(dz) {
-    const [a] = this.cache;
-    a.backward(dz.reshape(a.shape));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.reshape(a.shape));
   }
 }
 registerOperation("reshape", Reshape);
 class Unsqueeze extends Operation {
-  cache;
-  forward(a, dim) {
+  _forward(a, dim) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
+    }
+    if (a.grad_fn) {
+      this.next_functions.push(a.grad_fn);
+    } else if (a.requires_grad) {
+      const acc = new AccumulateGrad();
+      acc.variable = a;
+      this.next_functions.push(acc);
+    } else {
+      this.next_functions.push(nullOp);
     }
     if (dim < 0) {
       dim += a.shape.length + 1;
@@ -1055,9 +1083,10 @@ class Unsqueeze extends Operation {
       { operation: a.requires_grad ? this : null, shape }
     );
   }
-  backward(dz) {
-    const [a] = this.cache;
-    a.backward(dz.reshape(a.shape));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.reshape(a.shape));
   }
 }
 registerOperation("unsqueeze", Unsqueeze);
@@ -1078,16 +1107,17 @@ function _sin_tensor(a, operation = null) {
   );
 }
 class Sin extends UnaryOperation {
-  cache;
-  forward(a) {
+  _forward(a) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _sin_tensor(a, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a] = this.cache;
-    a.backward(dz.mul(a.cos()));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.mul(a.cos()));
   }
 }
 registerOperation("sin", Sin);
@@ -1108,16 +1138,17 @@ function _cos_tensor(a, operation = null) {
   );
 }
 class Cos extends UnaryOperation {
-  cache;
-  forward(a) {
+  _forward(a) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _cos_tensor(a, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a] = this.cache;
-    a.backward(dz.mul(a.sin().neg()));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.mul(a.sin().neg()));
   }
 }
 registerOperation("cos", Cos);
@@ -1138,16 +1169,17 @@ function _tan_tensor(a, operation = null) {
   );
 }
 class Tan extends UnaryOperation {
-  cache;
-  forward(a) {
+  _forward(a) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _tan_tensor(a, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a] = this.cache;
-    a.backward(dz.mul(a.cos().pow(-2)));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.mul(a.cos().pow(-2)));
   }
 }
 registerOperation("tan", Tan);
@@ -1159,17 +1191,18 @@ function _sum_tensor(a, operation = null) {
   );
 }
 class Sum extends UnaryOperation {
-  cache;
-  forward(a) {
+  _forward(a) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _sum_tensor(a, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a] = this.cache;
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
     const result = new Tensor(Array(a.dataLength()).fill(dz.item()));
-    a.backward(result);
+    aFn.backward(result);
   }
 }
 registerOperation("sum", Sum);
@@ -1181,17 +1214,18 @@ function _mean_tensor(a, operation = null) {
   );
 }
 class Mean extends UnaryOperation {
-  cache;
-  forward(a) {
+  _forward(a) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _mean_tensor(a, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a] = this.cache;
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
     const result = new Tensor(Array(a.dataLength()).fill(dz.item() / a.dataLength()));
-    a.backward(result);
+    aFn.backward(result);
   }
 }
 registerOperation("mean", Mean);
@@ -1231,14 +1265,23 @@ function _transpose_tensor(a, dim0, dim1, operation = null) {
   );
 }
 class Transpose extends Operation {
-  cache;
-  forward(a, dim0, dim1) {
-    this.cache = [a, dim0, dim1];
+  dim0;
+  dim1;
+  _forward(a, dim0, dim1) {
+    if (a.requires_grad) {
+      this.saved_tensors = [a];
+      this.dim0 = dim0;
+      this.dim1 = dim1;
+    }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _transpose_tensor(a, dim0, dim1, this);
   }
-  backward(dz) {
-    const [a, dim0, dim1] = this.cache;
-    a.backward(dz.transpose(dim0, dim1));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const dim0 = this.dim0;
+    const dim1 = this.dim1;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.transpose(dim0, dim1));
   }
 }
 registerOperation("transpose", Transpose);
@@ -1290,15 +1333,17 @@ function _matmul_tensor(a, b, operation = null) {
   );
 }
 class Matmul extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _matmul_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
   }
 }
 registerOperation("matmul", Matmul);
@@ -1324,15 +1369,17 @@ function _lt_tensor(a, b, operation = null) {
   );
 }
 class Lt extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _lt_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
   }
 }
 registerOperation("lt", Lt);
@@ -1358,15 +1405,17 @@ function _gt_tensor(a, b, operation = null) {
   );
 }
 class Gt extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _gt_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
   }
 }
 registerOperation("gt", Gt);
@@ -1392,15 +1441,17 @@ function _le_tensor(a, b, operation = null) {
   );
 }
 class Le extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _le_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
   }
 }
 registerOperation("le", Le);
@@ -1426,15 +1477,17 @@ function _ge_tensor(a, b, operation = null) {
   );
 }
 class Ge extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _ge_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
   }
 }
 registerOperation("ge", Ge);
@@ -1460,15 +1513,17 @@ function _eq_tensor(a, b, operation = null) {
   );
 }
 class Eq extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _eq_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
   }
 }
 registerOperation("eq", Eq);
@@ -1494,15 +1549,17 @@ function _ne_tensor(a, b, operation = null) {
   );
 }
 class Ne extends BinaryOperation {
-  cache;
-  forward(a, b) {
+  _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _ne_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a, b] = this.cache;
+  _backward(dz) {
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
   }
 }
 registerOperation("ne", Ne);
@@ -1582,16 +1639,17 @@ function _relu_tensor(a, operation = null) {
   );
 }
 class Relu extends UnaryOperation {
-  cache;
-  forward(a) {
+  _forward(a) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _relu_tensor(a, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a] = this.cache;
-    a.backward(dz.mul(a.gt(0)));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.mul(a.gt(0)));
   }
 }
 registerOperation("relu", Relu);
@@ -1612,16 +1670,17 @@ function _sigmoid_tensor(a, operation = null) {
   );
 }
 let Sigmoid$1 = class Sigmoid extends UnaryOperation {
-  cache;
-  forward(a) {
+  _forward(a) {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _sigmoid_tensor(a, a.requires_grad ? this : null);
   }
-  backward(dz) {
-    const [a] = this.cache;
-    a.backward(dz.mul(a.exp().add(1).pow(-2).reciprocal().mul(a.exp()).mul(-1)));
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.mul(a.exp().add(1).pow(-2).reciprocal().mul(a.exp()).mul(-1)));
   }
 };
 registerOperation("sigmoid", Sigmoid$1);
@@ -1876,10 +1935,6 @@ const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePropert
   Optimizer,
   SGD
 }, Symbol.toStringTag, { value: "Module" }));
-Object.defineProperty(exports, "GPU", {
-  enumerable: true,
-  get: () => gpu_js.GPU
-});
 exports.Abs = Abs;
 exports.Add = Add;
 exports.Cos = Cos;
@@ -1899,6 +1954,7 @@ exports.Minimum = Minimum;
 exports.Mul = Mul;
 exports.Ne = Ne;
 exports.Neg = Neg;
+exports.Operation = Operation;
 exports.Pow = Pow;
 exports.PowInt = PowInt;
 exports.Reciprocal = Reciprocal;
@@ -1926,7 +1982,6 @@ exports.eq = eq;
 exports.exp = exp;
 exports.fmod = fmod;
 exports.ge = ge;
-exports.gpu = gpu;
 exports.gt = gt;
 exports.le = le;
 exports.linspace = linspace;
@@ -1942,6 +1997,7 @@ exports.neg = neg;
 exports.nn = index$1;
 exports.ones = ones;
 exports.ones_like = ones_like;
+exports.opBus = opBus;
 exports.optim = index;
 exports.pow = pow;
 exports.rand = rand;
