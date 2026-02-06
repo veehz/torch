@@ -32,13 +32,22 @@ jobs:
           run: yarn docs
 
         - name: Copy build to docs/build
-          run: cp -r build docs/build
+          run: |
+            if [ -d "build" ]; then
+              cp -r build docs/build
+            fi
 
         - name: Copy examples to docs/examples
-          run: cp -r examples docs/examples
+          run: |
+            if [ -d "examples" ]; then
+              cp -r examples docs/examples
+            fi
 
         - name: Copy vendor files to docs/vendor
-          run: cp -r vendor docs/vendor
+          run: |
+            if [ -d "vendor" ]; then
+              cp -r vendor docs/vendor
+            fi
 
         - name: Deploy docs
           uses: peaceiris/actions-gh-pages@v4
