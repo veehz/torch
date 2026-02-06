@@ -13,7 +13,7 @@ import { registerOperation } from '../operations/registry';
 
 const _relu_kernel = function (a: number[], output: number) {
   const res = new Array(output);
-  for(let x = 0; x < output; x++) {
+  for (let x = 0; x < output; x++) {
     res[x] = Math.max(a[x], 0);
   }
   return res;
@@ -32,13 +32,13 @@ function _relu_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 // class generated from unary_op_class("Relu", "relu", backward_operations)
 export class Relu extends UnaryOperation {
   private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
+  protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.cache = [a];
     }
     return _relu_tensor(a, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -51,7 +51,7 @@ registerOperation('relu', Relu);
 
 const _sigmoid_kernel = function (a: number[], output: number) {
   const res = new Array(output);
-  for(let x = 0; x < output; x++) {
+  for (let x = 0; x < output; x++) {
     res[x] = 1 / (1 + Math.exp(-a[x]));
   }
   return res;
@@ -70,13 +70,13 @@ function _sigmoid_tensor(a: Tensor, operation: Operation | null = null): Tensor 
 // class generated from unary_op_class("Sigmoid", "sigmoid", backward_operations)
 export class Sigmoid extends UnaryOperation {
   private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
+  protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.cache = [a];
     }
     return _sigmoid_tensor(a, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:

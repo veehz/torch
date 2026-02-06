@@ -41,13 +41,13 @@ function ___left_index___tensor(a: Tensor, b: Tensor, operation: Operation | nul
 // class generated from binary_op_class("__Left_index__", "__left_index__", backward_operations)
 export class __Left_index__ extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return ___left_index___tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -83,13 +83,13 @@ function ___right_index___tensor(a: Tensor, b: Tensor, operation: Operation | nu
 // class generated from binary_op_class("__Right_index__", "__right_index__", backward_operations)
 export class __Right_index__ extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return ___right_index___tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -127,13 +127,13 @@ function _add_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 // class generated from binary_op_class("Add", "add", backward_operations)
 export class Add extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _add_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -170,13 +170,13 @@ function _sub_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 // class generated from binary_op_class("Sub", "sub", backward_operations)
 export class Sub extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _sub_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -213,13 +213,13 @@ function _mul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 // class generated from binary_op_class("Mul", "mul", backward_operations)
 export class Mul extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _mul_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -256,13 +256,13 @@ function _div_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 // class generated from binary_op_class("Div", "div", backward_operations)
 export class Div extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _div_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -299,13 +299,13 @@ function _pow_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): 
 // class generated from binary_op_class("Pow", "pow", backward_operations)
 export class Pow extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _pow_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -342,13 +342,13 @@ function _fmod_tensor(a: Tensor, b: Tensor, operation: Operation | null = null):
 // class generated from binary_op_class("Fmod", "fmod", backward_operations)
 export class Fmod extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _fmod_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -384,13 +384,13 @@ function _maximum_tensor(a: Tensor, b: Tensor, operation: Operation | null = nul
 // class generated from binary_op_class("Maximum", "maximum", backward_operations)
 export class Maximum extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _maximum_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -427,13 +427,13 @@ function _minimum_tensor(a: Tensor, b: Tensor, operation: Operation | null = nul
 // class generated from binary_op_class("Minimum", "minimum", backward_operations)
 export class Minimum extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _minimum_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -457,14 +457,14 @@ function _powint_tensor(a: Tensor, n: number, operation: Operation | null = null
 }
 export class PowInt extends Operation {
   private cache: [Tensor, number];
-  public forward(a: Tensor, n: number): Tensor {
+  protected _forward(a: Tensor, n: number): Tensor {
     if (a.requires_grad) {
       this.cache = [a, n];
     }
 
     return _powint_tensor(a, n, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, n] = this.cache;
 
     // backward_operations:
@@ -479,7 +479,7 @@ registerOperation('powint', PowInt);
 
 const _log_kernel = function (a: number[], output: number) {
   const res = new Array(output);
-  for(let x = 0; x < output; x++) {
+  for (let x = 0; x < output; x++) {
     res[x] = Math.log(a[x]);
   }
   return res;
@@ -498,13 +498,13 @@ function _log_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 // class generated from unary_op_class("Log", "log", backward_operations)
 export class Log extends UnaryOperation {
   private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
+  protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.cache = [a];
     }
     return _log_tensor(a, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -517,7 +517,7 @@ registerOperation('log', Log);
 
 const _sqrt_kernel = function (a: number[], output: number) {
   const res = new Array(output);
-  for(let x = 0; x < output; x++) {
+  for (let x = 0; x < output; x++) {
     res[x] = Math.sqrt(a[x]);
   }
   return res;
@@ -536,13 +536,13 @@ function _sqrt_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 // class generated from unary_op_class("Sqrt", "sqrt", backward_operations)
 export class Sqrt extends UnaryOperation {
   private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
+  protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.cache = [a];
     }
     return _sqrt_tensor(a, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -555,7 +555,7 @@ registerOperation('sqrt', Sqrt);
 
 const _exp_kernel = function (a: number[], output: number) {
   const res = new Array(output);
-  for(let x = 0; x < output; x++) {
+  for (let x = 0; x < output; x++) {
     res[x] = Math.exp(a[x]);
   }
   return res;
@@ -574,13 +574,13 @@ function _exp_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 // class generated from unary_op_class("Exp", "exp", backward_operations)
 export class Exp extends UnaryOperation {
   private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
+  protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.cache = [a];
     }
     return _exp_tensor(a, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -593,7 +593,7 @@ registerOperation('exp', Exp);
 
 const _square_kernel = function (a: number[], output: number) {
   const res = new Array(output);
-  for(let x = 0; x < output; x++) {
+  for (let x = 0; x < output; x++) {
     res[x] = a[x] * a[x];
   }
   return res;
@@ -612,13 +612,13 @@ function _square_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 // class generated from unary_op_class("Square", "square", backward_operations)
 export class Square extends UnaryOperation {
   private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
+  protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.cache = [a];
     }
     return _square_tensor(a, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -631,7 +631,7 @@ registerOperation('square', Square);
 
 const _abs_kernel = function (a: number[], output: number) {
   const res = new Array(output);
-  for(let x = 0; x < output; x++) {
+  for (let x = 0; x < output; x++) {
     res[x] = Math.abs(a[x]);
   }
   return res;
@@ -650,13 +650,13 @@ function _abs_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 // class generated from unary_op_class("Abs", "abs", backward_operations)
 export class Abs extends UnaryOperation {
   private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
+  protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.cache = [a];
     }
     return _abs_tensor(a, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -669,7 +669,7 @@ registerOperation('abs', Abs);
 
 const _sign_kernel = function (a: number[], output: number) {
   const res = new Array(output);
-  for(let x = 0; x < output; x++) {
+  for (let x = 0; x < output; x++) {
     res[x] = Math.sign(a[x]);
   }
   return res;
@@ -688,13 +688,13 @@ function _sign_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 // class generated from unary_op_class("Sign", "sign", backward_operations)
 export class Sign extends UnaryOperation {
   private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
+  protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.cache = [a];
     }
     return _sign_tensor(a, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -707,7 +707,7 @@ registerOperation('sign', Sign);
 
 const _neg_kernel = function (a: number[], output: number) {
   const res = new Array(output);
-  for(let x = 0; x < output; x++) {
+  for (let x = 0; x < output; x++) {
     res[x] = -a[x];
   }
   return res;
@@ -726,13 +726,13 @@ function _neg_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 // class generated from unary_op_class("Neg", "neg", backward_operations)
 export class Neg extends UnaryOperation {
   private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
+  protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.cache = [a];
     }
     return _neg_tensor(a, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -745,7 +745,7 @@ registerOperation('neg', Neg);
 
 const _reciprocal_kernel = function (a: number[], output: number) {
   const res = new Array(output);
-  for(let x = 0; x < output; x++) {
+  for (let x = 0; x < output; x++) {
     res[x] = 1 / a[x];
   }
   return res;
@@ -764,13 +764,13 @@ function _reciprocal_tensor(a: Tensor, operation: Operation | null = null): Tens
 // class generated from unary_op_class("Reciprocal", "reciprocal", backward_operations)
 export class Reciprocal extends UnaryOperation {
   private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
+  protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.cache = [a];
     }
     return _reciprocal_tensor(a, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -781,7 +781,7 @@ registerOperation('reciprocal', Reciprocal);
 
 export class Reshape extends Operation {
   private cache: [Tensor];
-  public forward(a: Tensor, shape: number[]) {
+  protected _forward(a: Tensor, shape: number[]) {
     const previous_length = a.dataLength();
     const target_length = shape.reduce((acc, val) => acc * val, 1);
 
@@ -799,7 +799,7 @@ export class Reshape extends Operation {
       { operation: a.requires_grad ? this : null, shape }
     );
   }
-  public backward(dz: Tensor) {
+  protected _backward(dz: Tensor) {
     const [a] = this.cache;
 
     // backward_operations:
@@ -810,7 +810,7 @@ registerOperation('reshape', Reshape);
 
 export class Unsqueeze extends Operation {
   private cache: [Tensor];
-  public forward(a: Tensor, dim: number) {
+  protected _forward(a: Tensor, dim: number) {
     if (a.requires_grad) {
       this.cache = [a];
     }
@@ -828,7 +828,7 @@ export class Unsqueeze extends Operation {
       { operation: a.requires_grad ? this : null, shape }
     );
   }
-  public backward(dz: Tensor) {
+  protected _backward(dz: Tensor) {
     const [a] = this.cache;
 
     // backward_operations:
@@ -843,7 +843,7 @@ registerOperation('unsqueeze', Unsqueeze);
 
 const _sin_kernel = function (a: number[], output: number) {
   const res = new Array(output);
-  for(let x = 0; x < output; x++) {
+  for (let x = 0; x < output; x++) {
     res[x] = Math.sin(a[x]);
   }
   return res;
@@ -862,13 +862,13 @@ function _sin_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 // class generated from unary_op_class("Sin", "sin", backward_operations)
 export class Sin extends UnaryOperation {
   private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
+  protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.cache = [a];
     }
     return _sin_tensor(a, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -881,7 +881,7 @@ registerOperation('sin', Sin);
 
 const _cos_kernel = function (a: number[], output: number) {
   const res = new Array(output);
-  for(let x = 0; x < output; x++) {
+  for (let x = 0; x < output; x++) {
     res[x] = Math.cos(a[x]);
   }
   return res;
@@ -900,13 +900,13 @@ function _cos_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 // class generated from unary_op_class("Cos", "cos", backward_operations)
 export class Cos extends UnaryOperation {
   private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
+  protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.cache = [a];
     }
     return _cos_tensor(a, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -919,7 +919,7 @@ registerOperation('cos', Cos);
 
 const _tan_kernel = function (a: number[], output: number) {
   const res = new Array(output);
-  for(let x = 0; x < output; x++) {
+  for (let x = 0; x < output; x++) {
     res[x] = Math.tan(a[x]);
   }
   return res;
@@ -938,13 +938,13 @@ function _tan_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 // class generated from unary_op_class("Tan", "tan", backward_operations)
 export class Tan extends UnaryOperation {
   private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
+  protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.cache = [a];
     }
     return _tan_tensor(a, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -966,13 +966,13 @@ function _sum_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 // class generated from unary_op_class("Sum", "sum", backward_operations)
 export class Sum extends UnaryOperation {
   private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
+  protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.cache = [a];
     }
     return _sum_tensor(a, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -993,13 +993,13 @@ function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 // class generated from unary_op_class("Mean", "mean", backward_operations)
 export class Mean extends UnaryOperation {
   private cache: [Tensor];
-  public forward(a: Tensor): Tensor {
+  protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.cache = [a];
     }
     return _mean_tensor(a, a.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a] = this.cache;
 
     // backward_operations:
@@ -1058,11 +1058,11 @@ function _transpose_tensor(
 }
 export class Transpose extends Operation {
   cache: [Tensor, number, number];
-  forward(a: Tensor, dim0: number, dim1: number): Tensor {
+  protected _forward(a: Tensor, dim0: number, dim1: number): Tensor {
     this.cache = [a, dim0, dim1];
     return _transpose_tensor(a, dim0, dim1, this);
   }
-  backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, dim0, dim1] = this.cache;
 
     // backward_operations:
@@ -1137,13 +1137,13 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null
 // class generated from binary_op_class("Matmul", "matmul", backward_operations)
 export class Matmul extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _matmul_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -1181,13 +1181,13 @@ function _lt_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 // class generated from binary_op_class("Lt", "lt", backward_operations)
 export class Lt extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _lt_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -1223,13 +1223,13 @@ function _gt_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 // class generated from binary_op_class("Gt", "gt", backward_operations)
 export class Gt extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _gt_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -1265,13 +1265,13 @@ function _le_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 // class generated from binary_op_class("Le", "le", backward_operations)
 export class Le extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _le_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -1307,13 +1307,13 @@ function _ge_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 // class generated from binary_op_class("Ge", "ge", backward_operations)
 export class Ge extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _ge_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -1349,13 +1349,13 @@ function _eq_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 // class generated from binary_op_class("Eq", "eq", backward_operations)
 export class Eq extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _eq_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:
@@ -1391,13 +1391,13 @@ function _ne_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): T
 // class generated from binary_op_class("Ne", "ne", backward_operations)
 export class Ne extends BinaryOperation {
   private cache: [Tensor, Tensor];
-  public forward(a: Tensor, b: Tensor): Tensor {
+  protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.cache = [a, b];
     }
     return _ne_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
-  public backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.cache;
 
     // backward_operations:

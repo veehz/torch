@@ -80,7 +80,7 @@ import { registerOperation } from './registry';
 
 export class Reshape extends Operation {
   private cache: [Tensor];
-  public forward(a: Tensor, shape: number[]) {
+  protected _forward(a: Tensor, shape: number[]) {
     const previous_length = a.dataLength();
     const target_length = shape.reduce((acc, val) => acc * val, 1);
 
@@ -98,7 +98,7 @@ export class Reshape extends Operation {
       { operation: a.requires_grad ? this : null, shape }
     );
   }
-  public backward(dz: Tensor) {
+  protected _backward(dz: Tensor) {
     const [a] = this.cache;
 
     // backward_operations:
@@ -109,7 +109,7 @@ registerOperation('reshape', Reshape);
 
 export class Unsqueeze extends Operation {
   private cache: [Tensor];
-  public forward(a: Tensor, dim: number) {
+  protected _forward(a: Tensor, dim: number) {
     if (a.requires_grad) {
       this.cache = [a];
     }
@@ -127,7 +127,7 @@ export class Unsqueeze extends Operation {
       { operation: a.requires_grad ? this : null, shape }
     );
   }
-  public backward(dz: Tensor) {
+  protected _backward(dz: Tensor) {
     const [a] = this.cache;
 
     // backward_operations:

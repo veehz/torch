@@ -1,18 +1,31 @@
 import { Tensor } from '../tensor';
 
+export const opBus = new EventTarget();
+
 abstract class Operation {
-  abstract forward(...args: (Tensor | number | number[])[]): Tensor;
-  abstract backward(dz: Tensor): void;
+  protected abstract _forward(...args: (Tensor | number | number[])[]): Tensor;
+  protected abstract _backward(dz: Tensor): void;
+
+  forward(...args: (Tensor | number | number[])[]): Tensor {
+    const result = this._forward(...args);
+    opBus.dispatchEvent(new CustomEvent('forward', { detail: { operation: this, args, result } }));
+    return result;
+  }
+
+  backward(dz: Tensor): void {
+    opBus.dispatchEvent(new CustomEvent('backward', { detail: { operation: this, dz } }));
+    this._backward(dz);
+  }
 }
 
 abstract class UnaryOperation extends Operation {
-  abstract forward(a: Tensor): Tensor;
-  abstract backward(dz: Tensor): void;
+  protected abstract _forward(a: Tensor): Tensor;
+  protected abstract _backward(dz: Tensor): void;
 }
 
 abstract class BinaryOperation extends Operation {
-  abstract forward(a: Tensor, b: Tensor): Tensor;
-  abstract backward(dz: Tensor): void;
+  protected abstract _forward(a: Tensor, b: Tensor): Tensor;
+  protected abstract _backward(dz: Tensor): void;
 }
 
 export type OperationConstructor = new () => Operation;
