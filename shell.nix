@@ -21,5 +21,12 @@ pkgs.mkShell {
         pkgs.xorg.libXext
       ]
     }:$LD_LIBRARY_PATH"
+    # Create venv if it doesn't exist
+    if [ ! -d "venv" ]; then
+      python -m venv venv
+    fi
+
+    # Source the venv
+    source venv/bin/activate
   '';
 }

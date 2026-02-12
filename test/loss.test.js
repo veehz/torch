@@ -11,8 +11,6 @@ describe('BCELoss', () => {
         const loss = new torch.nn.BCELoss();
         const result = loss.forward(input, target);
 
-        console.log("BCELoss result:", result.item());
-
         assert.closeTo(result.item(), 2.0712, 0.001);
     })
 
@@ -32,9 +30,6 @@ describe('BCELoss', () => {
 
         const loss = new torch.nn.BCELoss();
         const result = loss.forward(m.forward(input), target);
-
-        console.log(m.forward(input))
-        console.log("BCELoss result:", result.item());
 
         assert.closeTo(result.item(), 0.7657, 0.001);
     });

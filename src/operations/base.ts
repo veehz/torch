@@ -1,8 +1,10 @@
 import { Tensor } from '../tensor';
+import { getNextId } from '../util';
 
 export const opBus = new EventTarget();
 
 abstract class Operation {
+  public id: number = getNextId();
   public next_functions: Operation[] = [];
   public saved_tensors: Tensor[] = [];
   public _retained_tensors: Tensor[] = [];
@@ -12,7 +14,14 @@ abstract class Operation {
 
   forward(...args: (Tensor | number | number[])[]): Tensor {
     const result = this._forward(...args);
-    opBus.dispatchEvent(new CustomEvent('forward', { detail: { operation: this, args, result } }));
+    opBus.dispatchEvent(new CustomEvent('forward', {
+      detail: {
+        operation: this,
+        args,
+        result,
+        requires_grad: result.requires_grad
+      }
+    }));
     return result;
   }
 

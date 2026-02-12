@@ -1,6 +1,7 @@
 import { _get_original_index } from './broadcasting';
 import { AccumulateGrad, Operation } from './operations/base';
 import { getOperation, getOperationCache } from './operations/registry';
+import { getNextId } from './util';
 
 /*
  * TODO:
@@ -44,6 +45,7 @@ function _flatten(data: NestedNumberArray): number[] {
 }
 
 export class Tensor {
+  public id: number = getNextId();
   data: number[];
   _shape: number[];
   grad_fn: Operation | null = null;

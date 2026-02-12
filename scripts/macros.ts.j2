@@ -55,15 +55,17 @@ function _{{ name }}_tensor(a: Tensor, operation: Operation | null = null): Tens
 {% macro binary_op_class(classname, opname, backward_operations) -%}
 // class generated from binary_op_class("{{ classname }}", "{{ opname }}", backward_operations)
 export class {{ classname }} extends BinaryOperation {
-  private cache: [Tensor, Tensor];
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
-      this.cache = [a, b];
+      this.saved_tensors = [a, b];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
     return _{{ opname }}_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, b] = this.cache;
+    const [a, b] = this.saved_tensors;
+    const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
     {{ backward_operations | join("\n    ") }}
@@ -75,15 +77,16 @@ registerOperation('{{ opname }}', {{ classname }});
 {% macro unary_op_class(classname, opname, backward_operations) -%}
 // class generated from unary_op_class("{{ classname }}", "{{ opname }}", backward_operations)
 export class {{ classname }} extends UnaryOperation {
-  private cache: [Tensor];
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
-      this.cache = [a];
+      this.saved_tensors = [a];
     }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _{{ opname }}_tensor(a, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.cache;
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
     {{ backward_operations | join("\n    ") }}
@@ -108,19 +111,23 @@ function _powint_tensor(a: Tensor, n: number, operation: Operation | null = null
 
 {% macro powint_op_class() -%}
 export class PowInt extends Operation {
-  private cache: [Tensor, number];
+  private n: number;
   protected _forward(a: Tensor, n: number): Tensor {
     if (a.requires_grad) {
-      this.cache = [a, n];
+      this.saved_tensors = [a];
+      this.n = n;
     }
 
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _powint_tensor(a, n, a.requires_grad ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a, n] = this.cache;
+    const [a] = this.saved_tensors;
+    const n = this.n;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.mul(n).mul(a.pow(n - 1)));
+    aFn.backward(dz.mul(n).mul(a.pow(n - 1)));
   }
 }
 registerOperation('powint', PowInt);
@@ -176,16 +183,25 @@ function _transpose_tensor(
 
 {% macro transpose_op_class() -%}
 export class Transpose extends Operation {
-  cache: [Tensor, number, number];
+  private dim0: number;
+  private dim1: number;
   protected _forward(a: Tensor, dim0: number, dim1: number): Tensor {
-    this.cache = [a, dim0, dim1];
+    if (a.requires_grad) {
+        this.saved_tensors = [a];
+        this.dim0 = dim0;
+        this.dim1 = dim1;
+    }
+    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     return _transpose_tensor(a, dim0, dim1, this);
   }
   protected _backward(dz: Tensor): void {
-    const [a, dim0, dim1] = this.cache;
+    const [a] = this.saved_tensors;
+    const dim0 = this.dim0;
+    const dim1 = this.dim1;
+    const [aFn] = this.next_functions;
 
     // backward_operations:
-    a.backward(dz.transpose(dim0, dim1));
+    aFn.backward(dz.transpose(dim0, dim1));
   }
 }
 registerOperation('transpose', Transpose);
