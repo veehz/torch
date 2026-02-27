@@ -1,7 +1,5 @@
 import { Tensor } from '../tensor';
-import { getNextId } from '../util';
-
-export const opBus = new EventTarget();
+import { eventBus, getNextId } from '../util';
 
 abstract class Operation {
   public id: number = getNextId();
@@ -13,8 +11,14 @@ abstract class Operation {
   protected abstract _backward(dz: Tensor): void;
 
   forward(...args: (Tensor | number | number[])[]): Tensor {
+    eventBus.dispatchEvent(new CustomEvent('operation.beforeForward', {
+      detail: {
+        operation: this,
+        args
+      }
+    }));
     const result = this._forward(...args);
-    opBus.dispatchEvent(new CustomEvent('forward', {
+    eventBus.dispatchEvent(new CustomEvent('operation.afterForward', {
       detail: {
         operation: this,
         args,
@@ -26,7 +30,7 @@ abstract class Operation {
   }
 
   backward(dz: Tensor): void {
-    opBus.dispatchEvent(new CustomEvent('backward', { detail: { operation: this, dz } }));
+    eventBus.dispatchEvent(new CustomEvent('operation.beforeBackward', { detail: { operation: this, dz } }));
     for (const x of this._retained_tensors) {
       if (!x.grad) {
         x.grad = new Tensor(new Array(x.dataLength()).fill(0));
@@ -34,6 +38,7 @@ abstract class Operation {
       x.grad = x.grad.add(dz);
     }
     this._backward(dz);
+    eventBus.dispatchEvent(new CustomEvent('operation.afterBackward', { detail: { operation: this, dz } }));
   }
 }
 
@@ -76,6 +81,7 @@ export class AccumulateGrad extends UnaryOperation {
     if(!this.variable.grad) {
       this.variable.grad = new Tensor(new Array(this.variable.dataLength()).fill(0));
     }
+    eventBus.dispatchEvent(new CustomEvent('operation.accumulateGrad', { detail: { operation: this, dz } }));
     this.variable.grad = this.variable.grad.add(dz);
   }
 }
