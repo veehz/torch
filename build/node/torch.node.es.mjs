@@ -1,15 +1,33 @@
-const opBus = new EventTarget();
+let globalId = 0;
+const getNextId = () => {
+  return globalId++;
+};
+const eventBus = new EventTarget();
 class Operation {
+  id = getNextId();
   next_functions = [];
   saved_tensors = [];
   _retained_tensors = [];
   forward(...args) {
+    eventBus.dispatchEvent(new CustomEvent("operation.beforeForward", {
+      detail: {
+        operation: this,
+        args
+      }
+    }));
     const result = this._forward(...args);
-    opBus.dispatchEvent(new CustomEvent("forward", { detail: { operation: this, args, result } }));
+    eventBus.dispatchEvent(new CustomEvent("operation.afterForward", {
+      detail: {
+        operation: this,
+        args,
+        result,
+        requires_grad: result.requires_grad
+      }
+    }));
     return result;
   }
   backward(dz) {
-    opBus.dispatchEvent(new CustomEvent("backward", { detail: { operation: this, dz } }));
+    eventBus.dispatchEvent(new CustomEvent("operation.beforeBackward", { detail: { operation: this, dz } }));
     for (const x of this._retained_tensors) {
       if (!x.grad) {
         x.grad = new Tensor(new Array(x.dataLength()).fill(0));
@@ -17,6 +35,7 @@ class Operation {
       x.grad = x.grad.add(dz);
     }
     this._backward(dz);
+    eventBus.dispatchEvent(new CustomEvent("operation.afterBackward", { detail: { operation: this, dz } }));
   }
 }
 class NullOp extends Operation {
@@ -42,6 +61,7 @@ class AccumulateGrad extends UnaryOperation {
     if (!this.variable.grad) {
       this.variable.grad = new Tensor(new Array(this.variable.dataLength()).fill(0));
     }
+    eventBus.dispatchEvent(new CustomEvent("operation.accumulateGrad", { detail: { operation: this, dz } }));
     this.variable.grad = this.variable.grad.add(dz);
   }
 }
@@ -86,6 +106,7 @@ function _flatten(data) {
   }
 }
 class Tensor {
+  id = getNextId();
   data;
   _shape;
   grad_fn = null;
@@ -173,7 +194,9 @@ class Tensor {
       grad.toArray_();
     }
     if (this.grad_fn) {
+      eventBus.dispatchEvent(new CustomEvent("tensor.beforeBackward", { detail: { tensor: this } }));
       this.grad_fn.backward(grad);
+      eventBus.dispatchEvent(new CustomEvent("tensor.afterBackward", { detail: { tensor: this } }));
     }
   }
   // operations
@@ -1978,6 +2001,7 @@ export {
   cos,
   div,
   eq,
+  eventBus,
   exp,
   fmod,
   ge,
@@ -1996,7 +2020,6 @@ export {
   index$1 as nn,
   ones,
   ones_like,
-  opBus,
   index as optim,
   pow,
   rand,

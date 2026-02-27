@@ -1,6 +1,6 @@
 import { Tensor } from '../tensor';
-export declare const opBus: EventTarget;
 declare abstract class Operation {
+    id: number;
     next_functions: Operation[];
     saved_tensors: Tensor[];
     _retained_tensors: Tensor[];
