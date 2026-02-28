@@ -1,6 +1,6 @@
 export { Tensor } from './tensor';
 
-export { Operation } from './operations/base';
+export { Operation, AccumulateGrad } from './operations/base';
 export * from './operations/ops.gen';
 export * from './operations/functional';
 
