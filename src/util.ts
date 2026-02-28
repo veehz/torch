@@ -12,5 +12,6 @@ export const events = {
   OPERATION_AFTER_FORWARD: 'operation.afterForward',
   OPERATION_BEFORE_BACKWARD: 'operation.beforeBackward',
   OPERATION_AFTER_BACKWARD: 'operation.afterBackward',
-  OPERATION_ACCUMULATE_GRAD: 'operation.accumulateGrad',
+  OPERATION_BEFORE_ACCUMULATE_GRAD: 'operation.beforeAccumulateGrad',
+  OPERATION_AFTER_ACCUMULATE_GRAD: 'operation.afterAccumulateGrad',
 }

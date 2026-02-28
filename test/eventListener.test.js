@@ -74,9 +74,18 @@ describe('Event Bus', () => {
     });
 
     describe('operation.accumulateGrad', () => {
+        it('should dispatch event before accumulateGrad', () => {
+            let eventDispatched = false;
+            torch.eventBus.addEventListener(torch.events.OPERATION_BEFORE_ACCUMULATE_GRAD, () => {
+                eventDispatched = true;
+            });
+            sum.backward();
+            assert.isTrue(eventDispatched);
+        });
+
         it('should dispatch event after accumulateGrad', () => {
             let eventDispatched = false;
-            torch.eventBus.addEventListener(torch.events.OPERATION_ACCUMULATE_GRAD, () => {
+            torch.eventBus.addEventListener(torch.events.OPERATION_AFTER_ACCUMULATE_GRAD, () => {
                 eventDispatched = true;
             });
             sum.backward();
