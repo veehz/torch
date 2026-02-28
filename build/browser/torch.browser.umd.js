@@ -2202,6 +2202,7 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
     SGD
   }, Symbol.toStringTag, { value: "Module" }));
   exports2.Abs = Abs;
+  exports2.AccumulateGrad = AccumulateGrad;
   exports2.Add = Add;
   exports2.Cos = Cos;
   exports2.Div = Div;

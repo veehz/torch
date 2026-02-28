@@ -1968,6 +1968,7 @@ const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePropert
   SGD
 }, Symbol.toStringTag, { value: "Module" }));
 exports.Abs = Abs;
+exports.AccumulateGrad = AccumulateGrad;
 exports.Add = Add;
 exports.Cos = Cos;
 exports.Div = Div;

@@ -1967,6 +1967,7 @@ const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePropert
 }, Symbol.toStringTag, { value: "Module" }));
 export {
   Abs,
+  AccumulateGrad,
   Add,
   Cos,
   Div,
