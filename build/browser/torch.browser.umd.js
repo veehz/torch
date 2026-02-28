@@ -10,20 +10,29 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
     return globalId++;
   }, "getNextId");
   const eventBus = new EventTarget();
+  const events = {
+    TENSOR_BEFORE_BACKWARD: "tensor.beforeBackward",
+    TENSOR_AFTER_BACKWARD: "tensor.afterBackward",
+    OPERATION_BEFORE_FORWARD: "operation.beforeForward",
+    OPERATION_AFTER_FORWARD: "operation.afterForward",
+    OPERATION_BEFORE_BACKWARD: "operation.beforeBackward",
+    OPERATION_AFTER_BACKWARD: "operation.afterBackward",
+    OPERATION_ACCUMULATE_GRAD: "operation.accumulateGrad"
+  };
   const _Operation = class _Operation {
     id = getNextId();
     next_functions = [];
     saved_tensors = [];
     _retained_tensors = [];
     forward(...args) {
-      eventBus.dispatchEvent(new CustomEvent("operation.beforeForward", {
+      eventBus.dispatchEvent(new CustomEvent(events.OPERATION_BEFORE_FORWARD, {
         detail: {
           operation: this,
           args
         }
       }));
       const result = this._forward(...args);
-      eventBus.dispatchEvent(new CustomEvent("operation.afterForward", {
+      eventBus.dispatchEvent(new CustomEvent(events.OPERATION_AFTER_FORWARD, {
         detail: {
           operation: this,
           args,
@@ -34,7 +43,7 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
       return result;
     }
     backward(dz) {
-      eventBus.dispatchEvent(new CustomEvent("operation.beforeBackward", { detail: { operation: this, dz } }));
+      eventBus.dispatchEvent(new CustomEvent(events.OPERATION_BEFORE_BACKWARD, { detail: { operation: this, dz } }));
       for (const x of this._retained_tensors) {
         if (!x.grad) {
           x.grad = new Tensor(new Array(x.dataLength()).fill(0));
@@ -42,7 +51,7 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
         x.grad = x.grad.add(dz);
       }
       this._backward(dz);
-      eventBus.dispatchEvent(new CustomEvent("operation.afterBackward", { detail: { operation: this, dz } }));
+      eventBus.dispatchEvent(new CustomEvent(events.OPERATION_AFTER_BACKWARD, { detail: { operation: this, dz } }));
     }
   };
   __name(_Operation, "Operation");
@@ -76,7 +85,7 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
       if (!this.variable.grad) {
         this.variable.grad = new Tensor(new Array(this.variable.dataLength()).fill(0));
       }
-      eventBus.dispatchEvent(new CustomEvent("operation.accumulateGrad", { detail: { operation: this, dz } }));
+      eventBus.dispatchEvent(new CustomEvent(events.OPERATION_ACCUMULATE_GRAD, { detail: { operation: this, dz } }));
       this.variable.grad = this.variable.grad.add(dz);
     }
   };
@@ -216,9 +225,9 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
         grad.toArray_();
       }
       if (this.grad_fn) {
-        eventBus.dispatchEvent(new CustomEvent("tensor.beforeBackward", { detail: { tensor: this } }));
+        eventBus.dispatchEvent(new CustomEvent(events.TENSOR_BEFORE_BACKWARD, { detail: { tensor: this } }));
         this.grad_fn.backward(grad);
-        eventBus.dispatchEvent(new CustomEvent("tensor.afterBackward", { detail: { tensor: this } }));
+        eventBus.dispatchEvent(new CustomEvent(events.TENSOR_AFTER_BACKWARD, { detail: { tensor: this } }));
       }
     }
     // operations
@@ -2237,6 +2246,7 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
   exports2.div = div;
   exports2.eq = eq;
   exports2.eventBus = eventBus;
+  exports2.events = events;
   exports2.exp = exp;
   exports2.fmod = fmod;
   exports2.ge = ge;

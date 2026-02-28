@@ -5,4 +5,4 @@ export * from './operations/functional';
 export * from './creation/index';
 export * as nn from './nn/index';
 export * as optim from './optim/index';
-export { eventBus } from './util';
+export { eventBus, events } from './util';
