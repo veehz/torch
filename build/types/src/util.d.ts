@@ -7,5 +7,6 @@ export declare const events: {
     OPERATION_AFTER_FORWARD: string;
     OPERATION_BEFORE_BACKWARD: string;
     OPERATION_AFTER_BACKWARD: string;
-    OPERATION_ACCUMULATE_GRAD: string;
+    OPERATION_BEFORE_ACCUMULATE_GRAD: string;
+    OPERATION_AFTER_ACCUMULATE_GRAD: string;
 };

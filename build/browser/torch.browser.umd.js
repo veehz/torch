@@ -17,7 +17,8 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
     OPERATION_AFTER_FORWARD: "operation.afterForward",
     OPERATION_BEFORE_BACKWARD: "operation.beforeBackward",
     OPERATION_AFTER_BACKWARD: "operation.afterBackward",
-    OPERATION_ACCUMULATE_GRAD: "operation.accumulateGrad"
+    OPERATION_BEFORE_ACCUMULATE_GRAD: "operation.beforeAccumulateGrad",
+    OPERATION_AFTER_ACCUMULATE_GRAD: "operation.afterAccumulateGrad"
   };
   function resultRequiresGrad(...args) {
     for (const arg of args) {
@@ -96,8 +97,9 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
       if (!this.variable.grad) {
         this.variable.grad = new Tensor(new Array(this.variable.dataLength()).fill(0));
       }
-      eventBus.dispatchEvent(new CustomEvent(events.OPERATION_ACCUMULATE_GRAD, { detail: { operation: this, dz } }));
+      eventBus.dispatchEvent(new CustomEvent(events.OPERATION_BEFORE_ACCUMULATE_GRAD, { detail: { operation: this, dz } }));
       this.variable.grad = this.variable.grad.add(dz);
+      eventBus.dispatchEvent(new CustomEvent(events.OPERATION_AFTER_ACCUMULATE_GRAD, { detail: { operation: this, dz } }));
     }
   };
   __name(_AccumulateGrad, "AccumulateGrad");
