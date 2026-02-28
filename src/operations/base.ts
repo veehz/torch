@@ -1,6 +1,15 @@
 import { Tensor } from '../tensor';
 import { eventBus, getNextId, events } from '../util';
 
+function resultRequiresGrad(...args: (Tensor | number | number[])[]): boolean {
+  for (const arg of args) {
+    if (arg instanceof Tensor && arg.requires_grad) {
+      return true;
+    }
+  }
+  return false;
+}
+
 abstract class Operation {
   public id: number = getNextId();
   public next_functions: Operation[] = [];
@@ -11,9 +20,11 @@ abstract class Operation {
   protected abstract _backward(dz: Tensor): void;
 
   forward(...args: (Tensor | number | number[])[]): Tensor {
+    const requires_grad = resultRequiresGrad(...args);
     eventBus.dispatchEvent(new CustomEvent(events.OPERATION_BEFORE_FORWARD, {
       detail: {
         operation: this,
+        requires_grad,
         args
       }
     }));
@@ -21,9 +32,9 @@ abstract class Operation {
     eventBus.dispatchEvent(new CustomEvent(events.OPERATION_AFTER_FORWARD, {
       detail: {
         operation: this,
+        requires_grad,
         args,
-        result,
-        requires_grad: result.requires_grad
+        result
       }
     }));
     return result;
