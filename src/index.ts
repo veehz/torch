@@ -10,4 +10,4 @@ export * as nn from './nn/index';
 
 export * as optim from './optim/index';
 
-export { eventBus } from './util';
+export { eventBus, events } from './util';

@@ -1,7 +1,7 @@
 import { _get_original_index } from './broadcasting';
 import { AccumulateGrad, Operation } from './operations/base';
 import { getOperation, getOperationCache } from './operations/registry';
-import { getNextId, eventBus } from './util';
+import { getNextId, eventBus, events } from './util';
 
 /*
  * TODO:
@@ -162,9 +162,9 @@ export class Tensor {
     }
 
     if (this.grad_fn) {
-      eventBus.dispatchEvent(new CustomEvent('tensor.beforeBackward', { detail: { tensor: this } }));
+      eventBus.dispatchEvent(new CustomEvent(events.TENSOR_BEFORE_BACKWARD, { detail: { tensor: this } }));
       this.grad_fn.backward(grad);
-      eventBus.dispatchEvent(new CustomEvent('tensor.afterBackward', { detail: { tensor: this } }));
+      eventBus.dispatchEvent(new CustomEvent(events.TENSOR_AFTER_BACKWARD, { detail: { tensor: this } }));
     }
   }
 
