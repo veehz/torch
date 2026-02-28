@@ -19,15 +19,26 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
     OPERATION_AFTER_BACKWARD: "operation.afterBackward",
     OPERATION_ACCUMULATE_GRAD: "operation.accumulateGrad"
   };
+  function resultRequiresGrad(...args) {
+    for (const arg of args) {
+      if (arg instanceof Tensor && arg.requires_grad) {
+        return true;
+      }
+    }
+    return false;
+  }
+  __name(resultRequiresGrad, "resultRequiresGrad");
   const _Operation = class _Operation {
     id = getNextId();
     next_functions = [];
     saved_tensors = [];
     _retained_tensors = [];
     forward(...args) {
+      const requires_grad = resultRequiresGrad(...args);
       eventBus.dispatchEvent(new CustomEvent(events.OPERATION_BEFORE_FORWARD, {
         detail: {
           operation: this,
+          requires_grad,
           args
         }
       }));
@@ -35,9 +46,9 @@ var __name = (target, value) => __defProp(target, "name", { value, configurable:
       eventBus.dispatchEvent(new CustomEvent(events.OPERATION_AFTER_FORWARD, {
         detail: {
           operation: this,
+          requires_grad,
           args,
-          result,
-          requires_grad: result.requires_grad
+          result
         }
       }));
       return result;
