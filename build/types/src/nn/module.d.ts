@@ -32,3 +32,11 @@ export declare class Sigmoid extends Module {
     constructor();
     forward(input: Tensor): Tensor;
 }
+export declare class Sequential extends Module {
+    private _modulesArr;
+    constructor(...modules: Module[]);
+    append(module: Module): this;
+    extend(sequential: Sequential): this;
+    insert(index: number, module: Module): this;
+    forward(input: Tensor): Tensor;
+}

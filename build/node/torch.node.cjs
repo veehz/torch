@@ -1775,8 +1775,12 @@ class Linear extends Module {
   constructor(in_features, out_features) {
     super();
     const k = Math.sqrt(1 / in_features);
-    this.weight = new Parameter(rand([out_features, in_features]).mul(2 * k).sub(k));
-    this.bias = new Parameter(rand([out_features]).mul(2 * k).sub(k));
+    this.weight = new Parameter(
+      rand([out_features, in_features]).mul(2 * k).sub(k)
+    );
+    this.bias = new Parameter(
+      rand([out_features]).mul(2 * k).sub(k)
+    );
     this.register("weight", this.weight);
     this.register("bias", this.bias);
   }
@@ -1798,6 +1802,41 @@ class Sigmoid2 extends Module {
   }
   forward(input) {
     return sigmoid(input);
+  }
+}
+class Sequential extends Module {
+  _modulesArr;
+  constructor(...modules) {
+    super();
+    this._modulesArr = modules;
+    for (let i = 0; i < modules.length; i++) {
+      this.register(i.toString(), modules[i]);
+    }
+  }
+  append(module2) {
+    this.register(this._modulesArr.length.toString(), module2);
+    this._modulesArr.push(module2);
+    return this;
+  }
+  extend(sequential) {
+    for (const module2 of sequential._modulesArr) {
+      this.append(module2);
+    }
+    return this;
+  }
+  insert(index2, module2) {
+    this._modulesArr.splice(index2, 0, module2);
+    for (let i = index2; i < this._modulesArr.length; i++) {
+      this.register(i.toString(), this._modulesArr[i]);
+    }
+    return this;
+  }
+  forward(input) {
+    let x = input;
+    for (const module2 of this._modulesArr) {
+      x = module2.forward(x);
+    }
+    return x;
   }
 }
 class Loss {
@@ -1859,6 +1898,7 @@ const index$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
   Module,
   Parameter,
   ReLU,
+  Sequential,
   Sigmoid: Sigmoid2,
   functional
 }, Symbol.toStringTag, { value: "Module" }));
