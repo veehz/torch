@@ -1,15 +1,15 @@
-import { Tensor } from "../tensor";
-import { NestedNumberArray } from "../tensor";
-import { Operation } from "../operations/base";
-import { rand } from "../creation";
-import { functional } from ".";
+import { Tensor } from '../tensor';
+import { NestedNumberArray } from '../tensor';
+import { Operation } from '../operations/base';
+import { rand } from '../creation';
+import { functional } from '.';
 
 export class Parameter extends Tensor {
   constructor(
     data: NestedNumberArray | Tensor | Parameter,
     // Default to requires_grad=true
     options: { requires_grad?: boolean } = {
-        requires_grad: true,
+      requires_grad: true
     },
     internal_options: { operation?: Operation; shape?: number[] } = {}
   ) {
@@ -67,11 +67,19 @@ export class Linear extends Module {
     super();
     const k = Math.sqrt(1 / in_features);
 
-    this.weight = new Parameter(rand([out_features, in_features]).mul(2 * k).sub(k));
-    this.bias = new Parameter(rand([out_features]).mul(2 * k).sub(k));
+    this.weight = new Parameter(
+      rand([out_features, in_features])
+        .mul(2 * k)
+        .sub(k)
+    );
+    this.bias = new Parameter(
+      rand([out_features])
+        .mul(2 * k)
+        .sub(k)
+    );
 
-    this.register("weight", this.weight);
-    this.register("bias", this.bias);
+    this.register('weight', this.weight);
+    this.register('bias', this.bias);
   }
 
   forward(input: Tensor) {
@@ -96,5 +104,46 @@ export class Sigmoid extends Module {
 
   forward(input: Tensor) {
     return functional.sigmoid(input);
+  }
+}
+
+export class Sequential extends Module {
+  private _modulesArr: Module[];
+
+  constructor(...modules: Module[]) {
+    super();
+    this._modulesArr = modules;
+    for (let i = 0; i < modules.length; i++) {
+      this.register(i.toString(), modules[i]);
+    }
+  }
+
+  append(module: Module): this {
+    this.register(this._modulesArr.length.toString(), module);
+    this._modulesArr.push(module);
+    return this;
+  }
+
+  extend(sequential: Sequential): this {
+    for (const module of sequential._modulesArr) {
+      this.append(module);
+    }
+    return this;
+  }
+
+  insert(index: number, module: Module): this {
+    this._modulesArr.splice(index, 0, module);
+    for (let i = index; i < this._modulesArr.length; i++) {
+      this.register(i.toString(), this._modulesArr[i]);
+    }
+    return this;
+  }
+
+  forward(input: Tensor) {
+    let x = input;
+    for (const module of this._modulesArr) {
+      x = module.forward(x);
+    }
+    return x;
   }
 }

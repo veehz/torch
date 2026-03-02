@@ -25,4 +25,51 @@ describe('Module', () => {
       assert.deepStrictEqual(output.shape, [128, 30]);
     });
   });
+
+  describe('Sequential', () => {
+    it('should forward the correct shape', () => {
+      const model = new torch.nn.Sequential(
+        new torch.nn.Linear(10, 20),
+        new torch.nn.ReLU(),
+        new torch.nn.Linear(20, 30)
+      );
+
+      const input = new torch.Tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+      const output = model.forward(input);
+      assert.deepStrictEqual(output.shape, [30]);
+    });
+
+    it('should append a module', () => {
+      const model = new torch.nn.Sequential();
+      model.append(new torch.nn.Linear(10, 20));
+      model.append(new torch.nn.ReLU());
+      model.append(new torch.nn.Linear(20, 30));
+
+      const input = new torch.Tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+      const output = model.forward(input);
+      assert.deepStrictEqual(output.shape, [30]);
+    });
+
+    it('should extend with modules', () => {
+      const model = new torch.nn.Sequential(new torch.nn.Linear(10, 20), new torch.nn.ReLU());
+      const model2 = new torch.nn.Sequential(new torch.nn.Linear(20, 30), new torch.nn.ReLU());
+      model.extend(model2);
+
+      const input = new torch.Tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+      const output = model.forward(input);
+      assert.deepStrictEqual(output.shape, [30]);
+    });
+
+    it('should insert a module', () => {
+      const model = new torch.nn.Sequential(
+        new torch.nn.Linear(10, 20),
+        new torch.nn.Linear(30, 40)
+      );
+      model.insert(1, new torch.nn.Linear(20, 30));
+
+      const input = new torch.Tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+      const output = model.forward(input);
+      assert.deepStrictEqual(output.shape, [40]);
+    });
+  });
 });
