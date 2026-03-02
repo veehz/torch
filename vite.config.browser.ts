@@ -9,8 +9,7 @@ export default defineConfig({
     })
   ],
   build: {
-    // Avoid transforming/minifying function bodies used by gpu.js kernel parser
-    minify: false,
+    minify: true,
     sourcemap: true,
     lib: {
       entry: path.resolve(__dirname, 'src/index.ts'),
@@ -30,10 +29,5 @@ export default defineConfig({
   },
   esbuild: {
     keepNames: true,
-  },
-  resolve: {
-    alias: {
-      'gpu.js': path.resolve(__dirname, './vendor/gpu-browser.min.js'),
-    },
-  },
+  }
 });

@@ -25,6 +25,8 @@ First, build it:
 yarn build
 ```
 
+See [examples/](examples/) for examples.
+
 ### Node
 
 See `examples/basic_backpropagation.js`.

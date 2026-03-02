@@ -37,16 +37,18 @@ jobs:
               cp -r build docs/build
             fi
 
-        - name: Copy examples to docs/examples
+        - name: Copy build to docs/media/build
           run: |
-            if [ -d "examples" ]; then
-              cp -r examples docs/examples
+            if [ -d "build" ]; then
+              mkdir -p docs/media
+              cp -r build docs/media/build
             fi
 
-        - name: Copy vendor files to docs/vendor
+        - name: Copy examples to docs/media/examples
           run: |
-            if [ -d "vendor" ]; then
-              cp -r vendor docs/vendor
+            if [ -d "examples" ]; then
+              mkdir -p docs/media
+              cp -r examples docs/media/examples
             fi
 
         - name: Deploy docs
