@@ -1,3 +1,62 @@
+function get_shape_from_args(args) {
+  if (Array.isArray(args[0])) {
+    return args[0];
+  }
+  return args;
+}
+function randn(...args) {
+  const shape = get_shape_from_args(args);
+  const tensor = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(Math.random()));
+  tensor.shape = shape;
+  return tensor;
+}
+function rand(...args) {
+  const shape = get_shape_from_args(args);
+  const tensor = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(Math.random()));
+  tensor.shape = shape;
+  return tensor;
+}
+function randint(low, high, shape) {
+  const tensor = new Tensor(
+    Array(shape.reduce((a, b) => a * b, 1)).fill(Math.floor(Math.random() * (high - low) + low))
+  );
+  tensor.shape = shape;
+  return tensor;
+}
+function ones(...args) {
+  const shape = get_shape_from_args(args);
+  const tensor = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(1));
+  tensor.shape = shape;
+  return tensor;
+}
+function zeros(...args) {
+  const shape = get_shape_from_args(args);
+  const tensor = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(0));
+  tensor.shape = shape;
+  return tensor;
+}
+function ones_like(tensor) {
+  return ones(tensor.shape);
+}
+function zeros_like(tensor) {
+  return zeros(tensor.shape);
+}
+function linspace(start, end, steps) {
+  const data = [];
+  const step = (end - start) / (steps - 1);
+  for (let i = 0; i < steps - 1; i++) {
+    data.push(start + i * step);
+  }
+  data.push(end);
+  return new Tensor(data);
+}
+function arange(start, end = void 0, step = 1) {
+  const data = [];
+  for (let i = start; i < end; i += step) {
+    data.push(i);
+  }
+  return new Tensor(data);
+}
 let globalId = 0;
 const getNextId = () => {
   return globalId++;
@@ -79,7 +138,7 @@ class AccumulateGrad extends UnaryOperation {
   }
   _backward(dz) {
     if (!this.variable.grad) {
-      this.variable.grad = new Tensor(new Array(this.variable.dataLength()).fill(0));
+      this.variable.grad = zeros_like(this.variable);
     }
     eventBus.dispatchEvent(new CustomEvent(events.OPERATION_BEFORE_ACCUMULATE_GRAD, { detail: { operation: this, dz } }));
     this.variable.grad = this.variable.grad.add(dz);
@@ -1243,8 +1302,7 @@ class Sum extends UnaryOperation {
   _backward(dz) {
     const [a] = this.saved_tensors;
     const [aFn] = this.next_functions;
-    const result = new Tensor(Array(a.dataLength()).fill(dz.item()));
-    aFn.backward(result);
+    aFn.backward(zeros_like(a).add(dz.item()));
   }
 }
 registerOperation("sum", Sum);
@@ -1266,8 +1324,7 @@ class Mean extends UnaryOperation {
   _backward(dz) {
     const [a] = this.saved_tensors;
     const [aFn] = this.next_functions;
-    const result = new Tensor(Array(a.dataLength()).fill(dz.item() / a.dataLength()));
-    aFn.backward(result);
+    aFn.backward(zeros_like(a).add(dz.item() / a.dataLength()));
   }
 }
 registerOperation("mean", Mean);
@@ -1609,65 +1666,6 @@ class Ne extends BinaryOperation {
   }
 }
 registerOperation("ne", Ne);
-function get_shape_from_args(args) {
-  if (Array.isArray(args[0])) {
-    return args[0];
-  }
-  return args;
-}
-function randn(...args) {
-  const shape = get_shape_from_args(args);
-  const tensor = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(Math.random()));
-  tensor.shape = shape;
-  return tensor;
-}
-function rand(...args) {
-  const shape = get_shape_from_args(args);
-  const tensor = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(Math.random()));
-  tensor.shape = shape;
-  return tensor;
-}
-function randint(low, high, shape) {
-  const tensor = new Tensor(
-    Array(shape.reduce((a, b) => a * b, 1)).fill(Math.floor(Math.random() * (high - low) + low))
-  );
-  tensor.shape = shape;
-  return tensor;
-}
-function ones(...args) {
-  const shape = get_shape_from_args(args);
-  const tensor = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(1));
-  tensor.shape = shape;
-  return tensor;
-}
-function zeros(...args) {
-  const shape = get_shape_from_args(args);
-  const tensor = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(0));
-  tensor.shape = shape;
-  return tensor;
-}
-function ones_like(tensor) {
-  return ones(tensor.shape);
-}
-function zeros_like(tensor) {
-  return zeros(tensor.shape);
-}
-function linspace(start, end, steps) {
-  const data = [];
-  const step = (end - start) / (steps - 1);
-  for (let i = 0; i < steps - 1; i++) {
-    data.push(start + i * step);
-  }
-  data.push(end);
-  return new Tensor(data);
-}
-function arange(start, end = void 0, step = 1) {
-  const data = [];
-  for (let i = start; i < end; i += step) {
-    data.push(i);
-  }
-  return new Tensor(data);
-}
 const _relu_kernel = function(a, output) {
   const res = new Array(output);
   for (let x = 0; x < output; x++) {

@@ -1,7 +1,60 @@
 var Qr = Object.defineProperty;
 var o = (t, e) => Qr(t, "name", { value: e, configurable: !0 });
-let Xr = 0;
-const Wr = /* @__PURE__ */ o(() => Xr++, "getNextId"), F = new EventTarget(), E = {
+function K(t) {
+  return Array.isArray(t[0]) ? t[0] : t;
+}
+o(K, "get_shape_from_args");
+function lt(...t) {
+  const e = K(t), r = new c(Array(e.reduce((s, n) => s * n, 1)).fill(Math.random()));
+  return r.shape = e, r;
+}
+o(lt, "randn");
+function Dr(...t) {
+  const e = K(t), r = new c(Array(e.reduce((s, n) => s * n, 1)).fill(Math.random()));
+  return r.shape = e, r;
+}
+o(Dr, "rand");
+function ft(t, e, r) {
+  const s = new c(
+    Array(r.reduce((n, a) => n * a, 1)).fill(Math.floor(Math.random() * (e - t) + t))
+  );
+  return s.shape = r, s;
+}
+o(ft, "randint");
+function Xr(...t) {
+  const e = K(t), r = new c(Array(e.reduce((s, n) => s * n, 1)).fill(1));
+  return r.shape = e, r;
+}
+o(Xr, "ones");
+function Yr(...t) {
+  const e = K(t), r = new c(Array(e.reduce((s, n) => s * n, 1)).fill(0));
+  return r.shape = e, r;
+}
+o(Yr, "zeros");
+function pt(t) {
+  return Xr(t.shape);
+}
+o(pt, "ones_like");
+function T(t) {
+  return Yr(t.shape);
+}
+o(T, "zeros_like");
+function gt(t, e, r) {
+  const s = [], n = (e - t) / (r - 1);
+  for (let a = 0; a < r - 1; a++)
+    s.push(t + a * n);
+  return s.push(e), new c(s);
+}
+o(gt, "linspace");
+function wt(t, e = void 0, r = 1) {
+  const s = [];
+  for (let n = t; n < e; n += r)
+    s.push(n);
+  return new c(s);
+}
+o(wt, "arange");
+let Zr = 0;
+const Wr = /* @__PURE__ */ o(() => Zr++, "getNextId"), F = new EventTarget(), E = {
   TENSOR_BEFORE_BACKWARD: "tensor.beforeBackward",
   TENSOR_AFTER_BACKWARD: "tensor.afterBackward",
   OPERATION_BEFORE_FORWARD: "operation.beforeForward",
@@ -11,20 +64,20 @@ const Wr = /* @__PURE__ */ o(() => Xr++, "getNextId"), F = new EventTarget(), E 
   OPERATION_BEFORE_ACCUMULATE_GRAD: "operation.beforeAccumulateGrad",
   OPERATION_AFTER_ACCUMULATE_GRAD: "operation.afterAccumulateGrad"
 };
-function Yr(...t) {
+function Sr(...t) {
   for (const e of t)
     if (e instanceof c && e.requires_grad)
       return !0;
   return !1;
 }
-o(Yr, "resultRequiresGrad");
+o(Sr, "resultRequiresGrad");
 const Ie = class Ie {
   id = Wr();
   next_functions = [];
   saved_tensors = [];
   _retained_tensors = [];
   forward(...e) {
-    const r = Yr(...e);
+    const r = Sr(...e);
     F.dispatchEvent(new CustomEvent(E.OPERATION_BEFORE_FORWARD, {
       detail: {
         operation: this,
@@ -74,12 +127,12 @@ const je = class je extends w {
     return this.variable = e, e;
   }
   _backward(e) {
-    this.variable.grad || (this.variable.grad = new c(new Array(this.variable.dataLength()).fill(0))), F.dispatchEvent(new CustomEvent(E.OPERATION_BEFORE_ACCUMULATE_GRAD, { detail: { operation: this, dz: e } })), this.variable.grad = this.variable.grad.add(e), F.dispatchEvent(new CustomEvent(E.OPERATION_AFTER_ACCUMULATE_GRAD, { detail: { operation: this, dz: e } }));
+    this.variable.grad || (this.variable.grad = T(this.variable)), F.dispatchEvent(new CustomEvent(E.OPERATION_BEFORE_ACCUMULATE_GRAD, { detail: { operation: this, dz: e } })), this.variable.grad = this.variable.grad.add(e), F.dispatchEvent(new CustomEvent(E.OPERATION_AFTER_ACCUMULATE_GRAD, { detail: { operation: this, dz: e } }));
   }
 };
 o(je, "AccumulateGrad");
-let C = je;
-const Nr = /* @__PURE__ */ new Map(), $ = /* @__PURE__ */ new Map();
+let U = je;
+const Nr = /* @__PURE__ */ new Map(), V = /* @__PURE__ */ new Map();
 function l(t, e) {
   Nr.set(t, e);
 }
@@ -91,12 +144,12 @@ function R(t) {
   return e;
 }
 o(R, "getOperation");
-function Dr(t) {
-  const e = $.get(t);
-  return e || ($.set(t, new (R(t))()), $.get(t));
+function Ir(t) {
+  const e = V.get(t);
+  return e || (V.set(t, new (R(t))()), V.get(t));
 }
-o(Dr, "getOperationCache");
-function Zr(t) {
+o(Ir, "getOperationCache");
+function Lr(t) {
   if (ArrayBuffer.isView(t))
     return [t.length];
   const e = [];
@@ -104,7 +157,7 @@ function Zr(t) {
     e.push(t.length), t = t[0];
   return e;
 }
-o(Zr, "_get_shape");
+o(Lr, "_get_shape");
 function Pr(t) {
   return Array.isArray(t) ? t.flatMap((e) => Pr(e)) : ArrayBuffer.isView(t) ? Array.from(t) : [t];
 }
@@ -117,8 +170,8 @@ const M = class M {
   grad = null;
   requires_grad;
   constructor(e, r = {}, s = {}) {
-    if (this.data = Pr(e), this.requires_grad = r.requires_grad ?? !1, this._shape = s.shape ?? Zr(e), this.grad_fn = s.operation ?? null, this.requires_grad && !this.grad_fn) {
-      const n = new C();
+    if (this.data = Pr(e), this.requires_grad = r.requires_grad ?? !1, this._shape = s.shape ?? Lr(e), this.grad_fn = s.operation ?? null, this.requires_grad && !this.grad_fn) {
+      const n = new U();
       n.variable = this, this.grad_fn = n;
     }
   }
@@ -141,10 +194,10 @@ const M = class M {
     this._shape = e;
   }
   _executeUnaryOp(e) {
-    return (this.requires_grad ? new (R(e))() : Dr(e)).forward(this);
+    return (this.requires_grad ? new (R(e))() : Ir(e)).forward(this);
   }
   _executeBinaryOp(e, r) {
-    return typeof r == "number" && (r = new M(r)), (this.requires_grad || r.requires_grad ? new (R(e))() : Dr(e)).forward(this, r);
+    return typeof r == "number" && (r = new M(r)), (this.requires_grad || r.requires_grad ? new (R(e))() : Ir(e)).forward(this, r);
   }
   _executeOpRaw(e, ...r) {
     return new (R(e))().forward(this, ...r);
@@ -165,7 +218,7 @@ const M = class M {
   }
   is_retain_grad = !1;
   retain_grad() {
-    this.grad_fn instanceof C || this.is_retain_grad || (this.is_retain_grad = !0, this.grad_fn._retained_tensors.push(this));
+    this.grad_fn instanceof U || this.is_retain_grad || (this.is_retain_grad = !0, this.grad_fn._retained_tensors.push(this));
   }
   backward(e) {
     if (this.requires_grad) {
@@ -320,7 +373,7 @@ function m(t) {
   return (e, r) => (typeof e == "number" && (e = new c(e)), typeof r == "number" && (r = new c(r)), new (R(t))().forward(e, r));
 }
 o(m, "generate_binary_function$1");
-const lt = m("__left_index__"), ft = m("__right_index__"), pt = m("add"), gt = m("sub"), wt = m("mul"), xt = m("div"), mt = m("pow"), qt = m("fmod"), kt = m("maximum"), vt = m("minimum"), yt = q("log"), At = q("sqrt"), Ot = q("exp"), bt = q("square"), Ft = q("abs"), Sr = q("sign"), Et = q("neg"), Rt = q("reciprocal"), Bt = De("reshape"), Mt = De("unsqueeze"), Tt = q("sin"), Ct = q("cos"), Ut = q("tan"), zt = q("sum"), Dt = q("mean"), It = De("transpose"), Wt = m("matmul"), Nt = m("lt"), Pt = m("gt"), jt = m("le"), Kt = m("ge"), $t = m("eq"), Vt = m("ne"), Lr = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
+const xt = m("__left_index__"), mt = m("__right_index__"), qt = m("add"), kt = m("sub"), vt = m("mul"), yt = m("div"), At = m("pow"), Ot = m("fmod"), bt = m("maximum"), Ft = m("minimum"), Et = q("log"), Rt = q("sqrt"), Bt = q("exp"), Mt = q("square"), Tt = q("abs"), es = q("sign"), Ct = q("neg"), Ut = q("reciprocal"), zt = De("reshape"), Dt = De("unsqueeze"), It = q("sin"), Wt = q("cos"), Nt = q("tan"), Pt = q("sum"), jt = q("mean"), Kt = De("transpose"), $t = m("matmul"), Vt = m("lt"), Gt = m("gt"), Ht = m("le"), Jt = m("ge"), Qt = m("eq"), Xt = m("ne"), rs = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   const d = Array(a);
   for (let i = 0; i < a; i++) {
     const _ = p(e, n, i), u = p(s, n, i);
@@ -328,34 +381,6 @@ const lt = m("__left_index__"), ft = m("__right_index__"), pt = m("add"), gt = m
   }
   return d;
 }, "___left_index___kernel");
-function es(t, e, r = null) {
-  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = Lr, i = s.reduce((_, u) => _ * u, 1);
-  return new c(
-    d(t.data, n, e.data, a, s, i),
-    { requires_grad: t.requires_grad || e.requires_grad },
-    { operation: r, shape: s }
-  );
-}
-o(es, "___left_index___tensor");
-const Ke = class Ke extends g {
-  _forward(e, r) {
-    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), es(e, r, e.requires_grad || r.requires_grad ? this : null);
-  }
-  _backward(e) {
-    const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
-  }
-};
-o(Ke, "__Left_index__");
-let H = Ke;
-l("__left_index__", H);
-const rs = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
-  const d = Array(a);
-  for (let i = 0; i < a; i++) {
-    const _ = p(e, n, i), u = p(s, n, i);
-    d[i] = u;
-  }
-  return d;
-}, "___right_index___kernel");
 function ss(t, e, r = null) {
   const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = rs, i = s.reduce((_, u) => _ * u, 1);
   return new c(
@@ -364,8 +389,8 @@ function ss(t, e, r = null) {
     { operation: r, shape: s }
   );
 }
-o(ss, "___right_index___tensor");
-const $e = class $e extends g {
+o(ss, "___left_index___tensor");
+const Ke = class Ke extends g {
   _forward(e, r) {
     return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), ss(e, r, e.requires_grad || r.requires_grad ? this : null);
   }
@@ -373,17 +398,17 @@ const $e = class $e extends g {
     const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
   }
 };
-o($e, "__Right_index__");
-let J = $e;
-l("__right_index__", J);
+o(Ke, "__Left_index__");
+let H = Ke;
+l("__left_index__", H);
 const ts = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   const d = Array(a);
   for (let i = 0; i < a; i++) {
     const _ = p(e, n, i), u = p(s, n, i);
-    d[i] = t[_] + r[u];
+    d[i] = u;
   }
   return d;
-}, "_add_kernel");
+}, "___right_index___kernel");
 function ns(t, e, r = null) {
   const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = ts, i = s.reduce((_, u) => _ * u, 1);
   return new c(
@@ -392,10 +417,38 @@ function ns(t, e, r = null) {
     { operation: r, shape: s }
   );
 }
-o(ns, "_add_tensor");
-const Ve = class Ve extends g {
+o(ns, "___right_index___tensor");
+const $e = class $e extends g {
   _forward(e, r) {
     return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), ns(e, r, e.requires_grad || r.requires_grad ? this : null);
+  }
+  _backward(e) {
+    const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
+  }
+};
+o($e, "__Right_index__");
+let J = $e;
+l("__right_index__", J);
+const as = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
+  const d = Array(a);
+  for (let i = 0; i < a; i++) {
+    const _ = p(e, n, i), u = p(s, n, i);
+    d[i] = t[_] + r[u];
+  }
+  return d;
+}, "_add_kernel");
+function is(t, e, r = null) {
+  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = as, i = s.reduce((_, u) => _ * u, 1);
+  return new c(
+    d(t.data, n, e.data, a, s, i),
+    { requires_grad: t.requires_grad || e.requires_grad },
+    { operation: r, shape: s }
+  );
+}
+o(is, "_add_tensor");
+const Ve = class Ve extends g {
+  _forward(e, r) {
+    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), is(e, r, e.requires_grad || r.requires_grad ? this : null);
   }
   _backward(e) {
     const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
@@ -405,7 +458,7 @@ const Ve = class Ve extends g {
 o(Ve, "Add");
 let Q = Ve;
 l("add", Q);
-const as = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
+const os = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   const d = Array(a);
   for (let i = 0; i < a; i++) {
     const _ = p(e, n, i), u = p(s, n, i);
@@ -413,18 +466,18 @@ const as = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   }
   return d;
 }, "_sub_kernel");
-function is(t, e, r = null) {
-  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = as, i = s.reduce((_, u) => _ * u, 1);
+function ds(t, e, r = null) {
+  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = os, i = s.reduce((_, u) => _ * u, 1);
   return new c(
     d(t.data, n, e.data, a, s, i),
     { requires_grad: t.requires_grad || e.requires_grad },
     { operation: r, shape: s }
   );
 }
-o(is, "_sub_tensor");
+o(ds, "_sub_tensor");
 const Ge = class Ge extends g {
   _forward(e, r) {
-    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), is(e, r, e.requires_grad || r.requires_grad ? this : null);
+    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), ds(e, r, e.requires_grad || r.requires_grad ? this : null);
   }
   _backward(e) {
     const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
@@ -434,7 +487,7 @@ const Ge = class Ge extends g {
 o(Ge, "Sub");
 let X = Ge;
 l("sub", X);
-const os = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
+const us = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   const d = Array(a);
   for (let i = 0; i < a; i++) {
     const _ = p(e, n, i), u = p(s, n, i);
@@ -442,18 +495,18 @@ const os = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   }
   return d;
 }, "_mul_kernel");
-function ds(t, e, r = null) {
-  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = os, i = s.reduce((_, u) => _ * u, 1);
+function _s(t, e, r = null) {
+  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = us, i = s.reduce((_, u) => _ * u, 1);
   return new c(
     d(t.data, n, e.data, a, s, i),
     { requires_grad: t.requires_grad || e.requires_grad },
     { operation: r, shape: s }
   );
 }
-o(ds, "_mul_tensor");
+o(_s, "_mul_tensor");
 const He = class He extends g {
   _forward(e, r) {
-    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), ds(e, r, e.requires_grad || r.requires_grad ? this : null);
+    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), _s(e, r, e.requires_grad || r.requires_grad ? this : null);
   }
   _backward(e) {
     const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
@@ -463,7 +516,7 @@ const He = class He extends g {
 o(He, "Mul");
 let Y = He;
 l("mul", Y);
-const us = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
+const cs = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   const d = Array(a);
   for (let i = 0; i < a; i++) {
     const _ = p(e, n, i), u = p(s, n, i);
@@ -471,18 +524,18 @@ const us = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   }
   return d;
 }, "_div_kernel");
-function _s(t, e, r = null) {
-  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = us, i = s.reduce((_, u) => _ * u, 1);
+function hs(t, e, r = null) {
+  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = cs, i = s.reduce((_, u) => _ * u, 1);
   return new c(
     d(t.data, n, e.data, a, s, i),
     { requires_grad: t.requires_grad || e.requires_grad },
     { operation: r, shape: s }
   );
 }
-o(_s, "_div_tensor");
+o(hs, "_div_tensor");
 const Je = class Je extends g {
   _forward(e, r) {
-    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), _s(e, r, e.requires_grad || r.requires_grad ? this : null);
+    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), hs(e, r, e.requires_grad || r.requires_grad ? this : null);
   }
   _backward(e) {
     const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
@@ -492,7 +545,7 @@ const Je = class Je extends g {
 o(Je, "Div");
 let Z = Je;
 l("div", Z);
-const cs = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
+const ls = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   const d = Array(a);
   for (let i = 0; i < a; i++) {
     const _ = p(e, n, i), u = p(s, n, i);
@@ -500,18 +553,18 @@ const cs = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   }
   return d;
 }, "_pow_kernel");
-function hs(t, e, r = null) {
-  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = cs, i = s.reduce((_, u) => _ * u, 1);
+function fs(t, e, r = null) {
+  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = ls, i = s.reduce((_, u) => _ * u, 1);
   return new c(
     d(t.data, n, e.data, a, s, i),
     { requires_grad: t.requires_grad || e.requires_grad },
     { operation: r, shape: s }
   );
 }
-o(hs, "_pow_tensor");
+o(fs, "_pow_tensor");
 const Qe = class Qe extends g {
   _forward(e, r) {
-    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), hs(e, r, e.requires_grad || r.requires_grad ? this : null);
+    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), fs(e, r, e.requires_grad || r.requires_grad ? this : null);
   }
   _backward(e) {
     const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
@@ -521,7 +574,7 @@ const Qe = class Qe extends g {
 o(Qe, "Pow");
 let S = Qe;
 l("pow", S);
-const ls = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
+const ps = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   const d = Array(a);
   for (let i = 0; i < a; i++) {
     const _ = p(e, n, i), u = p(s, n, i);
@@ -529,18 +582,18 @@ const ls = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   }
   return d;
 }, "_fmod_kernel");
-function fs(t, e, r = null) {
-  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = ls, i = s.reduce((_, u) => _ * u, 1);
+function gs(t, e, r = null) {
+  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = ps, i = s.reduce((_, u) => _ * u, 1);
   return new c(
     d(t.data, n, e.data, a, s, i),
     { requires_grad: t.requires_grad || e.requires_grad },
     { operation: r, shape: s }
   );
 }
-o(fs, "_fmod_tensor");
+o(gs, "_fmod_tensor");
 const Xe = class Xe extends g {
   _forward(e, r) {
-    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), fs(e, r, e.requires_grad || r.requires_grad ? this : null);
+    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), gs(e, r, e.requires_grad || r.requires_grad ? this : null);
   }
   _backward(e) {
     const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
@@ -550,7 +603,7 @@ const Xe = class Xe extends g {
 o(Xe, "Fmod");
 let L = Xe;
 l("fmod", L);
-const ps = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
+const ws = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   const d = Array(a);
   for (let i = 0; i < a; i++) {
     const _ = p(e, n, i), u = p(s, n, i);
@@ -558,18 +611,18 @@ const ps = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   }
   return d;
 }, "_maximum_kernel");
-function gs(t, e, r = null) {
-  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = ps, i = s.reduce((_, u) => _ * u, 1);
+function xs(t, e, r = null) {
+  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = ws, i = s.reduce((_, u) => _ * u, 1);
   return new c(
     d(t.data, n, e.data, a, s, i),
     { requires_grad: t.requires_grad || e.requires_grad },
     { operation: r, shape: s }
   );
 }
-o(gs, "_maximum_tensor");
+o(xs, "_maximum_tensor");
 const Ye = class Ye extends g {
   _forward(e, r) {
-    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), gs(e, r, e.requires_grad || r.requires_grad ? this : null);
+    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), xs(e, r, e.requires_grad || r.requires_grad ? this : null);
   }
   _backward(e) {
     const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
@@ -579,7 +632,7 @@ const Ye = class Ye extends g {
 o(Ye, "Maximum");
 let ee = Ye;
 l("maximum", ee);
-const ws = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
+const ms = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   const d = Array(a);
   for (let i = 0; i < a; i++) {
     const _ = p(e, n, i), u = p(s, n, i);
@@ -587,18 +640,18 @@ const ws = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   }
   return d;
 }, "_minimum_kernel");
-function xs(t, e, r = null) {
-  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = ws, i = s.reduce((_, u) => _ * u, 1);
+function qs(t, e, r = null) {
+  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = ms, i = s.reduce((_, u) => _ * u, 1);
   return new c(
     d(t.data, n, e.data, a, s, i),
     { requires_grad: t.requires_grad || e.requires_grad },
     { operation: r, shape: s }
   );
 }
-o(xs, "_minimum_tensor");
+o(qs, "_minimum_tensor");
 const Ze = class Ze extends g {
   _forward(e, r) {
-    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), xs(e, r, e.requires_grad || r.requires_grad ? this : null);
+    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), qs(e, r, e.requires_grad || r.requires_grad ? this : null);
   }
   _backward(e) {
     const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
@@ -608,7 +661,7 @@ const Ze = class Ze extends g {
 o(Ze, "Minimum");
 let re = Ze;
 l("minimum", re);
-function ms(t, e, r = null) {
+function ks(t, e, r = null) {
   const s = new Array(t.dataLength());
   for (let n = 0; n < s.length; n++)
     s[n] = Math.pow(t.data[n], e);
@@ -618,11 +671,11 @@ function ms(t, e, r = null) {
     { operation: r, shape: t.shape }
   );
 }
-o(ms, "_powint_tensor");
+o(ks, "_powint_tensor");
 const Se = class Se extends y {
   n;
   _forward(e, r) {
-    return e.requires_grad && (this.saved_tensors = [e], this.n = r), this.next_functions.push(e.grad_fn ? e.grad_fn : h), ms(e, r, e.requires_grad ? this : null);
+    return e.requires_grad && (this.saved_tensors = [e], this.n = r), this.next_functions.push(e.grad_fn ? e.grad_fn : h), ks(e, r, e.requires_grad ? this : null);
   }
   _backward(e) {
     const [r] = this.saved_tensors, s = this.n, [n] = this.next_functions;
@@ -632,24 +685,24 @@ const Se = class Se extends y {
 o(Se, "PowInt");
 let se = Se;
 l("powint", se);
-const qs = /* @__PURE__ */ o(function(t, e) {
+const vs = /* @__PURE__ */ o(function(t, e) {
   const r = new Array(e);
   for (let s = 0; s < e; s++)
     r[s] = Math.log(t[s]);
   return r;
 }, "_log_kernel");
-function ks(t, e = null) {
-  const r = qs, s = t.shape.reduce((n, a) => n * a, 1);
+function ys(t, e = null) {
+  const r = vs, s = t.shape.reduce((n, a) => n * a, 1);
   return new c(
     r(t.data, s),
     { requires_grad: t.requires_grad },
     { operation: e, shape: t.shape }
   );
 }
-o(ks, "_log_tensor");
+o(ys, "_log_tensor");
 const Le = class Le extends w {
   _forward(e) {
-    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), ks(e, e.requires_grad ? this : null);
+    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), ys(e, e.requires_grad ? this : null);
   }
   _backward(e) {
     const [r] = this.saved_tensors, [s] = this.next_functions;
@@ -659,24 +712,24 @@ const Le = class Le extends w {
 o(Le, "Log");
 let te = Le;
 l("log", te);
-const vs = /* @__PURE__ */ o(function(t, e) {
+const As = /* @__PURE__ */ o(function(t, e) {
   const r = new Array(e);
   for (let s = 0; s < e; s++)
     r[s] = Math.sqrt(t[s]);
   return r;
 }, "_sqrt_kernel");
-function ys(t, e = null) {
-  const r = vs, s = t.shape.reduce((n, a) => n * a, 1);
+function Os(t, e = null) {
+  const r = As, s = t.shape.reduce((n, a) => n * a, 1);
   return new c(
     r(t.data, s),
     { requires_grad: t.requires_grad },
     { operation: e, shape: t.shape }
   );
 }
-o(ys, "_sqrt_tensor");
+o(Os, "_sqrt_tensor");
 const er = class er extends w {
   _forward(e) {
-    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), ys(e, e.requires_grad ? this : null);
+    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Os(e, e.requires_grad ? this : null);
   }
   _backward(e) {
     const [r] = this.saved_tensors, [s] = this.next_functions;
@@ -686,24 +739,24 @@ const er = class er extends w {
 o(er, "Sqrt");
 let ne = er;
 l("sqrt", ne);
-const As = /* @__PURE__ */ o(function(t, e) {
+const bs = /* @__PURE__ */ o(function(t, e) {
   const r = new Array(e);
   for (let s = 0; s < e; s++)
     r[s] = Math.exp(t[s]);
   return r;
 }, "_exp_kernel");
-function Os(t, e = null) {
-  const r = As, s = t.shape.reduce((n, a) => n * a, 1);
+function Fs(t, e = null) {
+  const r = bs, s = t.shape.reduce((n, a) => n * a, 1);
   return new c(
     r(t.data, s),
     { requires_grad: t.requires_grad },
     { operation: e, shape: t.shape }
   );
 }
-o(Os, "_exp_tensor");
+o(Fs, "_exp_tensor");
 const rr = class rr extends w {
   _forward(e) {
-    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Os(e, e.requires_grad ? this : null);
+    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Fs(e, e.requires_grad ? this : null);
   }
   _backward(e) {
     const [r] = this.saved_tensors, [s] = this.next_functions;
@@ -713,24 +766,24 @@ const rr = class rr extends w {
 o(rr, "Exp");
 let ae = rr;
 l("exp", ae);
-const bs = /* @__PURE__ */ o(function(t, e) {
+const Es = /* @__PURE__ */ o(function(t, e) {
   const r = new Array(e);
   for (let s = 0; s < e; s++)
     r[s] = t[s] * t[s];
   return r;
 }, "_square_kernel");
-function Fs(t, e = null) {
-  const r = bs, s = t.shape.reduce((n, a) => n * a, 1);
+function Rs(t, e = null) {
+  const r = Es, s = t.shape.reduce((n, a) => n * a, 1);
   return new c(
     r(t.data, s),
     { requires_grad: t.requires_grad },
     { operation: e, shape: t.shape }
   );
 }
-o(Fs, "_square_tensor");
+o(Rs, "_square_tensor");
 const sr = class sr extends w {
   _forward(e) {
-    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Fs(e, e.requires_grad ? this : null);
+    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Rs(e, e.requires_grad ? this : null);
   }
   _backward(e) {
     const [r] = this.saved_tensors, [s] = this.next_functions;
@@ -740,39 +793,12 @@ const sr = class sr extends w {
 o(sr, "Square");
 let ie = sr;
 l("square", ie);
-const Es = /* @__PURE__ */ o(function(t, e) {
+const Bs = /* @__PURE__ */ o(function(t, e) {
   const r = new Array(e);
   for (let s = 0; s < e; s++)
     r[s] = Math.abs(t[s]);
   return r;
 }, "_abs_kernel");
-function Rs(t, e = null) {
-  const r = Es, s = t.shape.reduce((n, a) => n * a, 1);
-  return new c(
-    r(t.data, s),
-    { requires_grad: t.requires_grad },
-    { operation: e, shape: t.shape }
-  );
-}
-o(Rs, "_abs_tensor");
-const tr = class tr extends w {
-  _forward(e) {
-    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Rs(e, e.requires_grad ? this : null);
-  }
-  _backward(e) {
-    const [r] = this.saved_tensors, [s] = this.next_functions;
-    s.backward(e.mul(Sr(r)));
-  }
-};
-o(tr, "Abs");
-let oe = tr;
-l("abs", oe);
-const Bs = /* @__PURE__ */ o(function(t, e) {
-  const r = new Array(e);
-  for (let s = 0; s < e; s++)
-    r[s] = Math.sign(t[s]);
-  return r;
-}, "_sign_kernel");
 function Ms(t, e = null) {
   const r = Bs, s = t.shape.reduce((n, a) => n * a, 1);
   return new c(
@@ -781,24 +807,25 @@ function Ms(t, e = null) {
     { operation: e, shape: t.shape }
   );
 }
-o(Ms, "_sign_tensor");
-const nr = class nr extends w {
+o(Ms, "_abs_tensor");
+const tr = class tr extends w {
   _forward(e) {
     return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Ms(e, e.requires_grad ? this : null);
   }
   _backward(e) {
     const [r] = this.saved_tensors, [s] = this.next_functions;
+    s.backward(e.mul(es(r)));
   }
 };
-o(nr, "Sign");
-let de = nr;
-l("sign", de);
+o(tr, "Abs");
+let oe = tr;
+l("abs", oe);
 const Ts = /* @__PURE__ */ o(function(t, e) {
   const r = new Array(e);
   for (let s = 0; s < e; s++)
-    r[s] = -t[s];
+    r[s] = Math.sign(t[s]);
   return r;
-}, "_neg_kernel");
+}, "_sign_kernel");
 function Cs(t, e = null) {
   const r = Ts, s = t.shape.reduce((n, a) => n * a, 1);
   return new c(
@@ -807,10 +834,36 @@ function Cs(t, e = null) {
     { operation: e, shape: t.shape }
   );
 }
-o(Cs, "_neg_tensor");
-const ar = class ar extends w {
+o(Cs, "_sign_tensor");
+const nr = class nr extends w {
   _forward(e) {
     return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Cs(e, e.requires_grad ? this : null);
+  }
+  _backward(e) {
+    const [r] = this.saved_tensors, [s] = this.next_functions;
+  }
+};
+o(nr, "Sign");
+let de = nr;
+l("sign", de);
+const Us = /* @__PURE__ */ o(function(t, e) {
+  const r = new Array(e);
+  for (let s = 0; s < e; s++)
+    r[s] = -t[s];
+  return r;
+}, "_neg_kernel");
+function zs(t, e = null) {
+  const r = Us, s = t.shape.reduce((n, a) => n * a, 1);
+  return new c(
+    r(t.data, s),
+    { requires_grad: t.requires_grad },
+    { operation: e, shape: t.shape }
+  );
+}
+o(zs, "_neg_tensor");
+const ar = class ar extends w {
+  _forward(e) {
+    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), zs(e, e.requires_grad ? this : null);
   }
   _backward(e) {
     const [r] = this.saved_tensors, [s] = this.next_functions;
@@ -820,24 +873,24 @@ const ar = class ar extends w {
 o(ar, "Neg");
 let ue = ar;
 l("neg", ue);
-const Us = /* @__PURE__ */ o(function(t, e) {
+const Ds = /* @__PURE__ */ o(function(t, e) {
   const r = new Array(e);
   for (let s = 0; s < e; s++)
     r[s] = 1 / t[s];
   return r;
 }, "_reciprocal_kernel");
-function zs(t, e = null) {
-  const r = Us, s = t.shape.reduce((n, a) => n * a, 1);
+function Is(t, e = null) {
+  const r = Ds, s = t.shape.reduce((n, a) => n * a, 1);
   return new c(
     r(t.data, s),
     { requires_grad: t.requires_grad },
     { operation: e, shape: t.shape }
   );
 }
-o(zs, "_reciprocal_tensor");
+o(Is, "_reciprocal_tensor");
 const ir = class ir extends w {
   _forward(e) {
-    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), zs(e, e.requires_grad ? this : null);
+    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Is(e, e.requires_grad ? this : null);
   }
   _backward(e) {
     const [r] = this.saved_tensors, [s] = this.next_functions;
@@ -855,7 +908,7 @@ const or = class or extends y {
     if (e.requires_grad && (this.saved_tensors = [e]), e.grad_fn)
       this.next_functions.push(e.grad_fn);
     else if (e.requires_grad) {
-      const a = new C();
+      const a = new U();
       a.variable = e, this.next_functions.push(a);
     } else
       this.next_functions.push(h);
@@ -878,7 +931,7 @@ const dr = class dr extends y {
     if (e.requires_grad && (this.saved_tensors = [e]), e.grad_fn)
       this.next_functions.push(e.grad_fn);
     else if (e.requires_grad) {
-      const n = new C();
+      const n = new U();
       n.variable = e, this.next_functions.push(n);
     } else
       this.next_functions.push(h);
@@ -898,24 +951,24 @@ const dr = class dr extends y {
 o(dr, "Unsqueeze");
 let he = dr;
 l("unsqueeze", he);
-const Ds = /* @__PURE__ */ o(function(t, e) {
+const Ws = /* @__PURE__ */ o(function(t, e) {
   const r = new Array(e);
   for (let s = 0; s < e; s++)
     r[s] = Math.sin(t[s]);
   return r;
 }, "_sin_kernel");
-function Is(t, e = null) {
-  const r = Ds, s = t.shape.reduce((n, a) => n * a, 1);
+function Ns(t, e = null) {
+  const r = Ws, s = t.shape.reduce((n, a) => n * a, 1);
   return new c(
     r(t.data, s),
     { requires_grad: t.requires_grad },
     { operation: e, shape: t.shape }
   );
 }
-o(Is, "_sin_tensor");
+o(Ns, "_sin_tensor");
 const ur = class ur extends w {
   _forward(e) {
-    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Is(e, e.requires_grad ? this : null);
+    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Ns(e, e.requires_grad ? this : null);
   }
   _backward(e) {
     const [r] = this.saved_tensors, [s] = this.next_functions;
@@ -925,24 +978,24 @@ const ur = class ur extends w {
 o(ur, "Sin");
 let le = ur;
 l("sin", le);
-const Ws = /* @__PURE__ */ o(function(t, e) {
+const Ps = /* @__PURE__ */ o(function(t, e) {
   const r = new Array(e);
   for (let s = 0; s < e; s++)
     r[s] = Math.cos(t[s]);
   return r;
 }, "_cos_kernel");
-function Ns(t, e = null) {
-  const r = Ws, s = t.shape.reduce((n, a) => n * a, 1);
+function js(t, e = null) {
+  const r = Ps, s = t.shape.reduce((n, a) => n * a, 1);
   return new c(
     r(t.data, s),
     { requires_grad: t.requires_grad },
     { operation: e, shape: t.shape }
   );
 }
-o(Ns, "_cos_tensor");
+o(js, "_cos_tensor");
 const _r = class _r extends w {
   _forward(e) {
-    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Ns(e, e.requires_grad ? this : null);
+    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), js(e, e.requires_grad ? this : null);
   }
   _backward(e) {
     const [r] = this.saved_tensors, [s] = this.next_functions;
@@ -952,24 +1005,24 @@ const _r = class _r extends w {
 o(_r, "Cos");
 let fe = _r;
 l("cos", fe);
-const Ps = /* @__PURE__ */ o(function(t, e) {
+const Ks = /* @__PURE__ */ o(function(t, e) {
   const r = new Array(e);
   for (let s = 0; s < e; s++)
     r[s] = Math.tan(t[s]);
   return r;
 }, "_tan_kernel");
-function js(t, e = null) {
-  const r = Ps, s = t.shape.reduce((n, a) => n * a, 1);
+function $s(t, e = null) {
+  const r = Ks, s = t.shape.reduce((n, a) => n * a, 1);
   return new c(
     r(t.data, s),
     { requires_grad: t.requires_grad },
     { operation: e, shape: t.shape }
   );
 }
-o(js, "_tan_tensor");
+o($s, "_tan_tensor");
 const cr = class cr extends w {
   _forward(e) {
-    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), js(e, e.requires_grad ? this : null);
+    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), $s(e, e.requires_grad ? this : null);
   }
   _backward(e) {
     const [r] = this.saved_tensors, [s] = this.next_functions;
@@ -979,47 +1032,47 @@ const cr = class cr extends w {
 o(cr, "Tan");
 let pe = cr;
 l("tan", pe);
-function Ks(t, e = null) {
+function Vs(t, e = null) {
   return new c(
     t.toArray().reduce((r, s) => r + s, 0),
     { requires_grad: t.requires_grad },
     { operation: e }
   );
 }
-o(Ks, "_sum_tensor");
+o(Vs, "_sum_tensor");
 const hr = class hr extends w {
   _forward(e) {
-    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Ks(e, e.requires_grad ? this : null);
+    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Vs(e, e.requires_grad ? this : null);
   }
   _backward(e) {
-    const [r] = this.saved_tensors, [s] = this.next_functions, n = new c(Array(r.dataLength()).fill(e.item()));
-    s.backward(n);
+    const [r] = this.saved_tensors, [s] = this.next_functions;
+    s.backward(T(r).add(e.item()));
   }
 };
 o(hr, "Sum");
 let ge = hr;
 l("sum", ge);
-function $s(t, e = null) {
+function Gs(t, e = null) {
   return new c(
     t.toArray().reduce((r, s) => r + s, 0) / t.dataLength(),
     { requires_grad: t.requires_grad },
     { operation: e }
   );
 }
-o($s, "_mean_tensor");
+o(Gs, "_mean_tensor");
 const lr = class lr extends w {
   _forward(e) {
-    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), $s(e, e.requires_grad ? this : null);
+    return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Gs(e, e.requires_grad ? this : null);
   }
   _backward(e) {
-    const [r] = this.saved_tensors, [s] = this.next_functions, n = new c(Array(r.dataLength()).fill(e.item() / r.dataLength()));
-    s.backward(n);
+    const [r] = this.saved_tensors, [s] = this.next_functions;
+    s.backward(T(r).add(e.item() / r.dataLength()));
   }
 };
 o(lr, "Mean");
 let we = lr;
 l("mean", we);
-function Vs(t, e, r, s = null) {
+function Hs(t, e, r, s = null) {
   e = e < 0 ? t.shape.length + e : e, r = r < 0 ? t.shape.length + r : r;
   const n = [...t.shape];
   [n[e], n[r]] = [n[r], n[e]];
@@ -1029,14 +1082,14 @@ function Vs(t, e, r, s = null) {
   for (let u = n.length - 1, k = 1; u >= 0; u--)
     _[u] = k, k *= n[u];
   for (let u = 0; u < a; u++) {
-    let k = u, I = 0;
+    let k = u, W = 0;
     for (let A = 0; A < n.length; A++) {
-      const O = _[A], K = Math.floor(k / O);
+      const O = _[A], $ = Math.floor(k / O);
       k %= O;
       let v = A;
-      A === e ? v = r : A === r && (v = e), I += K * i[v];
+      A === e ? v = r : A === r && (v = e), W += $ * i[v];
     }
-    d[u] = t.data[I];
+    d[u] = t.data[W];
   }
   return new c(
     d,
@@ -1044,12 +1097,12 @@ function Vs(t, e, r, s = null) {
     { operation: s, shape: n }
   );
 }
-o(Vs, "_transpose_tensor");
+o(Hs, "_transpose_tensor");
 const fr = class fr extends y {
   dim0;
   dim1;
   _forward(e, r, s) {
-    return e.requires_grad && (this.saved_tensors = [e], this.dim0 = r, this.dim1 = s), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Vs(e, r, s, this);
+    return e.requires_grad && (this.saved_tensors = [e], this.dim0 = r, this.dim1 = s), this.next_functions.push(e.grad_fn ? e.grad_fn : h), Hs(e, r, s, this);
   }
   _backward(e) {
     const [r] = this.saved_tensors, s = this.dim0, n = this.dim1, [a] = this.next_functions;
@@ -1059,7 +1112,7 @@ const fr = class fr extends y {
 o(fr, "Transpose");
 let xe = fr;
 l("transpose", xe);
-function Gs(t, e, r = null) {
+function Js(t, e, r = null) {
   if (t.shape.length == 1 && e.shape.length == 1)
     return t.mul(e).sum();
   const s = t.shape.length == 1, n = e.shape.length == 1, a = s ? [1, t.shape[0]] : t.shape, d = n ? [e.shape[0], 1] : e.shape;
@@ -1068,12 +1121,12 @@ function Gs(t, e, r = null) {
   const i = x(a.slice(0, -2), d.slice(0, -2)).concat([
     a[a.length - 2],
     d[d.length - 1]
-  ]), _ = i.reduce((b, W) => b * W, 1), u = new Array(_).fill(0), k = f(a, i), I = f(d, i), A = i[i.length - 2], O = i[i.length - 1], K = a[a.length - 1];
+  ]), _ = i.reduce((b, N) => b * N, 1), u = new Array(_).fill(0), k = f(a, i), W = f(d, i), A = i[i.length - 2], O = i[i.length - 1], $ = a[a.length - 1];
   for (let b = 0; b < _; b++) {
-    const W = b % (A * O), Vr = Math.floor(W / O), Gr = W % O;
-    let Hr = p(k, i, b - Gr), Jr = p(I, i, b - Vr * O), zr = 0;
-    for (let N = 0; N < K; N++)
-      zr += t.data[Hr + N] * e.data[Jr + N * O];
+    const N = b % (A * O), Vr = Math.floor(N / O), Gr = N % O;
+    let Hr = p(k, i, b - Gr), Jr = p(W, i, b - Vr * O), zr = 0;
+    for (let P = 0; P < $; P++)
+      zr += t.data[Hr + P] * e.data[Jr + P * O];
     u[b] = zr;
   }
   let v = [...i];
@@ -1083,10 +1136,10 @@ function Gs(t, e, r = null) {
     { operation: r, shape: v }
   );
 }
-o(Gs, "_matmul_tensor");
+o(Js, "_matmul_tensor");
 const pr = class pr extends g {
   _forward(e, r) {
-    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), Gs(e, r, e.requires_grad || r.requires_grad ? this : null);
+    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), Js(e, r, e.requires_grad || r.requires_grad ? this : null);
   }
   _backward(e) {
     const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
@@ -1096,7 +1149,7 @@ const pr = class pr extends g {
 o(pr, "Matmul");
 let me = pr;
 l("matmul", me);
-const Hs = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
+const Qs = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   const d = Array(a);
   for (let i = 0; i < a; i++) {
     const _ = p(e, n, i), u = p(s, n, i);
@@ -1104,34 +1157,6 @@ const Hs = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   }
   return d;
 }, "_lt_kernel");
-function Js(t, e, r = null) {
-  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = Hs, i = s.reduce((_, u) => _ * u, 1);
-  return new c(
-    d(t.data, n, e.data, a, s, i),
-    { requires_grad: t.requires_grad || e.requires_grad },
-    { operation: r, shape: s }
-  );
-}
-o(Js, "_lt_tensor");
-const gr = class gr extends g {
-  _forward(e, r) {
-    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), Js(e, r, e.requires_grad || r.requires_grad ? this : null);
-  }
-  _backward(e) {
-    const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
-  }
-};
-o(gr, "Lt");
-let qe = gr;
-l("lt", qe);
-const Qs = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
-  const d = Array(a);
-  for (let i = 0; i < a; i++) {
-    const _ = p(e, n, i), u = p(s, n, i);
-    d[i] = t[_] > r[u] ? 1 : 0;
-  }
-  return d;
-}, "_gt_kernel");
 function Xs(t, e, r = null) {
   const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = Qs, i = s.reduce((_, u) => _ * u, 1);
   return new c(
@@ -1140,8 +1165,8 @@ function Xs(t, e, r = null) {
     { operation: r, shape: s }
   );
 }
-o(Xs, "_gt_tensor");
-const wr = class wr extends g {
+o(Xs, "_lt_tensor");
+const gr = class gr extends g {
   _forward(e, r) {
     return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), Xs(e, r, e.requires_grad || r.requires_grad ? this : null);
   }
@@ -1149,17 +1174,17 @@ const wr = class wr extends g {
     const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
   }
 };
-o(wr, "Gt");
-let ke = wr;
-l("gt", ke);
+o(gr, "Lt");
+let qe = gr;
+l("lt", qe);
 const Ys = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   const d = Array(a);
   for (let i = 0; i < a; i++) {
     const _ = p(e, n, i), u = p(s, n, i);
-    d[i] = t[_] <= r[u] ? 1 : 0;
+    d[i] = t[_] > r[u] ? 1 : 0;
   }
   return d;
-}, "_le_kernel");
+}, "_gt_kernel");
 function Zs(t, e, r = null) {
   const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = Ys, i = s.reduce((_, u) => _ * u, 1);
   return new c(
@@ -1168,8 +1193,8 @@ function Zs(t, e, r = null) {
     { operation: r, shape: s }
   );
 }
-o(Zs, "_le_tensor");
-const xr = class xr extends g {
+o(Zs, "_gt_tensor");
+const wr = class wr extends g {
   _forward(e, r) {
     return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), Zs(e, r, e.requires_grad || r.requires_grad ? this : null);
   }
@@ -1177,17 +1202,17 @@ const xr = class xr extends g {
     const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
   }
 };
-o(xr, "Le");
-let ve = xr;
-l("le", ve);
+o(wr, "Gt");
+let ke = wr;
+l("gt", ke);
 const Ss = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   const d = Array(a);
   for (let i = 0; i < a; i++) {
     const _ = p(e, n, i), u = p(s, n, i);
-    d[i] = t[_] >= r[u] ? 1 : 0;
+    d[i] = t[_] <= r[u] ? 1 : 0;
   }
   return d;
-}, "_ge_kernel");
+}, "_le_kernel");
 function Ls(t, e, r = null) {
   const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = Ss, i = s.reduce((_, u) => _ * u, 1);
   return new c(
@@ -1196,8 +1221,8 @@ function Ls(t, e, r = null) {
     { operation: r, shape: s }
   );
 }
-o(Ls, "_ge_tensor");
-const mr = class mr extends g {
+o(Ls, "_le_tensor");
+const xr = class xr extends g {
   _forward(e, r) {
     return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), Ls(e, r, e.requires_grad || r.requires_grad ? this : null);
   }
@@ -1205,17 +1230,17 @@ const mr = class mr extends g {
     const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
   }
 };
-o(mr, "Ge");
-let ye = mr;
-l("ge", ye);
+o(xr, "Le");
+let ve = xr;
+l("le", ve);
 const et = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   const d = Array(a);
   for (let i = 0; i < a; i++) {
     const _ = p(e, n, i), u = p(s, n, i);
-    d[i] = t[_] == r[u] ? 1 : 0;
+    d[i] = t[_] >= r[u] ? 1 : 0;
   }
   return d;
-}, "_eq_kernel");
+}, "_ge_kernel");
 function rt(t, e, r = null) {
   const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = et, i = s.reduce((_, u) => _ * u, 1);
   return new c(
@@ -1224,8 +1249,8 @@ function rt(t, e, r = null) {
     { operation: r, shape: s }
   );
 }
-o(rt, "_eq_tensor");
-const qr = class qr extends g {
+o(rt, "_ge_tensor");
+const mr = class mr extends g {
   _forward(e, r) {
     return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), rt(e, r, e.requires_grad || r.requires_grad ? this : null);
   }
@@ -1233,17 +1258,17 @@ const qr = class qr extends g {
     const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
   }
 };
-o(qr, "Eq");
-let Ae = qr;
-l("eq", Ae);
+o(mr, "Ge");
+let ye = mr;
+l("ge", ye);
 const st = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
   const d = Array(a);
   for (let i = 0; i < a; i++) {
     const _ = p(e, n, i), u = p(s, n, i);
-    d[i] = t[_] != r[u] ? 1 : 0;
+    d[i] = t[_] == r[u] ? 1 : 0;
   }
   return d;
-}, "_ne_kernel");
+}, "_eq_kernel");
 function tt(t, e, r = null) {
   const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = st, i = s.reduce((_, u) => _ * u, 1);
   return new c(
@@ -1252,10 +1277,38 @@ function tt(t, e, r = null) {
     { operation: r, shape: s }
   );
 }
-o(tt, "_ne_tensor");
-const kr = class kr extends g {
+o(tt, "_eq_tensor");
+const qr = class qr extends g {
   _forward(e, r) {
     return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), tt(e, r, e.requires_grad || r.requires_grad ? this : null);
+  }
+  _backward(e) {
+    const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
+  }
+};
+o(qr, "Eq");
+let Ae = qr;
+l("eq", Ae);
+const nt = /* @__PURE__ */ o(function(t, e, r, s, n, a) {
+  const d = Array(a);
+  for (let i = 0; i < a; i++) {
+    const _ = p(e, n, i), u = p(s, n, i);
+    d[i] = t[_] != r[u] ? 1 : 0;
+  }
+  return d;
+}, "_ne_kernel");
+function at(t, e, r = null) {
+  const s = x(t.shape, e.shape), n = f(t.shape, s), a = f(e.shape, s), d = nt, i = s.reduce((_, u) => _ * u, 1);
+  return new c(
+    d(t.data, n, e.data, a, s, i),
+    { requires_grad: t.requires_grad || e.requires_grad },
+    { operation: r, shape: s }
+  );
+}
+o(at, "_ne_tensor");
+const kr = class kr extends g {
+  _forward(e, r) {
+    return (e.requires_grad || r.requires_grad) && (this.saved_tensors = [e, r]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), this.next_functions.push(r.grad_fn ? r.grad_fn : h), at(e, r, e.requires_grad || r.requires_grad ? this : null);
   }
   _backward(e) {
     const [r, s] = this.saved_tensors, [n, a] = this.next_functions;
@@ -1264,59 +1317,6 @@ const kr = class kr extends g {
 o(kr, "Ne");
 let Oe = kr;
 l("ne", Oe);
-function j(t) {
-  return Array.isArray(t[0]) ? t[0] : t;
-}
-o(j, "get_shape_from_args");
-function Gt(...t) {
-  const e = j(t), r = new c(Array(e.reduce((s, n) => s * n, 1)).fill(Math.random()));
-  return r.shape = e, r;
-}
-o(Gt, "randn");
-function Ir(...t) {
-  const e = j(t), r = new c(Array(e.reduce((s, n) => s * n, 1)).fill(Math.random()));
-  return r.shape = e, r;
-}
-o(Ir, "rand");
-function Ht(t, e, r) {
-  const s = new c(
-    Array(r.reduce((n, a) => n * a, 1)).fill(Math.floor(Math.random() * (e - t) + t))
-  );
-  return s.shape = r, s;
-}
-o(Ht, "randint");
-function nt(...t) {
-  const e = j(t), r = new c(Array(e.reduce((s, n) => s * n, 1)).fill(1));
-  return r.shape = e, r;
-}
-o(nt, "ones");
-function at(...t) {
-  const e = j(t), r = new c(Array(e.reduce((s, n) => s * n, 1)).fill(0));
-  return r.shape = e, r;
-}
-o(at, "zeros");
-function Jt(t) {
-  return nt(t.shape);
-}
-o(Jt, "ones_like");
-function V(t) {
-  return at(t.shape);
-}
-o(V, "zeros_like");
-function Qt(t, e, r) {
-  const s = [], n = (e - t) / (r - 1);
-  for (let a = 0; a < r - 1; a++)
-    s.push(t + a * n);
-  return s.push(e), new c(s);
-}
-o(Qt, "linspace");
-function Xt(t, e = void 0, r = 1) {
-  const s = [];
-  for (let n = t; n < e; n += r)
-    s.push(n);
-  return new c(s);
-}
-o(Xt, "arange");
 const it = /* @__PURE__ */ o(function(t, e) {
   const r = new Array(e);
   for (let s = 0; s < e; s++)
@@ -1359,8 +1359,8 @@ function ut(t, e = null) {
   );
 }
 o(ut, "_sigmoid_tensor");
-var T;
-let _t = (T = class extends w {
+var C;
+let _t = (C = class extends w {
   _forward(e) {
     return e.requires_grad && (this.saved_tensors = [e]), this.next_functions.push(e.grad_fn ? e.grad_fn : h), ut(e, e.requires_grad ? this : null);
   }
@@ -1368,17 +1368,17 @@ let _t = (T = class extends w {
     const [r] = this.saved_tensors, [s] = this.next_functions;
     s.backward(e.mul(r.exp().add(1).pow(-2).reciprocal().mul(r.exp()).mul(-1)));
   }
-}, o(T, "Sigmoid"), T);
+}, o(C, "Sigmoid"), C);
 l("sigmoid", _t);
-const P = class P extends c {
+const j = class j extends c {
   constructor(e, r = {
     requires_grad: !0
   }, s = {}) {
-    e instanceof c ? super(e.data, { requires_grad: !0 }, { shape: e.shape }) : e instanceof P ? super(e.data, { requires_grad: !0 }, { shape: e.shape }) : super(e, r, s);
+    e instanceof c ? super(e.data, { requires_grad: !0 }, { shape: e.shape }) : e instanceof j ? super(e.data, { requires_grad: !0 }, { shape: e.shape }) : super(e, r, s);
   }
 };
-o(P, "Parameter");
-let U = P;
+o(j, "Parameter");
+let z = j;
 const yr = class yr {
   _modules;
   _parameters;
@@ -1392,7 +1392,7 @@ const yr = class yr {
     this._modules[e] = r;
   }
   register(e, r) {
-    r instanceof U ? this.register_parameter(e, r) : this.register_module(e, r);
+    r instanceof z ? this.register_parameter(e, r) : this.register_module(e, r);
   }
   parameters() {
     let e = Object.values(this._parameters);
@@ -1409,10 +1409,10 @@ const Ar = class Ar extends B {
   constructor(e, r) {
     super();
     const s = Math.sqrt(1 / e);
-    this.weight = new U(
-      Ir([r, e]).mul(2 * s).sub(s)
-    ), this.bias = new U(
-      Ir([r]).mul(2 * s).sub(s)
+    this.weight = new z(
+      Dr([r, e]).mul(2 * s).sub(s)
+    ), this.bias = new z(
+      Dr([r]).mul(2 * s).sub(s)
     ), this.register("weight", this.weight), this.register("bias", this.bias);
   }
   forward(e) {
@@ -1474,8 +1474,8 @@ let Be = Fr;
 const Er = class Er {
 };
 o(Er, "Loss");
-let z = Er;
-const Rr = class Rr extends z {
+let D = Er;
+const Rr = class Rr extends D {
   constructor() {
     super();
   }
@@ -1485,7 +1485,7 @@ const Rr = class Rr extends z {
 };
 o(Rr, "MSELoss");
 let Me = Rr;
-const Br = class Br extends z {
+const Br = class Br extends D {
   constructor() {
     super();
   }
@@ -1495,7 +1495,7 @@ const Br = class Br extends z {
 };
 o(Br, "L1Loss");
 let Te = Br;
-const Mr = class Mr extends z {
+const Mr = class Mr extends D {
   weight;
   constructor(e = null) {
     super(), this.weight = e;
@@ -1522,7 +1522,7 @@ const Kr = jr("relu"), $r = jr("sigmoid"), ct = /* @__PURE__ */ Object.freeze(/*
   Linear: Fe,
   MSELoss: Me,
   Module: B,
-  Parameter: U,
+  Parameter: z,
   ReLU: Ee,
   Sequential: Be,
   Sigmoid: Re,
@@ -1539,8 +1539,8 @@ const Kr = jr("relu"), $r = jr("sigmoid"), ct = /* @__PURE__ */ Object.freeze(/*
   }
 };
 o(Tr, "Optimizer");
-let D = Tr;
-const Cr = class Cr extends D {
+let I = Tr;
+const Cr = class Cr extends I {
   state = /* @__PURE__ */ new Map();
   lr;
   momentum;
@@ -1570,7 +1570,7 @@ const Cr = class Cr extends D {
 };
 o(Cr, "SGD");
 let Ue = Cr;
-const Ur = class Ur extends D {
+const Ur = class Ur extends I {
   state = /* @__PURE__ */ new Map();
   step_count = 0;
   lr;
@@ -1588,9 +1588,9 @@ const Ur = class Ur extends D {
     for (const e of this.params) {
       let r = this.maximize ? e.grad.mul(-1) : e.grad;
       this.weight_decay !== 0 && (r = r.add(e.mul(this.weight_decay))), this.state.has(e) || this.state.set(e, {
-        m: V(e),
-        v: V(e),
-        vmax: V(e)
+        m: T(e),
+        v: T(e),
+        vmax: T(e)
       });
       const s = this.state.get(e);
       s.m = s.m.mul(this.beta1).add(r.mul(1 - this.beta1)), s.v = s.v.mul(this.beta2).add(r.mul(r).mul(1 - this.beta2));
@@ -1608,12 +1608,12 @@ let ze = Ur;
 const Zt = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   Adam: ze,
-  Optimizer: D,
+  Optimizer: I,
   SGD: Ue
 }, Symbol.toStringTag, { value: "Module" }));
 export {
   oe as Abs,
-  C as AccumulateGrad,
+  U as AccumulateGrad,
   Q as Add,
   fe as Cos,
   Z as Div,
@@ -1649,51 +1649,51 @@ export {
   he as Unsqueeze,
   H as __Left_index__,
   J as __Right_index__,
-  lt as __left_index__,
-  ft as __right_index__,
-  Ft as abs,
-  pt as add,
-  Xt as arange,
-  Ct as cos,
-  xt as div,
-  $t as eq,
+  xt as __left_index__,
+  mt as __right_index__,
+  Tt as abs,
+  qt as add,
+  wt as arange,
+  Wt as cos,
+  yt as div,
+  Qt as eq,
   F as eventBus,
   E as events,
-  Ot as exp,
-  qt as fmod,
-  Kt as ge,
-  Pt as gt,
-  jt as le,
-  Qt as linspace,
-  yt as log,
-  Nt as lt,
-  Wt as matmul,
-  kt as maximum,
-  Dt as mean,
-  vt as minimum,
-  wt as mul,
-  Vt as ne,
-  Et as neg,
+  Bt as exp,
+  Ot as fmod,
+  Jt as ge,
+  Gt as gt,
+  Ht as le,
+  gt as linspace,
+  Et as log,
+  Vt as lt,
+  $t as matmul,
+  bt as maximum,
+  jt as mean,
+  Ft as minimum,
+  vt as mul,
+  Xt as ne,
+  Ct as neg,
   Yt as nn,
-  nt as ones,
-  Jt as ones_like,
+  Xr as ones,
+  pt as ones_like,
   Zt as optim,
-  mt as pow,
-  Ir as rand,
-  Ht as randint,
-  Gt as randn,
-  Rt as reciprocal,
-  Bt as reshape,
-  Sr as sign,
-  Tt as sin,
-  At as sqrt,
-  bt as square,
-  gt as sub,
-  zt as sum,
-  Ut as tan,
-  It as transpose,
-  Mt as unsqueeze,
-  at as zeros,
-  V as zeros_like
+  At as pow,
+  Dr as rand,
+  ft as randint,
+  lt as randn,
+  Ut as reciprocal,
+  zt as reshape,
+  es as sign,
+  It as sin,
+  Rt as sqrt,
+  Mt as square,
+  kt as sub,
+  Pt as sum,
+  Nt as tan,
+  Kt as transpose,
+  Dt as unsqueeze,
+  Yr as zeros,
+  T as zeros_like
 };
 //# sourceMappingURL=torch.browser.es.js.map
