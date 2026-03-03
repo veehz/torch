@@ -10,6 +10,7 @@ import {
 import { Operation, BinaryOperation, UnaryOperation, nullOp, AccumulateGrad } from './base';
 import * as functional from './functional';
 import { registerOperation } from './registry';
+import { zeros_like } from '../creation';
 
 // debug operations
 
@@ -1029,8 +1030,7 @@ export class Sum extends UnaryOperation {
     const [aFn] = this.next_functions;
 
     // backward_operations:
-    const result = new Tensor(Array(a.dataLength()).fill(dz.item()));
-    aFn.backward(result);
+    aFn.backward(zeros_like(a).add(dz.item()));
   }
 }
 registerOperation('sum', Sum);
@@ -1057,8 +1057,7 @@ export class Mean extends UnaryOperation {
     const [aFn] = this.next_functions;
 
     // backward_operations:
-    const result = new Tensor(Array(a.dataLength()).fill(dz.item() / a.dataLength()));
-    aFn.backward(result);
+    aFn.backward(zeros_like(a).add(dz.item() / a.dataLength()));
   }
 }
 registerOperation('mean', Mean);
@@ -1071,6 +1070,9 @@ function _transpose_tensor(
   dim1: number,
   operation: Operation | null = null
 ): Tensor {
+  if(a.shape.length + dim0 < 0 || a.shape.length + dim1 < 0) {
+    throw new Error(`Transpose: Dimension out of range (${dim0} and ${dim1})`);
+  }
   dim0 = dim0 < 0 ? a.shape.length + dim0 : dim0;
   dim1 = dim1 < 0 ? a.shape.length + dim1 : dim1;
 
@@ -1200,7 +1202,7 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null
     { operation: operation, shape: shape_after_removing_extra_dims }
   );
 }
-// class generated from binary_op_class("Matmul", "matmul", backward_operations)
+// class generated from matmul_op_class()
 export class Matmul extends BinaryOperation {
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
@@ -1215,6 +1217,28 @@ export class Matmul extends BinaryOperation {
     const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
+    if(a.shape.length == 1 && b.shape.length == 1) {
+      aFn.backward(dz);
+      bFn.backward(dz);
+      return;
+    }
+
+    if(a.shape.length == 1) {
+      const dz1 = dz.unsqueeze(0);
+      const a1 = a.unsqueeze(0);
+      aFn.backward(dz1.matmul(b.transpose(-2, -1)));
+      bFn.backward(a1.transpose(0, 1).matmul(dz1));
+      return;
+    }
+
+    if(b.shape.length == 1) {
+      const dz1 = dz.unsqueeze(0);
+      const b1 = b.unsqueeze(1);
+      aFn.backward(dz1.matmul(b1.transpose(0, 1)));
+      bFn.backward(a.transpose(-2, -1).matmul(dz1));
+      return;
+    }
+    
     aFn.backward(dz.matmul(b.transpose(-2, -1)));
     bFn.backward(a.transpose(-2, -1).matmul(dz));
   }

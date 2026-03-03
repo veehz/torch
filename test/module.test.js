@@ -24,6 +24,17 @@ describe('Module', () => {
       const output = m.forward(input);
       assert.deepStrictEqual(output.shape, [128, 30]);
     });
+
+    it('should backward a tensor', () => {
+      const linear = new torch.nn.Linear(10, 20);
+      const input = new torch.Tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+      const output = linear.forward(input).sum();
+      console.log("weight shape", linear.weight.shape);
+      console.log("bias shape", linear.bias.shape);
+      output.backward();
+      assert.deepStrictEqual(linear.weight.grad.shape, [20, 10]);
+      assert.deepStrictEqual(linear.bias.grad.shape, [20]);
+    });
   });
 
   describe('Sequential', () => {

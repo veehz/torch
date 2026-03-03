@@ -1,3 +1,4 @@
+import { zeros_like } from '../creation';
 import { Tensor } from '../tensor';
 import { eventBus, getNextId, events } from '../util';
 
@@ -90,7 +91,7 @@ export class AccumulateGrad extends UnaryOperation {
 
   protected _backward(dz: Tensor): void {
     if (!this.variable.grad) {
-      this.variable.grad = new Tensor(new Array(this.variable.dataLength()).fill(0));
+      this.variable.grad = zeros_like(this.variable);
     }
     eventBus.dispatchEvent(new CustomEvent(events.OPERATION_BEFORE_ACCUMULATE_GRAD, { detail: { operation: this, dz } }));
     this.variable.grad = this.variable.grad.add(dz);

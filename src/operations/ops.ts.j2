@@ -1,4 +1,4 @@
-{% from 'scripts/macros.ts.j2' import binary_op_base, unary_op_base, binary_op_class, unary_op_class, kernel_options, powint_op_base, powint_op_class, transpose_op_base, transpose_op_class, matmul_op_base %}
+{% from 'scripts/macros.ts.j2' import binary_op_base, unary_op_base, binary_op_class, unary_op_class, kernel_options, powint_op_base, powint_op_class, transpose_op_base, transpose_op_class, matmul_op_base, matmul_op_class %}
 import { Tensor } from '../tensor';
 import {
   _broadcast_shape,
@@ -10,6 +10,7 @@ import {
 import { Operation, BinaryOperation, UnaryOperation, nullOp, AccumulateGrad } from './base';
 import * as functional from './functional';
 import { registerOperation } from './registry';
+import { zeros_like } from '../creation';
 
 // debug operations
 
@@ -175,7 +176,7 @@ function _sum_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   );
 }
 
-{{ unary_op_class("Sum", "sum", ["const result = new Tensor(Array(a.dataLength()).fill(dz.item()));", "aFn.backward(result);"]) }}
+{{ unary_op_class("Sum", "sum", ["aFn.backward(zeros_like(a).add(dz.item()));"]) }}
 
 function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   return new Tensor(
@@ -185,7 +186,7 @@ function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   );
 }
 
-{{ unary_op_class("Mean", "mean", ["const result = new Tensor(Array(a.dataLength()).fill(dz.item() / a.dataLength()));", "aFn.backward(result);"]) }}
+{{ unary_op_class("Mean", "mean", ["aFn.backward(zeros_like(a).add(dz.item() / a.dataLength()));"]) }}
 
 // linalg
 
@@ -193,7 +194,7 @@ function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 {{ transpose_op_class() }}
 
 {{ matmul_op_base() }}
-{{ binary_op_class("Matmul", "matmul", ["aFn.backward(dz.matmul(b.transpose(-2, -1)));", "bFn.backward(a.transpose(-2, -1).matmul(dz));"]) }}
+{{ matmul_op_class() }}
 
 // comparison
 

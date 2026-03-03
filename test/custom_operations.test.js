@@ -65,6 +65,27 @@ describe('Custom Operations', () => {
       const data = Array.from(result.toArray());
       assert.deepStrictEqual(data, [9026, 4236, 3813, 4314, 2363, 5074, 8831, 13874]);
     });
+
+    it('should calculate backward correctly for matmul', () => {
+      const t1 = new Tensor([
+        [1, 2],
+        [3, 4]
+      ], { requires_grad: true });
+
+      const t2 = new Tensor([
+        [5, 6],
+        [7, 8]
+      ], { requires_grad: true });
+
+      const result = t1.matmul(t2);
+      result.sum().backward();
+
+      const t1Grad = Array.from(t1.grad.toArray());
+      assert.deepStrictEqual(t1Grad, [11, 15, 11, 15]);
+
+      const t2Grad = Array.from(t2.grad.toArray());
+      assert.deepStrictEqual(t2Grad, [4, 4, 6, 6]);
+    });    
   });
 
   describe('Transpose', () => {
@@ -90,6 +111,8 @@ describe('Custom Operations', () => {
       const data = Array.from(result.toArray());
       assert.deepStrictEqual(data, [1, 3, 2, 4, 5, 7, 6, 8]);
     });
+
+
   });
 
 });
