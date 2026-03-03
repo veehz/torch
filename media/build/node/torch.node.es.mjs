@@ -1272,6 +1272,8 @@ class Mean extends UnaryOperation {
 }
 registerOperation("mean", Mean);
 function _transpose_tensor(a, dim0, dim1, operation = null) {
+  dim0 = dim0 < 0 ? a.shape.length + dim0 : dim0;
+  dim1 = dim1 < 0 ? a.shape.length + dim1 : dim1;
   const output_shape = [...a.shape];
   [output_shape[dim0], output_shape[dim1]] = [output_shape[dim1], output_shape[dim0]];
   const size = a.dataLength();
@@ -1386,6 +1388,8 @@ class Matmul extends BinaryOperation {
   _backward(dz) {
     const [a, b] = this.saved_tensors;
     const [aFn, bFn] = this.next_functions;
+    aFn.backward(dz.matmul(b.transpose(-2, -1)));
+    bFn.backward(a.transpose(-2, -1).matmul(dz));
   }
 }
 registerOperation("matmul", Matmul);
