@@ -1331,6 +1331,9 @@ class Mean extends UnaryOperation {
 }
 registerOperation("mean", Mean);
 function _transpose_tensor(a, dim0, dim1, operation = null) {
+  if (a.shape.length + dim0 < 0 || a.shape.length + dim1 < 0) {
+    throw new Error(`Transpose: Dimension out of range (${dim0} and ${dim1})`);
+  }
   dim0 = dim0 < 0 ? a.shape.length + dim0 : dim0;
   dim1 = dim1 < 0 ? a.shape.length + dim1 : dim1;
   const output_shape = [...a.shape];
@@ -1447,6 +1450,25 @@ class Matmul extends BinaryOperation {
   _backward(dz) {
     const [a, b] = this.saved_tensors;
     const [aFn, bFn] = this.next_functions;
+    if (a.shape.length == 1 && b.shape.length == 1) {
+      aFn.backward(dz);
+      bFn.backward(dz);
+      return;
+    }
+    if (a.shape.length == 1) {
+      const dz1 = dz.unsqueeze(0);
+      const a1 = a.unsqueeze(0);
+      aFn.backward(dz1.matmul(b.transpose(-2, -1)));
+      bFn.backward(a1.transpose(0, 1).matmul(dz1));
+      return;
+    }
+    if (b.shape.length == 1) {
+      const dz1 = dz.unsqueeze(0);
+      const b1 = b.unsqueeze(1);
+      aFn.backward(dz1.matmul(b1.transpose(0, 1)));
+      bFn.backward(a.transpose(-2, -1).matmul(dz1));
+      return;
+    }
     aFn.backward(dz.matmul(b.transpose(-2, -1)));
     bFn.backward(a.transpose(-2, -1).matmul(dz));
   }
