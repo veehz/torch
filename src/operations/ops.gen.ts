@@ -1071,6 +1071,9 @@ function _transpose_tensor(
   dim1: number,
   operation: Operation | null = null
 ): Tensor {
+  dim0 = dim0 < 0 ? a.shape.length + dim0 : dim0;
+  dim1 = dim1 < 0 ? a.shape.length + dim1 : dim1;
+
   const output_shape = [...a.shape];
   [output_shape[dim0], output_shape[dim1]] = [output_shape[dim1], output_shape[dim0]];
   const size = a.dataLength();
@@ -1212,7 +1215,8 @@ export class Matmul extends BinaryOperation {
     const [aFn, bFn] = this.next_functions;
 
     // backward_operations:
-    
+    aFn.backward(dz.matmul(b.transpose(-2, -1)));
+    bFn.backward(a.transpose(-2, -1).matmul(dz));
   }
 }
 registerOperation('matmul', Matmul);

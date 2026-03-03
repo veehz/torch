@@ -193,7 +193,7 @@ function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 {{ transpose_op_class() }}
 
 {{ matmul_op_base() }}
-{{ binary_op_class("Matmul", "matmul", []) }}
+{{ binary_op_class("Matmul", "matmul", ["aFn.backward(dz.matmul(b.transpose(-2, -1)));", "bFn.backward(a.transpose(-2, -1).matmul(dz));"]) }}
 
 // comparison
 
