@@ -6,8 +6,8 @@ import {
   _get_original_index_kernel,
   _pad_shape
 } from '../broadcasting';
-import { Operation, BinaryOperation, UnaryOperation, nullOp, AccumulateGrad } from '../operations/base';
-import { registerOperation } from '../operations/registry';
+import { TorchFunction, BinaryFunction, UnaryFunction, nullOp, AccumulateGrad } from '../functions/base';
+import { registerOperation } from '../functions/registry';
 
 // function generated from unary_op_base("relu", "Math.max(a[x], 0)")
 
@@ -19,7 +19,7 @@ const _relu_kernel = function (a: number[], output: number) {
   return res;
 };
 
-function _relu_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+function _relu_tensor(a: Tensor, operation: TorchFunction | null = null): Tensor {
   const kernel = _relu_kernel;
   const output = a.shape.reduce((acc, val) => acc * val, 1);
 
@@ -30,7 +30,7 @@ function _relu_tensor(a: Tensor, operation: Operation | null = null): Tensor {
   );
 }
 // class generated from unary_op_class("Relu", "relu", backward_operations)
-export class Relu extends UnaryOperation {
+export class Relu extends UnaryFunction {
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.saved_tensors = [a];
@@ -58,7 +58,7 @@ const _sigmoid_kernel = function (a: number[], output: number) {
   return res;
 };
 
-function _sigmoid_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+function _sigmoid_tensor(a: Tensor, operation: TorchFunction | null = null): Tensor {
   const kernel = _sigmoid_kernel;
   const output = a.shape.reduce((acc, val) => acc * val, 1);
 
@@ -69,7 +69,7 @@ function _sigmoid_tensor(a: Tensor, operation: Operation | null = null): Tensor 
   );
 }
 // class generated from unary_op_class("Sigmoid", "sigmoid", backward_operations)
-export class Sigmoid extends UnaryOperation {
+export class Sigmoid extends UnaryFunction {
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.saved_tensors = [a];

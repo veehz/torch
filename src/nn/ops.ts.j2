@@ -6,8 +6,8 @@ import {
   _get_original_index_kernel,
   _pad_shape
 } from '../broadcasting';
-import { Operation, BinaryOperation, UnaryOperation, nullOp, AccumulateGrad } from '../operations/base';
-import { registerOperation } from '../operations/registry';
+import { TorchFunction, BinaryFunction, UnaryFunction, nullOp, AccumulateGrad } from '../functions/base';
+import { registerOperation } from '../functions/registry';
 
 {{ unary_op_base("relu", "Math.max(a[x], 0)") }}
 {{ unary_op_class("Relu", "relu", ["aFn.backward(dz.mul(a.gt(0)));"]) }}

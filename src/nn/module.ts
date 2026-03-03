@@ -1,6 +1,6 @@
 import { Tensor } from '../tensor';
 import { NestedNumberArray } from '../tensor';
-import { Operation } from '../operations/base';
+import { TorchFunction } from '../functions/base';
 import { rand } from '../creation';
 import { functional } from '.';
 
@@ -11,7 +11,7 @@ export class Parameter extends Tensor {
     options: { requires_grad?: boolean } = {
       requires_grad: true
     },
-    internal_options: { operation?: Operation; shape?: number[] } = {}
+    internal_options: { operation?: TorchFunction; shape?: number[] } = {}
   ) {
     if (data instanceof Tensor) {
       super(data.data, { requires_grad: true }, { shape: data.shape });

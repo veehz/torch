@@ -13,7 +13,7 @@ const _{{ name }}_kernel = function (a: number[], as: number[], b: number[], bs:
   return res;
 };
 
-function _{{ name }}_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
+function _{{ name }}_tensor(a: Tensor, b: Tensor, operation: TorchFunction | null = null): Tensor {
   const broadcast_shape = _broadcast_shape(a.shape, b.shape);
   const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
   const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
@@ -40,7 +40,7 @@ const _{{ name }}_kernel = function (a: number[], output: number) {
   return res;
 };
 
-function _{{ name }}_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+function _{{ name }}_tensor(a: Tensor, operation: TorchFunction | null = null): Tensor {
   const kernel = _{{ name }}_kernel;
   const output = a.shape.reduce((acc, val) => acc * val, 1);
 
@@ -54,7 +54,7 @@ function _{{ name }}_tensor(a: Tensor, operation: Operation | null = null): Tens
 
 {% macro binary_op_class(classname, opname, backward_operations) -%}
 // class generated from binary_op_class("{{ classname }}", "{{ opname }}", backward_operations)
-export class {{ classname }} extends BinaryOperation {
+export class {{ classname }} extends BinaryFunction {
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.saved_tensors = [a, b];
@@ -76,7 +76,7 @@ registerOperation('{{ opname }}', {{ classname }});
 
 {% macro unary_op_class(classname, opname, backward_operations) -%}
 // class generated from unary_op_class("{{ classname }}", "{{ opname }}", backward_operations)
-export class {{ classname }} extends UnaryOperation {
+export class {{ classname }} extends UnaryFunction {
   protected _forward(a: Tensor): Tensor {
     if (a.requires_grad) {
       this.saved_tensors = [a];
@@ -96,7 +96,7 @@ registerOperation('{{ opname }}', {{ classname }});
 {%- endmacro %}
 
 {% macro powint_op_base() -%}
-function _powint_tensor(a: Tensor, n: number, operation: Operation | null = null): Tensor {
+function _powint_tensor(a: Tensor, n: number, operation: TorchFunction | null = null): Tensor {
   const data = new Array(a.dataLength());
   for (let i = 0; i < data.length; i++) {
     data[i] = Math.pow(a.data[i], n);
@@ -110,7 +110,7 @@ function _powint_tensor(a: Tensor, n: number, operation: Operation | null = null
 {%- endmacro %}
 
 {% macro powint_op_class() -%}
-export class PowInt extends Operation {
+export class PowInt extends TorchFunction {
   private n: number;
   protected _forward(a: Tensor, n: number): Tensor {
     if (a.requires_grad) {
@@ -138,7 +138,7 @@ function _transpose_tensor(
   a: Tensor,
   dim0: number,
   dim1: number,
-  operation: Operation | null = null
+  operation: TorchFunction | null = null
 ): Tensor {
   if(a.shape.length + dim0 < 0 || a.shape.length + dim1 < 0) {
     throw new Error(`Transpose: Dimension out of range (${dim0} and ${dim1})`);
@@ -188,7 +188,7 @@ function _transpose_tensor(
 {%- endmacro %}
 
 {% macro transpose_op_class() -%}
-export class Transpose extends Operation {
+export class Transpose extends TorchFunction {
   private dim0: number;
   private dim1: number;
   protected _forward(a: Tensor, dim0: number, dim1: number): Tensor {
@@ -214,7 +214,7 @@ registerOperation('transpose', Transpose);
 {%- endmacro %}
 
 {% macro matmul_op_base() -%}
-function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null): Tensor {
+function _matmul_tensor(a: Tensor, b: Tensor, operation: TorchFunction | null = null): Tensor {
   if (a.shape.length == 1 && b.shape.length == 1) {
     return a.mul(b).sum();
   }
@@ -281,7 +281,7 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: Operation | null = null
 
 {% macro matmul_op_class() -%}
 // class generated from matmul_op_class()
-export class Matmul extends BinaryOperation {
+export class Matmul extends BinaryFunction {
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.saved_tensors = [a, b];
@@ -316,7 +316,7 @@ export class Matmul extends BinaryOperation {
       bFn.backward(a.transpose(-2, -1).matmul(dz1));
       return;
     }
-    
+
     aFn.backward(dz.matmul(b.transpose(-2, -1)));
     bFn.backward(a.transpose(-2, -1).matmul(dz));
   }

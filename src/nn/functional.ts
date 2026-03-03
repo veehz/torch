@@ -1,5 +1,5 @@
 import { Tensor } from "../tensor";
-import { getOperation } from "../operations/registry";
+import { getOperation } from "../functions/registry";
 
 function generate_function(opname: string) {
   return (...args: (Tensor | number)[]) => {

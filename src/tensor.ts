@@ -1,6 +1,6 @@
 import { _get_original_index } from './broadcasting';
-import { AccumulateGrad, Operation } from './operations/base';
-import { getOperation, getOperationCache } from './operations/registry';
+import { AccumulateGrad, TorchFunction } from './functions/base';
+import { getOperation, getOperationCache } from './functions/registry';
 import { getNextId, eventBus, events } from './util';
 
 /*
@@ -48,7 +48,7 @@ export class Tensor {
   public id: number = getNextId();
   data: number[];
   _shape: number[];
-  grad_fn: Operation | null = null;
+  grad_fn: TorchFunction | null = null;
   public grad: Tensor | null = null;
 
   requires_grad: boolean;
@@ -56,7 +56,7 @@ export class Tensor {
   constructor(
     data: NestedNumberArray,
     options: { requires_grad?: boolean } = {},
-    internal_options: { operation?: Operation; shape?: number[] } = {}
+    internal_options: { operation?: TorchFunction; shape?: number[] } = {}
   ) {
     this.data = _flatten(data);
     this.requires_grad = options.requires_grad ?? false;

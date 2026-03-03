@@ -3,7 +3,7 @@
 - [`src`](src)
     - [`index.ts`](src/index.ts) is the entry point of the library.
     - [`tensor.ts`](src/tensor.ts) is the main tensor class.
-    - [`operations`](operations) contains all operations that tensors can perform.
+    - [`function`](function) contains all functions that tensors can perform.
     - [`nn`](nn) contains all neural network modules (for everything under `torch.nn`).
     - [`optim`](optim) contains all optimizers (for everything under `torch.optim`).
     - [`creation`](creation) contains all tensor creation functions (all functions that create a tensor not from scratch, including `zeros`, `randn`).
@@ -28,13 +28,13 @@ You will have to run `yarn generate` or `python3 scripts/generate.py`.
 
 This is to allow for testing in `.gen.ts` files before moving the edits to `.ts.j2`.
 
-### Adding a new Operation
+### Adding a new Function
 
-To add a new operation, add it to [`src/operations/ops.ts.j2`](src/operations/ops.ts.j2).
+To add a new function, add it to [`src/function/ops.ts.j2`](src/function/ops.ts.j2).
 
-You may see the macros at [`scripts/macros.ts.j2`](scripts/macros.ts.j2) and the output at [`src/operations/ops.gen.ts`](src/operations/ops.gen.ts) (you need to run `yarn generate` to regenerate it) to see how it works.
+You may see the macros at [`scripts/macros.ts.j2`](scripts/macros.ts.j2) and the output at [`src/function/ops.gen.ts`](src/function/ops.gen.ts) (you need to run `yarn generate` to regenerate it) to see how it works.
 
-- To allow for `torch.<opname>(<tensor>, <args>)`, add it as well to [`src/operations/functional.ts`](src/operations/functional.ts).
+- To allow for `torch.<opname>(<tensor>, <args>)`, add it as well to [`src/function/functional.ts`](src/function/functional.ts).
 - To allow for `<tensor>.<opname>(<args>)`, add it as well to [`src/tensor.ts`](src/tensor.ts) as a `tensor` method.
 
 ## Testing

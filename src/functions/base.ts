@@ -11,9 +11,9 @@ function resultRequiresGrad(...args: (Tensor | number | number[])[]): boolean {
   return false;
 }
 
-abstract class Operation {
+abstract class TorchFunction {
   public id: number = getNextId();
-  public next_functions: Operation[] = [];
+  public next_functions: TorchFunction[] = [];
   public saved_tensors: Tensor[] = [];
   public _retained_tensors: Tensor[] = [];
 
@@ -54,7 +54,7 @@ abstract class Operation {
   }
 }
 
-class NullOp extends Operation {
+class NullOp extends TorchFunction {
   protected _forward(...args: (Tensor | number | number[])[]): Tensor {
     throw new Error('NullOp should not be called');
   }
@@ -65,23 +65,23 @@ class NullOp extends Operation {
 
 export const nullOp = new NullOp();
 
-abstract class UnaryOperation extends Operation {
+abstract class UnaryFunction extends TorchFunction {
   protected abstract _forward(a: Tensor): Tensor;
   protected abstract _backward(dz: Tensor): void;
 }
 
-abstract class BinaryOperation extends Operation {
+abstract class BinaryFunction extends TorchFunction {
   protected abstract _forward(a: Tensor, b: Tensor): Tensor;
   protected abstract _backward(dz: Tensor): void;
 }
 
-export type OperationConstructor = new () => Operation;
-export type UnaryOperationConstructor = new () => UnaryOperation;
-export type BinaryOperationConstructor = new () => BinaryOperation;
+export type TorchFunctionConstructor = new () => TorchFunction;
+export type UnaryFunctionConstructor = new () => UnaryFunction;
+export type BinaryFunctionConstructor = new () => BinaryFunction;
 
-export { Operation, UnaryOperation, BinaryOperation };
+export { TorchFunction, UnaryFunction, BinaryFunction };
 
-export class AccumulateGrad extends UnaryOperation {
+export class AccumulateGrad extends UnaryFunction {
   public variable: Tensor;
 
   protected _forward(variable: Tensor): Tensor {

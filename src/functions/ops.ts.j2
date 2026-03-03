@@ -7,7 +7,7 @@ import {
   _get_original_index_kernel,
   _pad_shape
 } from '../broadcasting';
-import { Operation, BinaryOperation, UnaryOperation, nullOp, AccumulateGrad } from './base';
+import { TorchFunction, BinaryFunction, UnaryFunction, nullOp, AccumulateGrad } from './base';
 import * as functional from './functional';
 import { registerOperation } from './registry';
 import { zeros_like } from '../creation';
@@ -79,7 +79,7 @@ import { zeros_like } from '../creation';
 {{ unary_op_base("reciprocal", "1 / a[x]") }}
 {{ unary_op_class("Reciprocal", "reciprocal", ["aFn.backward(dz.mul(a.pow(-2)));"]) }}
 
-export class Reshape extends Operation {
+export class Reshape extends TorchFunction {
   protected _forward(a: Tensor, shape: number[]) {
     const previous_length = a.dataLength();
     const target_length = shape.reduce((acc, val) => acc * val, 1);
@@ -117,7 +117,7 @@ export class Reshape extends Operation {
 }
 registerOperation('reshape', Reshape);
 
-export class Unsqueeze extends Operation {
+export class Unsqueeze extends TorchFunction {
   protected _forward(a: Tensor, dim: number) {
     if (a.requires_grad) {
       this.saved_tensors = [a];
@@ -168,7 +168,7 @@ registerOperation('unsqueeze', Unsqueeze);
 
 // reduction
 
-function _sum_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+function _sum_tensor(a: Tensor, operation: TorchFunction | null = null): Tensor {
   return new Tensor(
     a.toArray().reduce((acc, val) => acc + val, 0),
     { requires_grad: a.requires_grad },
@@ -178,7 +178,7 @@ function _sum_tensor(a: Tensor, operation: Operation | null = null): Tensor {
 
 {{ unary_op_class("Sum", "sum", ["aFn.backward(zeros_like(a).add(dz.item()));"]) }}
 
-function _mean_tensor(a: Tensor, operation: Operation | null = null): Tensor {
+function _mean_tensor(a: Tensor, operation: TorchFunction | null = null): Tensor {
   return new Tensor(
     a.toArray().reduce((acc, val) => acc + val, 0) / a.dataLength(),
     { requires_grad: a.requires_grad },
