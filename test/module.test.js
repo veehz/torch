@@ -25,15 +25,24 @@ describe('Module', () => {
       assert.deepStrictEqual(output.shape, [128, 30]);
     });
 
-    it('should backward a tensor', () => {
+    it('should backward a linear with correct shape', () => {
       const linear = new torch.nn.Linear(10, 20);
       const input = new torch.Tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
       const output = linear.forward(input).sum();
-      console.log("weight shape", linear.weight.shape);
-      console.log("bias shape", linear.bias.shape);
       output.backward();
       assert.deepStrictEqual(linear.weight.grad.shape, [20, 10]);
       assert.deepStrictEqual(linear.bias.grad.shape, [20]);
+    });
+
+    it('should backward a linear with correct values', () => {
+      const linear = new torch.nn.Linear(2, 3);
+      linear.weight.data = new torch.Tensor([[1, 2], [3, 4], [5, 6]]);
+      linear.bias.data = new torch.Tensor([1, 2, 3]);
+      const input = new torch.Tensor([1, 2]);
+      const output = linear.forward(input).sum();
+      output.backward();
+      assert.deepStrictEqual(linear.weight.grad.data, [1, 2, 1, 2, 1, 2]);
+      assert.deepStrictEqual(linear.bias.grad.data, [1, 1, 1]);
     });
   });
 
