@@ -80,7 +80,7 @@ function resultRequiresGrad(...args) {
   }
   return false;
 }
-class Operation {
+class TorchFunction {
   id = getNextId();
   next_functions = [];
   saved_tensors = [];
@@ -117,7 +117,7 @@ class Operation {
     eventBus.dispatchEvent(new CustomEvent(events.OPERATION_AFTER_BACKWARD, { detail: { operation: this, dz } }));
   }
 }
-class NullOp extends Operation {
+class NullOp extends TorchFunction {
   _forward(...args) {
     throw new Error("NullOp should not be called");
   }
@@ -126,11 +126,11 @@ class NullOp extends Operation {
   }
 }
 const nullOp = new NullOp();
-class UnaryOperation extends Operation {
+class UnaryFunction extends TorchFunction {
 }
-class BinaryOperation extends Operation {
+class BinaryFunction extends TorchFunction {
 }
-class AccumulateGrad extends UnaryOperation {
+class AccumulateGrad extends UnaryFunction {
   variable;
   _forward(variable) {
     this.variable = variable;
@@ -186,7 +186,10 @@ function _flatten(data) {
   }
 }
 class Tensor {
+  // Auto-generated ID
   id = getNextId();
+  // Optional user-defined name
+  name = null;
   data;
   _shape;
   grad_fn = null;
@@ -195,6 +198,9 @@ class Tensor {
   constructor(data, options = {}, internal_options = {}) {
     this.data = _flatten(data);
     this.requires_grad = options.requires_grad ?? false;
+    if (options.name) {
+      this.name = options.name;
+    }
     this._shape = internal_options.shape ?? _get_shape(data);
     this.grad_fn = internal_options.operation ?? null;
     if (this.requires_grad && !this.grad_fn) {
@@ -476,381 +482,157 @@ const le = generate_binary_function("le");
 const ge = generate_binary_function("ge");
 const eq = generate_binary_function("eq");
 const ne = generate_binary_function("ne");
-const ___left_index___kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    _get_original_index(bs, bcs, x);
-    res[x] = a_index;
-  }
-  return res;
-};
-function ___left_index___tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = ___left_index___kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class __Left_index__ extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
+function BinaryFunctionMixin(operation, backward_operations, opName = null) {
+  const kernel = (a, as, b, bs, bcs, output_size) => {
+    const res = Array(output_size);
+    for (let x = 0; x < output_size; x++) {
+      const a_index = _get_original_index(as, bcs, x);
+      const b_index = _get_original_index(bs, bcs, x);
+      res[x] = operation(a, b, a_index, b_index);
     }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return ___left_index___tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
-  }
-}
-registerOperation("__left_index__", __Left_index__);
-const ___right_index___kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = b_index;
-  }
-  return res;
-};
-function ___right_index___tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = ___right_index___kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class __Right_index__ extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
+    return res;
+  };
+  const forward_tensor = (a, b, operation2 = null) => {
+    const broadcast_shape = _broadcast_shape(a.shape, b.shape);
+    const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
+    const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
+    const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
+    return new Tensor(
+      kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
+      { requires_grad: a.requires_grad || b.requires_grad },
+      { operation: operation2, shape: broadcast_shape }
+    );
+  };
+  const result = class extends BinaryFunction {
+    _forward(a, b) {
+      if (a.requires_grad || b.requires_grad) {
+        this.saved_tensors = [a, b];
+      }
+      this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+      this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
+      return forward_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
     }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return ___right_index___tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
-  }
-}
-registerOperation("__right_index__", __Right_index__);
-const _add_kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = a[a_index] + b[b_index];
-  }
-  return res;
-};
-function _add_tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = _add_kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class Add extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
+    _backward(dz) {
+      const [a, b] = this.saved_tensors;
+      const [aFn, bFn] = this.next_functions;
+      backward_operations(a, b, aFn, bFn, dz);
     }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return _add_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
+  };
+  if (opName) {
+    registerOperation(opName, result);
   }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
+  return result;
+}
+function UnaryFunctionMixin(operation, backward_operations, opName = null) {
+  const kernel = (a, output_size) => {
+    const res = Array(output_size);
+    for (let x = 0; x < output_size; x++) {
+      res[x] = operation(a, x);
+    }
+    return res;
+  };
+  const forward_tensor = (a, operation2 = null) => {
+    const output_size = a.dataLength();
+    return new Tensor(
+      kernel(a.data, output_size),
+      { requires_grad: a.requires_grad },
+      { operation: operation2, shape: a.shape }
+    );
+  };
+  const result = class extends UnaryFunction {
+    _forward(a) {
+      if (a.requires_grad) {
+        this.saved_tensors = [a];
+      }
+      this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
+      return forward_tensor(a, a.requires_grad ? this : null);
+    }
+    _backward(dz) {
+      const [a] = this.saved_tensors;
+      const [aFn] = this.next_functions;
+      backward_operations(a, aFn, dz);
+    }
+  };
+  if (opName) {
+    registerOperation(opName, result);
+  }
+  return result;
+}
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => a_index,
+  (a, b, aFn, bFn, dz) => {
+  },
+  "__left_index__"
+);
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => b_index,
+  (a, b, aFn, bFn, dz) => {
+  },
+  "__right_index__"
+);
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => a[a_index] + b[b_index],
+  (a, b, aFn, bFn, dz) => {
     aFn.backward(dz);
     bFn.backward(dz);
-  }
-}
-registerOperation("add", Add);
-const _sub_kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = a[a_index] - b[b_index];
-  }
-  return res;
-};
-function _sub_tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = _sub_kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class Sub extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return _sub_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
+  },
+  "add"
+);
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => a[a_index] - b[b_index],
+  (a, b, aFn, bFn, dz) => {
     aFn.backward(dz);
     bFn.backward(dz.mul(new Tensor(-1)));
-  }
-}
-registerOperation("sub", Sub);
-const _mul_kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = a[a_index] * b[b_index];
-  }
-  return res;
-};
-function _mul_tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = _mul_kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class Mul extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return _mul_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
+  },
+  "sub"
+);
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => a[a_index] * b[b_index],
+  (a, b, aFn, bFn, dz) => {
     aFn.backward(dz.mul(b));
     bFn.backward(dz.mul(a));
-  }
-}
-registerOperation("mul", Mul);
-const _div_kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = a[a_index] / b[b_index];
-  }
-  return res;
-};
-function _div_tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = _div_kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class Div extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return _div_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
+  },
+  "mul"
+);
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => a[a_index] / b[b_index],
+  (a, b, aFn, bFn, dz) => {
     aFn.backward(dz.div(b));
     bFn.backward(dz.mul(a).mul(new Tensor(-1)).div(b).div(b));
-  }
-}
-registerOperation("div", Div);
-const _pow_kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = Math.pow(a[a_index], b[b_index]);
-  }
-  return res;
-};
-function _pow_tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = _pow_kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class Pow extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return _pow_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
+  },
+  "div"
+);
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => Math.pow(a[a_index], b[b_index]),
+  (a, b, aFn, bFn, dz) => {
     aFn.backward(dz.mul(b).mul(a.pow(b.sub(new Tensor(1)))));
     bFn.backward(dz.mul(a.pow(b)).mul(a.log()));
-  }
-}
-registerOperation("pow", Pow);
-const _fmod_kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = a[a_index] % b[b_index];
-  }
-  return res;
-};
-function _fmod_tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = _fmod_kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class Fmod extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return _fmod_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
+  },
+  "pow"
+);
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => a[a_index] % b[b_index],
+  (a, b, aFn, bFn, dz) => {
     aFn.backward(dz);
-  }
-}
-registerOperation("fmod", Fmod);
-const _maximum_kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = Math.max(a[a_index], b[b_index]);
-  }
-  return res;
-};
-function _maximum_tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = _maximum_kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class Maximum extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return _maximum_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
+  },
+  "fmod"
+);
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => Math.max(a[a_index], b[b_index]),
+  (a, b, aFn, bFn, dz) => {
     aFn.backward(dz.mul(a.ge(b)));
     bFn.backward(dz.mul(b.gt(a)));
-  }
-}
-registerOperation("maximum", Maximum);
-const _minimum_kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = Math.min(a[a_index], b[b_index]);
-  }
-  return res;
-};
-function _minimum_tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = _minimum_kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class Minimum extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return _minimum_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
+  },
+  "maximum"
+);
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => Math.min(a[a_index], b[b_index]),
+  (a, b, aFn, bFn, dz) => {
     aFn.backward(dz.mul(a.le(b)));
     bFn.backward(dz.mul(b.lt(a)));
-  }
-}
-registerOperation("minimum", Minimum);
+  },
+  "minimum"
+);
 function _powint_tensor(a, n, operation = null) {
   const data = new Array(a.dataLength());
   for (let i = 0; i < data.length; i++) {
@@ -862,7 +644,7 @@ function _powint_tensor(a, n, operation = null) {
     { operation, shape: a.shape }
   );
 }
-class PowInt extends Operation {
+class PowInt extends TorchFunction {
   n;
   _forward(a, n) {
     if (a.requires_grad) {
@@ -880,254 +662,63 @@ class PowInt extends Operation {
   }
 }
 registerOperation("powint", PowInt);
-const _log_kernel = function(a, output) {
-  const res = new Array(output);
-  for (let x = 0; x < output; x++) {
-    res[x] = Math.log(a[x]);
-  }
-  return res;
-};
-function _log_tensor(a, operation = null) {
-  const kernel = _log_kernel;
-  const output = a.shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, output),
-    { requires_grad: a.requires_grad },
-    { operation, shape: a.shape }
-  );
-}
-class Log extends UnaryOperation {
-  _forward(a) {
-    if (a.requires_grad) {
-      this.saved_tensors = [a];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _log_tensor(a, a.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a] = this.saved_tensors;
-    const [aFn] = this.next_functions;
-    aFn.backward(new Tensor(1).div(a));
-  }
-}
-registerOperation("log", Log);
-const _sqrt_kernel = function(a, output) {
-  const res = new Array(output);
-  for (let x = 0; x < output; x++) {
-    res[x] = Math.sqrt(a[x]);
-  }
-  return res;
-};
-function _sqrt_tensor(a, operation = null) {
-  const kernel = _sqrt_kernel;
-  const output = a.shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, output),
-    { requires_grad: a.requires_grad },
-    { operation, shape: a.shape }
-  );
-}
-class Sqrt extends UnaryOperation {
-  _forward(a) {
-    if (a.requires_grad) {
-      this.saved_tensors = [a];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _sqrt_tensor(a, a.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a] = this.saved_tensors;
-    const [aFn] = this.next_functions;
-    aFn.backward(new Tensor(1).div(a.sqrt()).div(2));
-  }
-}
-registerOperation("sqrt", Sqrt);
-const _exp_kernel = function(a, output) {
-  const res = new Array(output);
-  for (let x = 0; x < output; x++) {
-    res[x] = Math.exp(a[x]);
-  }
-  return res;
-};
-function _exp_tensor(a, operation = null) {
-  const kernel = _exp_kernel;
-  const output = a.shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, output),
-    { requires_grad: a.requires_grad },
-    { operation, shape: a.shape }
-  );
-}
-class Exp extends UnaryOperation {
-  _forward(a) {
-    if (a.requires_grad) {
-      this.saved_tensors = [a];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _exp_tensor(a, a.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a] = this.saved_tensors;
-    const [aFn] = this.next_functions;
-    aFn.backward(dz.mul(a.exp()));
-  }
-}
-registerOperation("exp", Exp);
-const _square_kernel = function(a, output) {
-  const res = new Array(output);
-  for (let x = 0; x < output; x++) {
-    res[x] = a[x] * a[x];
-  }
-  return res;
-};
-function _square_tensor(a, operation = null) {
-  const kernel = _square_kernel;
-  const output = a.shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, output),
-    { requires_grad: a.requires_grad },
-    { operation, shape: a.shape }
-  );
-}
-class Square extends UnaryOperation {
-  _forward(a) {
-    if (a.requires_grad) {
-      this.saved_tensors = [a];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _square_tensor(a, a.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a] = this.saved_tensors;
-    const [aFn] = this.next_functions;
-    aFn.backward(dz.mul(a).mul(new Tensor(2)));
-  }
-}
-registerOperation("square", Square);
-const _abs_kernel = function(a, output) {
-  const res = new Array(output);
-  for (let x = 0; x < output; x++) {
-    res[x] = Math.abs(a[x]);
-  }
-  return res;
-};
-function _abs_tensor(a, operation = null) {
-  const kernel = _abs_kernel;
-  const output = a.shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, output),
-    { requires_grad: a.requires_grad },
-    { operation, shape: a.shape }
-  );
-}
-class Abs extends UnaryOperation {
-  _forward(a) {
-    if (a.requires_grad) {
-      this.saved_tensors = [a];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _abs_tensor(a, a.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a] = this.saved_tensors;
-    const [aFn] = this.next_functions;
-    aFn.backward(dz.mul(sign(a)));
-  }
-}
-registerOperation("abs", Abs);
-const _sign_kernel = function(a, output) {
-  const res = new Array(output);
-  for (let x = 0; x < output; x++) {
-    res[x] = Math.sign(a[x]);
-  }
-  return res;
-};
-function _sign_tensor(a, operation = null) {
-  const kernel = _sign_kernel;
-  const output = a.shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, output),
-    { requires_grad: a.requires_grad },
-    { operation, shape: a.shape }
-  );
-}
-class Sign extends UnaryOperation {
-  _forward(a) {
-    if (a.requires_grad) {
-      this.saved_tensors = [a];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _sign_tensor(a, a.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a] = this.saved_tensors;
-    const [aFn] = this.next_functions;
-  }
-}
-registerOperation("sign", Sign);
-const _neg_kernel = function(a, output) {
-  const res = new Array(output);
-  for (let x = 0; x < output; x++) {
-    res[x] = -a[x];
-  }
-  return res;
-};
-function _neg_tensor(a, operation = null) {
-  const kernel = _neg_kernel;
-  const output = a.shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, output),
-    { requires_grad: a.requires_grad },
-    { operation, shape: a.shape }
-  );
-}
-class Neg extends UnaryOperation {
-  _forward(a) {
-    if (a.requires_grad) {
-      this.saved_tensors = [a];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _neg_tensor(a, a.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a] = this.saved_tensors;
-    const [aFn] = this.next_functions;
-    aFn.backward(dz.mul(new Tensor(-1)));
-  }
-}
-registerOperation("neg", Neg);
-const _reciprocal_kernel = function(a, output) {
-  const res = new Array(output);
-  for (let x = 0; x < output; x++) {
-    res[x] = 1 / a[x];
-  }
-  return res;
-};
-function _reciprocal_tensor(a, operation = null) {
-  const kernel = _reciprocal_kernel;
-  const output = a.shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, output),
-    { requires_grad: a.requires_grad },
-    { operation, shape: a.shape }
-  );
-}
-class Reciprocal extends UnaryOperation {
-  _forward(a) {
-    if (a.requires_grad) {
-      this.saved_tensors = [a];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _reciprocal_tensor(a, a.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a] = this.saved_tensors;
-    const [aFn] = this.next_functions;
-    aFn.backward(dz.mul(a.pow(-2)));
-  }
-}
-registerOperation("reciprocal", Reciprocal);
-class Reshape extends Operation {
+UnaryFunctionMixin(
+  (a, a_index) => Math.log(a[a_index]),
+  (a, aFn, dz) => {
+    aFn.backward(dz.mul(new Tensor(1).div(a)));
+  },
+  "log"
+);
+UnaryFunctionMixin(
+  (a, x) => Math.sqrt(a[x]),
+  (a, aFn, dz) => {
+    aFn.backward(dz.mul(new Tensor(1).div(a.sqrt()).div(2)));
+  },
+  "sqrt"
+);
+UnaryFunctionMixin(
+  (a, x) => Math.exp(a[x]),
+  (a, aFn, dz) => {
+    aFn.backward(dz.mul(dz.mul(a.exp())));
+  },
+  "exp"
+);
+UnaryFunctionMixin(
+  (a, x) => a[x] * a[x],
+  (a, aFn, dz) => {
+    aFn.backward(dz.mul(dz.mul(a).mul(new Tensor(2))));
+  },
+  "square"
+);
+UnaryFunctionMixin(
+  (a, x) => Math.abs(a[x]),
+  (a, aFn, dz) => {
+    aFn.backward(dz.mul(dz.mul(sign(a))));
+  },
+  "abs"
+);
+UnaryFunctionMixin(
+  (a, x) => Math.sign(a[x]),
+  (a, aFn, dz) => {
+    aFn.backward(dz.mul(dz.mul(sign(a))));
+  },
+  "sign"
+);
+UnaryFunctionMixin(
+  (a, x) => -a[x],
+  (a, aFn, dz) => {
+    aFn.backward(dz.mul(dz.mul(new Tensor(-1))));
+  },
+  "neg"
+);
+UnaryFunctionMixin(
+  (a, x) => 1 / a[x],
+  (a, aFn, dz) => {
+    aFn.backward(dz.mul(dz.mul(a.pow(-2))));
+  },
+  "reciprocal"
+);
+class Reshape extends TorchFunction {
   _forward(a, shape) {
     const previous_length = a.dataLength();
     const target_length = shape.reduce((acc, val) => acc * val, 1);
@@ -1159,7 +750,7 @@ class Reshape extends Operation {
   }
 }
 registerOperation("reshape", Reshape);
-class Unsqueeze extends Operation {
+class Unsqueeze extends TorchFunction {
   _forward(a, dim) {
     if (a.requires_grad) {
       this.saved_tensors = [a];
@@ -1191,99 +782,27 @@ class Unsqueeze extends Operation {
   }
 }
 registerOperation("unsqueeze", Unsqueeze);
-const _sin_kernel = function(a, output) {
-  const res = new Array(output);
-  for (let x = 0; x < output; x++) {
-    res[x] = Math.sin(a[x]);
-  }
-  return res;
-};
-function _sin_tensor(a, operation = null) {
-  const kernel = _sin_kernel;
-  const output = a.shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, output),
-    { requires_grad: a.requires_grad },
-    { operation, shape: a.shape }
-  );
-}
-class Sin extends UnaryOperation {
-  _forward(a) {
-    if (a.requires_grad) {
-      this.saved_tensors = [a];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _sin_tensor(a, a.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a] = this.saved_tensors;
-    const [aFn] = this.next_functions;
-    aFn.backward(dz.mul(a.cos()));
-  }
-}
-registerOperation("sin", Sin);
-const _cos_kernel = function(a, output) {
-  const res = new Array(output);
-  for (let x = 0; x < output; x++) {
-    res[x] = Math.cos(a[x]);
-  }
-  return res;
-};
-function _cos_tensor(a, operation = null) {
-  const kernel = _cos_kernel;
-  const output = a.shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, output),
-    { requires_grad: a.requires_grad },
-    { operation, shape: a.shape }
-  );
-}
-class Cos extends UnaryOperation {
-  _forward(a) {
-    if (a.requires_grad) {
-      this.saved_tensors = [a];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _cos_tensor(a, a.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a] = this.saved_tensors;
-    const [aFn] = this.next_functions;
-    aFn.backward(dz.mul(a.sin().neg()));
-  }
-}
-registerOperation("cos", Cos);
-const _tan_kernel = function(a, output) {
-  const res = new Array(output);
-  for (let x = 0; x < output; x++) {
-    res[x] = Math.tan(a[x]);
-  }
-  return res;
-};
-function _tan_tensor(a, operation = null) {
-  const kernel = _tan_kernel;
-  const output = a.shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, output),
-    { requires_grad: a.requires_grad },
-    { operation, shape: a.shape }
-  );
-}
-class Tan extends UnaryOperation {
-  _forward(a) {
-    if (a.requires_grad) {
-      this.saved_tensors = [a];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _tan_tensor(a, a.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a] = this.saved_tensors;
-    const [aFn] = this.next_functions;
-    aFn.backward(dz.mul(a.cos().pow(-2)));
-  }
-}
-registerOperation("tan", Tan);
+UnaryFunctionMixin(
+  (a, x) => Math.sin(a[x]),
+  (a, aFn, dz) => {
+    aFn.backward(dz.mul(dz.mul(a.cos())));
+  },
+  "sin"
+);
+UnaryFunctionMixin(
+  (a, x) => Math.cos(a[x]),
+  (a, aFn, dz) => {
+    aFn.backward(dz.mul(dz.mul(a.sin().neg())));
+  },
+  "cos"
+);
+UnaryFunctionMixin(
+  (a, x) => Math.tan(a[x]),
+  (a, aFn, dz) => {
+    aFn.backward(dz.mul(dz.mul(a.cos().pow(-2))));
+  },
+  "tan"
+);
 function _sum_tensor(a, operation = null) {
   return new Tensor(
     a.toArray().reduce((acc, val) => acc + val, 0),
@@ -1291,7 +810,7 @@ function _sum_tensor(a, operation = null) {
     { operation }
   );
 }
-class Sum extends UnaryOperation {
+class Sum extends UnaryFunction {
   _forward(a) {
     if (a.requires_grad) {
       this.saved_tensors = [a];
@@ -1313,7 +832,7 @@ function _mean_tensor(a, operation = null) {
     { operation }
   );
 }
-class Mean extends UnaryOperation {
+class Mean extends UnaryFunction {
   _forward(a) {
     if (a.requires_grad) {
       this.saved_tensors = [a];
@@ -1368,7 +887,7 @@ function _transpose_tensor(a, dim0, dim1, operation = null) {
     { operation, shape: output_shape }
   );
 }
-class Transpose extends Operation {
+class Transpose extends TorchFunction {
   dim0;
   dim1;
   _forward(a, dim0, dim1) {
@@ -1436,7 +955,7 @@ function _matmul_tensor(a, b, operation = null) {
     { operation, shape: shape_after_removing_extra_dims }
   );
 }
-class Matmul extends BinaryOperation {
+class Matmul extends BinaryFunction {
   _forward(a, b) {
     if (a.requires_grad || b.requires_grad) {
       this.saved_tensors = [a, b];
@@ -1472,284 +991,56 @@ class Matmul extends BinaryOperation {
   }
 }
 registerOperation("matmul", Matmul);
-const _lt_kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = a[a_index] < b[b_index] ? 1 : 0;
-  }
-  return res;
-};
-function _lt_tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = _lt_kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class Lt extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return _lt_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
-  }
-}
-registerOperation("lt", Lt);
-const _gt_kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = a[a_index] > b[b_index] ? 1 : 0;
-  }
-  return res;
-};
-function _gt_tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = _gt_kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class Gt extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return _gt_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
-  }
-}
-registerOperation("gt", Gt);
-const _le_kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = a[a_index] <= b[b_index] ? 1 : 0;
-  }
-  return res;
-};
-function _le_tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = _le_kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class Le extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return _le_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
-  }
-}
-registerOperation("le", Le);
-const _ge_kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = a[a_index] >= b[b_index] ? 1 : 0;
-  }
-  return res;
-};
-function _ge_tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = _ge_kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class Ge extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return _ge_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
-  }
-}
-registerOperation("ge", Ge);
-const _eq_kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = a[a_index] == b[b_index] ? 1 : 0;
-  }
-  return res;
-};
-function _eq_tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = _eq_kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class Eq extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return _eq_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
-  }
-}
-registerOperation("eq", Eq);
-const _ne_kernel = function(a, as, b, bs, bcs, output_size) {
-  const res = Array(output_size);
-  for (let x = 0; x < output_size; x++) {
-    const a_index = _get_original_index(as, bcs, x);
-    const b_index = _get_original_index(bs, bcs, x);
-    res[x] = a[a_index] != b[b_index] ? 1 : 0;
-  }
-  return res;
-};
-function _ne_tensor(a, b, operation = null) {
-  const broadcast_shape = _broadcast_shape(a.shape, b.shape);
-  const padded_a_shape = _pad_shape(a.shape, broadcast_shape);
-  const padded_b_shape = _pad_shape(b.shape, broadcast_shape);
-  const kernel = _ne_kernel;
-  const output_size = broadcast_shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, padded_a_shape, b.data, padded_b_shape, broadcast_shape, output_size),
-    { requires_grad: a.requires_grad || b.requires_grad },
-    { operation, shape: broadcast_shape }
-  );
-}
-class Ne extends BinaryOperation {
-  _forward(a, b) {
-    if (a.requires_grad || b.requires_grad) {
-      this.saved_tensors = [a, b];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return _ne_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a, b] = this.saved_tensors;
-    const [aFn, bFn] = this.next_functions;
-  }
-}
-registerOperation("ne", Ne);
-const _relu_kernel = function(a, output) {
-  const res = new Array(output);
-  for (let x = 0; x < output; x++) {
-    res[x] = Math.max(a[x], 0);
-  }
-  return res;
-};
-function _relu_tensor(a, operation = null) {
-  const kernel = _relu_kernel;
-  const output = a.shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, output),
-    { requires_grad: a.requires_grad },
-    { operation, shape: a.shape }
-  );
-}
-class Relu extends UnaryOperation {
-  _forward(a) {
-    if (a.requires_grad) {
-      this.saved_tensors = [a];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _relu_tensor(a, a.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a] = this.saved_tensors;
-    const [aFn] = this.next_functions;
-    aFn.backward(dz.mul(a.gt(0)));
-  }
-}
-registerOperation("relu", Relu);
-const _sigmoid_kernel = function(a, output) {
-  const res = new Array(output);
-  for (let x = 0; x < output; x++) {
-    res[x] = 1 / (1 + Math.exp(-a[x]));
-  }
-  return res;
-};
-function _sigmoid_tensor(a, operation = null) {
-  const kernel = _sigmoid_kernel;
-  const output = a.shape.reduce((acc, val) => acc * val, 1);
-  return new Tensor(
-    kernel(a.data, output),
-    { requires_grad: a.requires_grad },
-    { operation, shape: a.shape }
-  );
-}
-let Sigmoid$1 = class Sigmoid extends UnaryOperation {
-  _forward(a) {
-    if (a.requires_grad) {
-      this.saved_tensors = [a];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _sigmoid_tensor(a, a.requires_grad ? this : null);
-  }
-  _backward(dz) {
-    const [a] = this.saved_tensors;
-    const [aFn] = this.next_functions;
-    aFn.backward(dz.mul(a.exp().add(1).pow(-2).reciprocal().mul(a.exp()).mul(-1)));
-  }
-};
-registerOperation("sigmoid", Sigmoid$1);
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => a[a_index] < b[b_index] ? 1 : 0,
+  (a, b, aFn, bFn) => {
+  },
+  "lt"
+);
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => a[a_index] > b[b_index] ? 1 : 0,
+  (a, b, aFn, bFn) => {
+  },
+  "gt"
+);
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => a[a_index] <= b[b_index] ? 1 : 0,
+  (a, b, aFn, bFn) => {
+  },
+  "le"
+);
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => a[a_index] >= b[b_index] ? 1 : 0,
+  (a, b, aFn, bFn) => {
+  },
+  "ge"
+);
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => a[a_index] == b[b_index] ? 1 : 0,
+  (a, b, aFn, bFn) => {
+  },
+  "eq"
+);
+BinaryFunctionMixin(
+  (a, b, a_index, b_index) => a[a_index] != b[b_index] ? 1 : 0,
+  (a, b, aFn, bFn) => {
+  },
+  "ne"
+);
+UnaryFunctionMixin(
+  (a, x) => Math.max(a[x], 0),
+  (a, aFn, dz) => {
+    aFn.backward(dz.mul(dz.mul(a.gt(0))));
+  },
+  "relu"
+);
+UnaryFunctionMixin(
+  (a, x) => 1 / (1 + Math.exp(-a[x])),
+  (a, aFn, dz) => {
+    aFn.backward(dz.mul(dz.mul(a.exp().add(1).pow(-2).reciprocal().mul(a.exp()).mul(-1))));
+  },
+  "sigmoid"
+);
 class Parameter extends Tensor {
   constructor(data, options = {
     requires_grad: true
@@ -1818,7 +1109,7 @@ class ReLU extends Module {
     return relu(input);
   }
 }
-class Sigmoid2 extends Module {
+class Sigmoid extends Module {
   constructor() {
     super();
   }
@@ -1921,7 +1212,7 @@ const index$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
   Parameter,
   ReLU,
   Sequential,
-  Sigmoid: Sigmoid2,
+  Sigmoid,
   functional
 }, Symbol.toStringTag, { value: "Module" }));
 class Optimizer {
@@ -2042,43 +1333,16 @@ const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePropert
   SGD
 }, Symbol.toStringTag, { value: "Module" }));
 export {
-  Abs,
   AccumulateGrad,
-  Add,
-  Cos,
-  Div,
-  Eq,
-  Exp,
-  Fmod,
-  Ge,
-  Gt,
-  Le,
-  Log,
-  Lt,
   Matmul,
-  Maximum,
   Mean,
-  Minimum,
-  Mul,
-  Ne,
-  Neg,
-  Operation,
-  Pow,
   PowInt,
-  Reciprocal,
   Reshape,
-  Sign,
-  Sin,
-  Sqrt,
-  Square,
-  Sub,
   Sum,
-  Tan,
   Tensor,
+  TorchFunction,
   Transpose,
   Unsqueeze,
-  __Left_index__,
-  __Right_index__,
   __left_index__,
   __right_index__,
   abs,

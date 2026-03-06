@@ -1,7 +1,7 @@
 export { Tensor } from './tensor';
-export { Operation, AccumulateGrad } from './operations/base';
-export * from './operations/ops.gen';
-export * from './operations/functional';
+export { TorchFunction, AccumulateGrad } from './functions/base';
+export * from './functions/ops';
+export * from './functions/functional';
 export * from './creation/index';
 export * as nn from './nn/index';
 export * as optim from './optim/index';

@@ -1,10 +1,10 @@
 import { Tensor, NestedNumberArray } from '../tensor';
-import { Operation } from '../operations/base';
+import { TorchFunction } from '../functions/base';
 export declare class Parameter extends Tensor {
     constructor(data: NestedNumberArray | Tensor | Parameter, options?: {
         requires_grad?: boolean;
     }, internal_options?: {
-        operation?: Operation;
+        operation?: TorchFunction;
         shape?: number[];
     });
 }

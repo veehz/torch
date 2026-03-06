@@ -1,17 +1,19 @@
-import { Operation } from './operations/base';
+import { TorchFunction } from './functions/base';
 type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
 export type NestedNumberArray = number | TypedArray | NestedNumberArray[];
 export declare class Tensor {
     id: number;
+    name: string | null;
     data: number[];
     _shape: number[];
-    grad_fn: Operation | null;
+    grad_fn: TorchFunction | null;
     grad: Tensor | null;
     requires_grad: boolean;
     constructor(data: NestedNumberArray, options?: {
         requires_grad?: boolean;
+        name?: string;
     }, internal_options?: {
-        operation?: Operation;
+        operation?: TorchFunction;
         shape?: number[];
     });
     get shape(): number[];
