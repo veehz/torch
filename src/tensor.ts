@@ -45,7 +45,12 @@ function _flatten(data: NestedNumberArray): number[] {
 }
 
 export class Tensor {
+  // Auto-generated ID
   public id: number = getNextId();
+
+  // Optional user-defined name
+  public name: string | null = null;
+
   data: number[];
   _shape: number[];
   grad_fn: TorchFunction | null = null;
@@ -55,11 +60,15 @@ export class Tensor {
 
   constructor(
     data: NestedNumberArray,
-    options: { requires_grad?: boolean } = {},
+    options: { requires_grad?: boolean, name?: string } = {},
     internal_options: { operation?: TorchFunction; shape?: number[] } = {}
   ) {
     this.data = _flatten(data);
     this.requires_grad = options.requires_grad ?? false;
+
+    if (options.name) {
+      this.name = options.name;
+    }
 
     this._shape = internal_options.shape ?? _get_shape(data);
     this.grad_fn = internal_options.operation ?? null;
