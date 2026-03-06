@@ -1,4 +1,4 @@
-import './ops.gen';
+import './ops';
 
 export * from './module';
 export * from './loss';
