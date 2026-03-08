@@ -29,5 +29,5 @@ export { TorchFunction, UnaryFunction, BinaryFunction };
 export declare class AccumulateGrad extends UnaryFunction {
     variable: Tensor;
     protected _forward(variable: Tensor): Tensor;
-    protected _backward(dz: Tensor): void;
+    protected _backward(dz: Tensor | number): void;
 }

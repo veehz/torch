@@ -9,6 +9,10 @@ export declare class Reshape extends TorchFunction {
     protected _forward(a: Tensor, shape: number[]): Tensor;
     protected _backward(dz: Tensor): void;
 }
+export declare class Squeeze extends TorchFunction {
+    protected _forward(a: Tensor, dim?: number): Tensor;
+    protected _backward(dz: Tensor): void;
+}
 export declare class Unsqueeze extends TorchFunction {
     protected _forward(a: Tensor, dim: number): Tensor;
     protected _backward(dz: Tensor): void;
@@ -28,6 +32,7 @@ export declare class Transpose extends TorchFunction {
     protected _backward(dz: Tensor): void;
 }
 export declare class Matmul extends BinaryFunction {
+    private shape;
     protected _forward(a: Tensor, b: Tensor): Tensor;
     protected _backward(dz: Tensor): void;
 }

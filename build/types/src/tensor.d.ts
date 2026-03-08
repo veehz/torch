@@ -49,6 +49,7 @@ export declare class Tensor {
     neg(): Tensor;
     reciprocal(): Tensor;
     reshape(shape: number[]): Tensor;
+    squeeze(dim: number): Tensor;
     unsqueeze(dim: number): Tensor;
     sin(): Tensor;
     cos(): Tensor;
