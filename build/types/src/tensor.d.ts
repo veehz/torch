@@ -1,5 +1,5 @@
 import { TorchFunction } from './functions/base';
-type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
+export type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
 export type NestedNumberArray = number | TypedArray | NestedNumberArray[];
 export declare class Tensor {
     id: number;
@@ -67,4 +67,3 @@ export declare class Tensor {
     ne(other: Tensor | number): Tensor;
     sigmoid(): Tensor;
 }
-export {};
