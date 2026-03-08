@@ -9,7 +9,11 @@ function assertDeepCloseTo(actual, expected, delta = 1e-3) {
             assertDeepCloseTo(actual[i], expected[i], delta);
         }
     } else {
-        assert.closeTo(actual, expected, delta);
+        if (Number.isNaN(expected)) {
+            assert.isTrue(Number.isNaN(actual), `Expected NaN but got ${actual}`);
+        } else {
+            assert.closeTo(actual, expected, delta);
+        }
     }
 }
 

@@ -1,8 +1,8 @@
 import torch
 import json
 
-UNARY_OPS = ['exp', 'square', 'abs', 'sign', 'neg', 'reciprocal', 'sin', 'cos', 'tan']
-BINARY_OPS = ['add', 'sub', 'mul', 'div', 'maximum', 'minimum']
+UNARY_OPS = ['log', 'sqrt', 'exp', 'square', 'abs', 'sign', 'neg', 'reciprocal', 'sin', 'cos', 'tan']
+BINARY_OPS = ['add', 'sub', 'mul', 'div', 'pow', 'maximum', 'minimum']
 
 torch.manual_seed(42)
 
