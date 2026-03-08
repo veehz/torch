@@ -34,13 +34,13 @@ jobs:
       - name: Sanity Check Generated File Length
         run: |
           # 1. Count lines of the file currently checked into Git
-          COMMITTED_LINES=$(wc -l < test/tensor_ops_data.gen.js)
+          COMMITTED_LINES=$(wc -l < test/testcases.gen.js)
 
           # 2. Regenerate the file using your script
           yarn update-tests
 
           # 3. Count lines of the newly generated file
-          GENERATED_LINES=$(wc -l < test/tensor_ops_data.gen.js)
+          GENERATED_LINES=$(wc -l < test/testcases.gen.js)
 
           # 4. Compare and fail if different
           if [ "$COMMITTED_LINES" -ne "$GENERATED_LINES" ]; then
