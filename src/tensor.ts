@@ -93,8 +93,35 @@ export class Tensor {
     return;
   }
 
-  toArray(): number[] {
+  toFlatArray(): number[] {
     return this.data;
+  }
+
+  toArray(): NestedNumberArray {
+    if (this.shape.length === 0) {
+      return this.data[0];
+    }
+
+    let flatIndex = 0;
+    const flatData = this.data;
+
+    const buildDimension = (currentDim: number): any[] => {
+      const size = this.shape[currentDim];
+      const result = new Array(size);
+      const isLastDimension = currentDim === this.shape.length - 1;
+
+      for (let i = 0; i < size; i++) {
+        if (isLastDimension) {
+          result[i] = flatData[flatIndex++];
+        } else {
+          result[i] = buildDimension(currentDim + 1);
+        }
+      }
+
+      return result;
+    };
+
+    return buildDimension(0);
   }
 
   dataLength(): number {
@@ -316,5 +343,11 @@ export class Tensor {
 
   ne(other: Tensor | number): Tensor {
     return this._executeBinaryOp('ne', other);
+  }
+  
+  // other
+
+  sigmoid(): Tensor {
+    return this._executeUnaryOp('sigmoid');
   }
 }

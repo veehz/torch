@@ -17,7 +17,7 @@ describe('Custom Operations', () => {
 
       const result = t1.matmul(t2);
       assert.deepStrictEqual(result.shape, [2, 2]);
-      assert.deepStrictEqual(Array.from(result.toArray()), [31, 19, 85, 55]);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [31, 19, 85, 55]);
     });
 
     it('should perform matrix multiplication on 2D tensors (2)', () => {
@@ -36,7 +36,7 @@ describe('Custom Operations', () => {
 
       const expected = [36, 32, 25, 96, 86, 55];
 
-      assert.deepStrictEqual(Array.from(result.toArray()), expected);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), expected);
       assert.deepStrictEqual(result.shape, [2, 3]);
     });
 
@@ -46,7 +46,7 @@ describe('Custom Operations', () => {
 
       const result = t1.matmul(t2);
       assert.deepStrictEqual(result.shape, [1]);
-      assert.deepStrictEqual(Array.from(result.toArray()), [32]);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [32]);
     });
 
     it('should handle batch matrix multiplication', () => {
@@ -62,7 +62,7 @@ describe('Custom Operations', () => {
       const result = t1.matmul(t2);
       assert.deepStrictEqual(result.shape, [2, 2, 2]);
 
-      const data = Array.from(result.toArray());
+      const data = Array.from(result.toFlatArray());
       assert.deepStrictEqual(data, [9026, 4236, 3813, 4314, 2363, 5074, 8831, 13874]);
     });
 
@@ -80,10 +80,10 @@ describe('Custom Operations', () => {
       const result = t1.matmul(t2);
       result.sum().backward();
 
-      const t1Grad = Array.from(t1.grad.toArray());
+      const t1Grad = Array.from(t1.grad.toFlatArray());
       assert.deepStrictEqual(t1Grad, [11, 15, 11, 15]);
 
-      const t2Grad = Array.from(t2.grad.toArray());
+      const t2Grad = Array.from(t2.grad.toFlatArray());
       assert.deepStrictEqual(t2Grad, [4, 4, 6, 6]);
     });    
   });
@@ -97,7 +97,7 @@ describe('Custom Operations', () => {
 
       const result = t.transpose(0, 1);
       assert.deepStrictEqual(result.shape, [3, 2]);
-      assert.deepStrictEqual(Array.from(result.toArray()), [1, 4, 2, 5, 3, 6]);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [1, 4, 2, 5, 3, 6]);
     });
 
     it('should transpose dimensions in a 3D tensor', () => {
@@ -108,7 +108,7 @@ describe('Custom Operations', () => {
 
       const result = t.transpose(1, 2);
       assert.deepStrictEqual(result.shape, [2, 2, 2]);
-      const data = Array.from(result.toArray());
+      const data = Array.from(result.toFlatArray());
       assert.deepStrictEqual(data, [1, 3, 2, 4, 5, 7, 6, 8]);
     });
 

@@ -9,7 +9,7 @@ describe('Functional', () => {
       const t2 = new Tensor([20]);
       const result = torch.add(t1, t2);
 
-      assert.deepStrictEqual(Array.from(result.toArray()), [30]);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [30]);
       assert.deepStrictEqual(result.shape, [1]);
     });
 
@@ -18,7 +18,7 @@ describe('Functional', () => {
       const t2 = new Tensor([1]);
       const result = torch.add(t1, t2);
 
-      assert.deepStrictEqual(Array.from(result.toArray()), [11, 21, 31]);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [11, 21, 31]);
       assert.deepStrictEqual(result.shape, [3]);
     });
 
@@ -27,7 +27,7 @@ describe('Functional', () => {
       const t2 = new Tensor([4, 5, 6]);
       const result = torch.add(t1, t2);
 
-      assert.deepStrictEqual(Array.from(result.toArray()), [5, 7, 9]);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [5, 7, 9]);
       assert.deepStrictEqual(result.shape, [3]);
     });
   });
@@ -38,7 +38,7 @@ describe('Functional', () => {
       const t2 = new Tensor([20]);
       const result = torch.mul(t1, t2);
 
-      assert.deepStrictEqual(Array.from(result.toArray()), [200]);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [200]);
       assert.deepStrictEqual(result.shape, [1]);
     });
   });
@@ -49,7 +49,7 @@ describe('Functional', () => {
       const t2 = new Tensor([1]);
       const result = torch.mul(t1, t2);
 
-      assert.deepStrictEqual(Array.from(result.toArray()), [10, 20, 30]);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [10, 20, 30]);
       assert.deepStrictEqual(result.shape, [3]);
     });
   });
@@ -60,7 +60,7 @@ describe('Functional', () => {
       const t2 = new Tensor([20]);
       const result = torch.matmul(t1, t2);
 
-      assert.deepStrictEqual(Array.from(result.toArray()), [200]);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [200]);
       assert.deepStrictEqual(result.shape, [1]);
     });
 
@@ -69,7 +69,7 @@ describe('Functional', () => {
       const t2 = new Tensor([5, 6, 7, 8]);
       const result = torch.matmul(t1, t2);
 
-      assert.deepStrictEqual(Array.from(result.toArray()), [70]);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [70]);
       assert.deepStrictEqual(result.shape, [1]);
     });
 
@@ -89,7 +89,7 @@ describe('Functional', () => {
 
       const expected = [36, 32, 25, 96, 86, 55];
 
-      assert.deepStrictEqual(Array.from(result.toArray()), expected);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), expected);
       assert.deepStrictEqual(result.shape, [2, 3]);
     });
 
@@ -116,7 +116,7 @@ describe('Functional', () => {
         [3, 4]
       ]);
       const result = t.transpose(0, 1);
-      assert.deepStrictEqual(Array.from(result.toArray()), [1, 3, 2, 4]);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [1, 3, 2, 4]);
       assert.deepStrictEqual(result.shape, [2, 2]);
     });
   });

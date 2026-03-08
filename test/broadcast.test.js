@@ -9,8 +9,8 @@ describe('Broadcast Index', () => {
             [0, 0]
         ]);
 
-        assert.deepStrictEqual(__left_index__(arr, arr).toArray(), [0, 1, 2, 3, 4, 5]);
-        assert.deepStrictEqual(__right_index__(arr, arr).toArray(), [0, 1, 2, 3, 4, 5]);
+        assert.deepStrictEqual(__left_index__(arr, arr).toFlatArray(), [0, 1, 2, 3, 4, 5]);
+        assert.deepStrictEqual(__right_index__(arr, arr).toFlatArray(), [0, 1, 2, 3, 4, 5]);
     });
 
     it('Should get correct value of left and right index', () => {
@@ -26,7 +26,7 @@ describe('Broadcast Index', () => {
             [0, 0]
         ])
 
-        assert.deepStrictEqual(add(arr, zeros).toArray(), [1, 2, 3, 4, 5, 6]);
-        assert.deepStrictEqual(add(zeros, arr).toArray(), [1, 2, 3, 4, 5, 6]);
+        assert.deepStrictEqual(add(arr, zeros).toFlatArray(), [1, 2, 3, 4, 5, 6]);
+        assert.deepStrictEqual(add(zeros, arr).toFlatArray(), [1, 2, 3, 4, 5, 6]);
     });
 });

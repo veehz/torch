@@ -6,7 +6,7 @@ describe('NN Functional', () => {
     it('should forward a tensor', () => {
       const x = new torch.Tensor([1, -2, 3, -4, 5]);
       const result = torch.nn.functional.relu(x);
-      assert.deepStrictEqual(Array.from(result.toArray()), [1, 0, 3, 0, 5]);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [1, 0, 3, 0, 5]);
       assert.deepStrictEqual(result.shape, [5]);
     });
   });

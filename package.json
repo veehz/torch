@@ -37,6 +37,7 @@
     "serve": "http-server -p 8080 -c-1",
     "test": "mocha test/**/*.test.ts test/**/*.test.js",
     "test:watch": "mocha --watch test/**/*.test.ts test/**/*.test.js",
+    "update-tests": "python3 scripts/generate_tests.py > test/tensor_ops_data.gen.js",
     "watch": "concurrently \"yarn:build:browser:watch\" \"yarn:build:node:watch\" \"yarn:test:watch\""
   },
   "devDependencies": {

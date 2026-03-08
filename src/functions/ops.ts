@@ -178,8 +178,7 @@ const Abs = UnaryFunctionMixin(
 const Sign = UnaryFunctionMixin(
   (a: number[], x: number) => Math.sign(a[x]),
   (a, aFn, dz) => {
-    // TODO: check
-    aFn.backward(dz.mul(dz.mul(functional.sign(a))));
+    aFn.backward(0);
   },
   "sign"
 );
@@ -195,7 +194,7 @@ const Neg = UnaryFunctionMixin(
 const Reciprocal = UnaryFunctionMixin(
   (a: number[], x: number) => 1 / a[x],
   (a, aFn, dz) => {
-    aFn.backward(dz.mul(dz.mul(a.pow(-2))));
+    aFn.backward(dz.mul(dz.mul(a.pow(-2))).neg());
   },
   "reciprocal"
 );
@@ -306,7 +305,7 @@ const Tan = UnaryFunctionMixin(
 
 function _sum_tensor(a: Tensor, operation: TorchFunction | null = null): Tensor {
   return new Tensor(
-    a.toArray().reduce((acc, val) => acc + val, 0),
+    a.toFlatArray().reduce((acc, val) => acc + val, 0),
     { requires_grad: a.requires_grad },
     { operation: operation }
   );
@@ -332,7 +331,7 @@ registerOperation('sum', Sum);
 
 function _mean_tensor(a: Tensor, operation: TorchFunction | null = null): Tensor {
   return new Tensor(
-    a.toArray().reduce((acc, val) => acc + val, 0) / a.dataLength(),
+    a.toFlatArray().reduce((acc, val) => acc + val, 0) / a.dataLength(),
     { requires_grad: a.requires_grad },
     { operation: operation }
   );

@@ -11,7 +11,8 @@ const Relu = UnaryFunctionMixin(
 const Sigmoid = UnaryFunctionMixin(
   (a: number[], x: number) => 1 / (1 + Math.exp(-a[x])),
   (a, aFn, dz) => {
-    aFn.backward(dz.mul(dz.mul(a.exp().add(1).pow(-2).reciprocal().mul(a.exp()).mul(-1))));
+    const res = a.sigmoid();
+    aFn.backward(res.mul(res.mul(-1).add(1)).mul(dz));
   },
   "sigmoid"
 );
