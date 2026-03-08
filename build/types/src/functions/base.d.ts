@@ -4,9 +4,9 @@ declare abstract class TorchFunction {
     next_functions: TorchFunction[];
     saved_tensors: Tensor[];
     _retained_tensors: Tensor[];
-    protected abstract _forward(...args: (Tensor | number | number[])[]): Tensor;
+    protected abstract _forward(...args: (Tensor | number | number[] | boolean)[]): Tensor;
     protected abstract _backward(dz: Tensor): void;
-    forward(...args: (Tensor | number | number[])[]): Tensor;
+    forward(...args: (Tensor | number | number[] | boolean)[]): Tensor;
     backward(dz: Tensor): void;
 }
 declare class NullOp extends TorchFunction {

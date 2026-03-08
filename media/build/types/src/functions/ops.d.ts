@@ -1,5 +1,5 @@
 import { Tensor } from '../tensor';
-import { TorchFunction, BinaryFunction, UnaryFunction } from './base';
+import { TorchFunction, BinaryFunction } from './base';
 export declare class PowInt extends TorchFunction {
     private n;
     protected _forward(a: Tensor, n: number): Tensor;
@@ -17,14 +17,14 @@ export declare class Unsqueeze extends TorchFunction {
     protected _forward(a: Tensor, dim: number): Tensor;
     protected _backward(dz: Tensor): void;
 }
-export declare class Sum extends UnaryFunction {
-    protected _forward(a: Tensor): Tensor;
+export declare class Expand extends TorchFunction {
+    protected _forward(a: Tensor, expanded_shape: number[]): Tensor;
     protected _backward(dz: Tensor): void;
 }
-export declare class Mean extends UnaryFunction {
-    protected _forward(a: Tensor): Tensor;
-    protected _backward(dz: Tensor): void;
-}
+export declare const Sum: new () => TorchFunction;
+export declare const Mean: new () => TorchFunction;
+export declare const Max: new () => TorchFunction;
+export declare const Min: new () => TorchFunction;
 export declare class Transpose extends TorchFunction {
     private dim0;
     private dim1;

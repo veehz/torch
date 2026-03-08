@@ -51,11 +51,14 @@ export declare class Tensor {
     reshape(shape: number[]): Tensor;
     squeeze(dim: number): Tensor;
     unsqueeze(dim: number): Tensor;
+    expand(sizes: number[]): Tensor;
     sin(): Tensor;
     cos(): Tensor;
     tan(): Tensor;
-    sum(): Tensor;
-    mean(): Tensor;
+    sum(dim?: number | number[], keepdim?: boolean): Tensor;
+    mean(dim?: number | number[], keepdim?: boolean): Tensor;
+    max(dim?: number | number[], keepdim?: boolean): Tensor;
+    min(dim?: number | number[], keepdim?: boolean): Tensor;
     transpose(dim0: number, dim1: number): Tensor;
     matmul(other: Tensor): Tensor;
     lt(other: Tensor | number): Tensor;
