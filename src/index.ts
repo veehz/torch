@@ -1,4 +1,4 @@
-export { Tensor } from './tensor';
+export * from './tensor';
 
 export { TorchFunction, AccumulateGrad } from './functions/base';
 export * from './functions/ops';

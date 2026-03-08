@@ -8,7 +8,7 @@ import { getNextId, eventBus, events } from './util';
  * - Add support for Textures to be stored in Tensors
  */
 
-type TypedArray =
+export type TypedArray =
   | Int8Array
   | Uint8Array
   | Uint8ClampedArray
