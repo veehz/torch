@@ -106,6 +106,43 @@ def generate_matmul_tests():
 
     return tests
 
+def generate_reduction_tests():
+    tests = []
+    ops = ['sum', 'mean', 'max', 'min']
+    dims = [None, 0, 1, -1]
+    keepdims = [False, True]
+
+    for op in ops:
+        for dim in dims:
+            for keepdim in keepdims:
+                if dim is None and keepdim:
+                    continue 
+
+                x = torch.randn(3, 4, 5, requires_grad=True)
+                torch_op = getattr(torch, op)
+
+                try:
+                    if dim is None:
+                        y = torch_op(x)
+                    else:
+                        out = torch_op(x, dim=dim, keepdim=keepdim)
+                        y = out.values if op in ['max', 'min'] else out
+
+                    y.sum().backward()
+
+                    tests.append({
+                        "test_name": f"{op}_dim_{dim}_keepdim_{keepdim}",
+                        "op_name": op,
+                        "dim": dim,
+                        "keepdim": keepdim,
+                        "input": x.detach().numpy().tolist(),
+                        "expected_output": y.detach().numpy().tolist(),
+                        "expected_grad": x.grad.numpy().tolist()
+                    })
+                except Exception as e:
+                    pass
+    return tests
+
 def generate_linear_tests():
     tests = []
     # Test standard 2D inputs and batched 3D inputs
@@ -178,14 +215,44 @@ def generate_optimizer_tests():
         
     return tests
 
+def generate_expand_tests():
+    tests = []
+    
+    # Tuples of (initial_shape, expand_shape, description)
+    cases = [
+        ((1,), (3,), "1D_expand"),
+        ((3,), (2, 3), "prepend_2D"),
+        ((1, 3), (4, 3), "expand_dim_0"),
+        ((2, 1, 4), (2, 5, 4), "expand_middle_dim"),
+        ((1, 3, 1), (2, -1, 4), "preserve_with_negative_one")
+    ]
+    
+    for initial_shape, expand_shape, desc in cases:
+        x = torch.randn(initial_shape, requires_grad=True)
+        
+        out = x.expand(*expand_shape)
+        out.sum().backward()
+        
+        tests.append({
+            "test_name": f"expand_{desc}",
+            "input": x.detach().numpy().tolist(),
+            "expand_shape": list(expand_shape),
+            "expected_output": out.detach().numpy().tolist(),
+            "expected_grad": x.grad.numpy().tolist()
+        })
+        
+    return tests
+
 if __name__ == "__main__":
     suite = {
         "unary": {op: generate_unary_tests(op) for op in UNARY_OPS},
         "binary": {op: generate_binary_tests(op) for op in BINARY_OPS},
         "broadcasting": generate_broadcasting_tests(),
         "matmul": generate_matmul_tests(),
+        "reductions": generate_reduction_tests(),
         "linear": generate_linear_tests(),
         "optimizers": generate_optimizer_tests(),
+        "expand": generate_expand_tests(),
     }
 
     print("export const testData = ", end="")

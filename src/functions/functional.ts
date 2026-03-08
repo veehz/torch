@@ -61,7 +61,9 @@ export const sign = generate_unary_function('sign');
 export const neg = generate_unary_function('neg');
 export const reciprocal = generate_unary_function('reciprocal');
 export const reshape = generate_function('reshape');
+export const squeeze = generate_function('squeeze');
 export const unsqueeze = generate_function('unsqueeze');
+export const expand = generate_function('expand');
 
 // trigonometric
 
@@ -71,8 +73,10 @@ export const tan = generate_unary_function('tan');
 
 // reduction
 
-export const sum = generate_unary_function('sum');
-export const mean = generate_unary_function('mean');
+export const sum = generate_function('sum');
+export const mean = generate_function('mean');
+export const min = generate_function('min');
+export const max = generate_function('max');
 
 // linalg
 

@@ -7,15 +7,20 @@ import {
   _pad_shape,
   _unbroadcast
 } from '../broadcasting';
-import { TorchFunction, BinaryFunction, UnaryFunction, nullOp, AccumulateGrad } from './base';
+import { TorchFunction, BinaryFunction, nullOp } from './base';
 import * as functional from './functional';
 import { registerOperation } from './registry';
-import { zeros_like } from '../creation';
-import { UnaryFunctionMixin, BinaryFunctionMixin } from './mixin';
+import { ones } from '../creation';
+import { UnaryFunctionMixin, BinaryFunctionMixin, ReductionFunctionMixin } from './mixin';
+import { _get_reduction_shape } from './util';
 
 function unbroadcast(result: Tensor, original_shape: number[]): Tensor {
   const unbroadcasted_result = _unbroadcast(result.shape, original_shape, result.data);
   return new Tensor(unbroadcasted_result, { requires_grad: result.requires_grad }, { shape: original_shape });
+}
+
+function broadcast(tensor: Tensor, result_shape: number[]): Tensor {
+  return tensor.mul(ones(result_shape));
 }
 
 // debug operations
@@ -219,10 +224,6 @@ export class Reshape extends TorchFunction {
     }
     if (a.grad_fn) {
       this.next_functions.push(a.grad_fn);
-    } else if (a.requires_grad) {
-      const acc = new AccumulateGrad();
-      acc.variable = a;
-      this.next_functions.push(acc);
     } else {
       this.next_functions.push(nullOp);
     }
@@ -250,10 +251,6 @@ export class Squeeze extends TorchFunction {
     }
     if (a.grad_fn) {
       this.next_functions.push(a.grad_fn);
-    } else if (a.requires_grad) {
-      const acc = new AccumulateGrad();
-      acc.variable = a;
-      this.next_functions.push(acc);
     } else {
       this.next_functions.push(nullOp);
     }
@@ -264,7 +261,7 @@ export class Squeeze extends TorchFunction {
       if (dim < 0) {
         dim += a.shape.length;
       }
-      
+
       // PyTorch only squeezes the specified dimension if its size is exactly 1
       if (shape[dim] === 1) {
         shape.splice(dim, 1);
@@ -299,10 +296,6 @@ export class Unsqueeze extends TorchFunction {
     }
     if (a.grad_fn) {
       this.next_functions.push(a.grad_fn);
-    } else if (a.requires_grad) {
-      const acc = new AccumulateGrad();
-      acc.variable = a;
-      this.next_functions.push(acc);
     } else {
       this.next_functions.push(nullOp);
     }
@@ -329,6 +322,46 @@ export class Unsqueeze extends TorchFunction {
   }
 }
 registerOperation('unsqueeze', Unsqueeze);
+
+export class Expand extends TorchFunction {
+  protected _forward(a: Tensor, expanded_shape: number[]): Tensor {
+    if (a.requires_grad) {
+      this.saved_tensors = [a];
+    }
+    if (a.grad_fn) {
+      this.next_functions.push(a.grad_fn);
+    } else {
+      this.next_functions.push(nullOp);
+    }
+  
+    const offset = expanded_shape.length - a.shape.length;
+    const target_shape = expanded_shape.map((dim, i) => {
+      if (dim === -1) {
+        const orig_i = i - offset;
+        return orig_i >= 0 ? a.shape[orig_i] : 1;
+      }
+      return dim;
+    });
+
+    // Steal data from just broadcasting
+    const outData = broadcast(a, target_shape).data;
+
+    return new Tensor(
+      outData,
+      { requires_grad: a.requires_grad },
+      { operation: a.requires_grad ? this : null, shape: target_shape }
+    );
+  }
+
+  protected _backward(dz: Tensor): void {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+
+    // Route the collapsed gradient upstream
+    aFn.backward(unbroadcast(dz, a.shape));
+  }
+}
+registerOperation('expand', Expand)
 
 // trigonometric
 
@@ -358,57 +391,52 @@ const Tan = UnaryFunctionMixin(
 
 // reduction
 
-function _sum_tensor(a: Tensor, operation: TorchFunction | null = null): Tensor {
-  return new Tensor(
-    a.toFlatArray().reduce((acc, val) => acc + val, 0),
-    { requires_grad: a.requires_grad },
-    { operation: operation }
-  );
-}
+export const Sum = ReductionFunctionMixin(
+  0,
+  (acc, val) => acc + val,
+  (a, expanded_dz) => expanded_dz,
+  'sum'
+);
 
-export class Sum extends UnaryFunction {
-  protected _forward(a: Tensor): Tensor {
-    if (a.requires_grad) {
-      this.saved_tensors = [a];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _sum_tensor(a, a.requires_grad ? this : null);
-  }
-  protected _backward(dz: Tensor): void {
-    const [a] = this.saved_tensors;
-    const [aFn] = this.next_functions;
+export const Mean = ReductionFunctionMixin(
+  0,
+  (acc, val) => acc + val,
+  (a, expanded_dz, dim) => {
+    const target_shape = _get_reduction_shape(a.shape, dim, false);
+    const out_size = target_shape.length > 0 ? target_shape.reduce((acc, v) => acc * v, 1) : 1;
+    const N = a.dataLength() / out_size;
 
-    // backward_operations:
-    aFn.backward(zeros_like(a).add(dz.item()));
-  }
-}
-registerOperation('sum', Sum);
+    return expanded_dz.mul(new Tensor([1 / N])); 
+  },
+  'mean',
+  (acc, count) => acc / count
+);
 
-function _mean_tensor(a: Tensor, operation: TorchFunction | null = null): Tensor {
-  return new Tensor(
-    a.toFlatArray().reduce((acc, val) => acc + val, 0) / a.dataLength(),
-    { requires_grad: a.requires_grad },
-    { operation: operation }
-  );
-}
+export const Max = ReductionFunctionMixin(
+  -Infinity,
+  (acc, val) => Math.max(acc, val),
+  (a, expanded_dz, dim) => {
+    const max_tensor = a.max(dim, true);
+    const max_expanded = max_tensor.expand(a.shape);
+    const mask = a.eq(max_expanded).detach();
 
-export class Mean extends UnaryFunction {
-  protected _forward(a: Tensor): Tensor {
-    if (a.requires_grad) {
-      this.saved_tensors = [a];
-    }
-    this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _mean_tensor(a, a.requires_grad ? this : null);
-  }
-  protected _backward(dz: Tensor): void {
-    const [a] = this.saved_tensors;
-    const [aFn] = this.next_functions;
+    return expanded_dz.mul(mask);
+  },
+  'max'
+);
 
-    // backward_operations:
-    aFn.backward(zeros_like(a).add(dz.item() / a.dataLength()));
-  }
-}
-registerOperation('mean', Mean);
+export const Min = ReductionFunctionMixin(
+  Infinity,
+  (acc, val) => Math.min(acc, val),
+  (a, expanded_dz, dim) => {
+    const min_tensor = a.min(dim, true);
+    const min_expanded = min_tensor.expand(a.shape);
+    const mask = a.eq(min_expanded).detach();
+
+    return expanded_dz.mul(mask);
+  },
+  'min'
+);
 
 // linalg
 
@@ -564,7 +592,7 @@ export class Matmul extends BinaryFunction {
     this.shape = result[1];
     return result[0];
   }
-protected _backward(dz: Tensor): void {
+  protected _backward(dz: Tensor): void {
     const [a, b] = this.saved_tensors;
     const [aFn, bFn] = this.next_functions;
 
@@ -579,13 +607,13 @@ protected _backward(dz: Tensor): void {
     if (a.shape.length === 1) {
       const dz1 = dz.unsqueeze(-2);
       const a1 = a.unsqueeze(-2);
-      
+
       let da = dz1.matmul(b.transpose(-2, -1));
       let db = a1.transpose(-2, -1).matmul(dz1);
-      
+
       da = da.squeeze(-2);
       db = unbroadcast(db, b.shape);
-      
+
       aFn.backward(da);
       bFn.backward(db);
       return;
@@ -595,13 +623,13 @@ protected _backward(dz: Tensor): void {
     if (b.shape.length === 1) {
       const dz1 = dz.unsqueeze(-1);
       const b1 = b.unsqueeze(-1);
-      
+
       let da = dz1.matmul(b1.transpose(-2, -1));
       let db = a.transpose(-2, -1).matmul(dz1);
-      
+
       da = unbroadcast(da, a.shape);
       db = db.squeeze(-1);
-      
+
       aFn.backward(da);
       bFn.backward(db);
       return;

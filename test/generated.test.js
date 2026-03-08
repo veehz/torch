@@ -85,6 +85,23 @@ describe('Automated Tests', () => {
     });
   });
 
+  describe('Reduction Operations', () => {
+    testData.reductions?.forEach(test => {
+      it(test.test_name, () => {
+        const x = new Tensor(test.input, { requires_grad: true });
+        let out;
+        if (test.dim === null || test.dim === undefined) {
+          out = x[test.op_name]();
+        } else {
+          out = x[test.op_name](test.dim, test.keepdim);
+        }
+        assertDeepCloseTo(out.toArray(), test.expected_output);
+        out.sum().backward();
+        assertDeepCloseTo(x.grad.toArray(), test.expected_grad);
+      });
+    });
+  });
+
   describe('Neural Network Modules', () => {
     describe('nn.Linear', () => {
       testData.linear?.forEach(test => {
@@ -150,6 +167,18 @@ describe('Automated Tests', () => {
         optimizer.step();
 
         assertDeepCloseTo(w.toArray(), test.expected_updated_weight);
+      });
+    });
+  });
+
+  describe('Expand Operations', () => {
+    testData.expand?.forEach(test => {
+      it(test.test_name, () => {
+        const x = new Tensor(test.input, { requires_grad: true });
+        const out = x.expand(test.expand_shape);
+        assertDeepCloseTo(out.toArray(), test.expected_output);
+        out.sum().backward();
+        assertDeepCloseTo(x.grad.toArray(), test.expected_grad);
       });
     });
   });

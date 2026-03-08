@@ -284,6 +284,10 @@ export class Tensor {
     return this._executeOpRaw('unsqueeze', dim);
   }
 
+  expand(sizes: number[]): Tensor {
+    return this._executeOpRaw('expand', sizes);
+  }
+
   // trigonometric
 
   sin(): Tensor {
@@ -300,12 +304,20 @@ export class Tensor {
 
   // reduction
 
-  sum(): Tensor {
-    return this._executeUnaryOp('sum');
+  sum(dim?: number | number[], keepdim: boolean = false): Tensor {
+    return this._executeOpRaw('sum', dim, keepdim);
   }
 
-  mean(): Tensor {
-    return this._executeUnaryOp('mean');
+  mean(dim?: number | number[], keepdim: boolean = false): Tensor {
+    return this._executeOpRaw('mean', dim, keepdim);
+  }
+
+  max(dim?: number | number[], keepdim: boolean = false): Tensor {
+    return this._executeOpRaw('max', dim, keepdim);
+  }
+
+  min(dim?: number | number[], keepdim: boolean = false): Tensor {
+    return this._executeOpRaw('min', dim, keepdim);
   }
 
   // linalg

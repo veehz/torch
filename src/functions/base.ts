@@ -3,7 +3,7 @@ import { zeros_like } from '../creation';
 import { Tensor } from '../tensor';
 import { eventBus, getNextId, events } from '../util';
 
-function resultRequiresGrad(...args: (Tensor | number | number[])[]): boolean {
+function resultRequiresGrad(...args: (Tensor | number | number[] | boolean)[]): boolean {
   for (const arg of args) {
     if (arg instanceof Tensor && arg.requires_grad) {
       return true;
@@ -18,10 +18,10 @@ abstract class TorchFunction {
   public saved_tensors: Tensor[] = [];
   public _retained_tensors: Tensor[] = [];
 
-  protected abstract _forward(...args: (Tensor | number | number[])[]): Tensor;
+  protected abstract _forward(...args: (Tensor | number | number[] | boolean)[]): Tensor;
   protected abstract _backward(dz: Tensor): void;
 
-  forward(...args: (Tensor | number | number[])[]): Tensor {
+  forward(...args: (Tensor | number | number[] | boolean)[]): Tensor {
     const requires_grad = resultRequiresGrad(...args);
     eventBus.dispatchEvent(new CustomEvent(events.OPERATION_BEFORE_FORWARD, {
       detail: {
