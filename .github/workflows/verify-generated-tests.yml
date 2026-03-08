@@ -1,0 +1,38 @@
+name: Verify Generated Tests
+
+on: [push]
+
+jobs:
+  verify-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Use Node.js 💻
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Regenerate test data
+        run: yarn update-tests
+
+      - name: Check for differences
+        run: |
+          git diff --exit-code test/tensor_ops_data.gen.js || (echo "❌ test/tensor_ops_data.gen.js is out of sync! Please run 'yarn update-tests' locally and commit the updated file." && exit 1)
