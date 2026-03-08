@@ -18,7 +18,8 @@ export declare class Tensor {
     });
     get shape(): number[];
     toArray_(): void;
-    toArray(): number[];
+    toFlatArray(): number[];
+    toArray(): NestedNumberArray;
     dataLength(): number;
     set shape(shape: number[]);
     private _executeUnaryOp;
@@ -62,5 +63,6 @@ export declare class Tensor {
     ge(other: Tensor | number): Tensor;
     eq(other: Tensor | number): Tensor;
     ne(other: Tensor | number): Tensor;
+    sigmoid(): Tensor;
 }
 export {};
