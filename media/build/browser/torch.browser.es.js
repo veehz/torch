@@ -207,10 +207,10 @@ const U = class U {
   // Optional user-defined name
   name = null;
   data;
-  _shape;
   grad_fn = null;
   grad = null;
   requires_grad;
+  _shape;
   constructor(e, t = {}, s = {}) {
     if (this.data = Qe(e), this.requires_grad = t.requires_grad ?? !1, t.name && (this.name = t.name), this._shape = s.shape ?? nt(e), this.grad_fn = s.operation ?? null, this.requires_grad && !this.grad_fn) {
       const n = new V();
@@ -1188,19 +1188,12 @@ const Ur = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
 }, Symbol.toStringTag, { value: "Module" }));
 export {
   V as AccumulateGrad,
-  ie as Expand,
-  ue as Matmul,
   vr as Max,
   qr as Mean,
   Or as Min,
-  re as PowInt,
-  se as Reshape,
-  ne as Squeeze,
   Ar as Sum,
   l as Tensor,
   q as TorchFunction,
-  oe as Transpose,
-  ae as Unsqueeze,
   xt as __left_index__,
   bt as __right_index__,
   Ct as abs,

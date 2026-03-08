@@ -5,10 +5,10 @@ export declare class Tensor {
     id: number;
     name: string | null;
     data: number[];
-    _shape: number[];
     grad_fn: TorchFunction | null;
     grad: Tensor | null;
     requires_grad: boolean;
+    private _shape;
     constructor(data: NestedNumberArray, options?: {
         requires_grad?: boolean;
         name?: string;

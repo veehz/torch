@@ -176,10 +176,10 @@ class h {
   // Optional user-defined name
   name = null;
   data;
-  _shape;
   grad_fn = null;
   grad = null;
   requires_grad;
+  _shape;
   constructor(e, t = {}, r = {}) {
     if (this.data = ae(e), this.requires_grad = t.requires_grad ?? !1, t.name && (this.name = t.name), this._shape = r.shape ?? _e(e), this.grad_fn = r.operation ?? null, this.requires_grad && !this.grad_fn) {
       const n = new J();
@@ -1125,19 +1125,12 @@ const Mt = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
 }, Symbol.toStringTag, { value: "Module" }));
 export {
   J as AccumulateGrad,
-  Ae as Expand,
-  ke as Matmul,
   kt as Max,
   Et as Mean,
   Rt as Min,
-  xe as PowInt,
-  be as Reshape,
-  qe as Squeeze,
   Ot as Sum,
   h as Tensor,
   A as TorchFunction,
-  Oe as Transpose,
-  ye as Unsqueeze,
   Ge as __left_index__,
   je as __right_index__,
   rt as abs,
