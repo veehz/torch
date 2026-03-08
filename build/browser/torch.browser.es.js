@@ -207,18 +207,15 @@ const U = class U {
   // Optional user-defined name
   name = null;
   data;
+  shape;
   grad_fn = null;
   grad = null;
   requires_grad;
-  _shape;
   constructor(e, t = {}, s = {}) {
-    if (this.data = Qe(e), this.requires_grad = t.requires_grad ?? !1, t.name && (this.name = t.name), this._shape = s.shape ?? nt(e), this.grad_fn = s.operation ?? null, this.requires_grad && !this.grad_fn) {
+    if (this.data = Qe(e), this.requires_grad = t.requires_grad ?? !1, t.name && (this.name = t.name), this.shape = s.shape ?? nt(e), this.grad_fn = s.operation ?? null, this.requires_grad && !this.grad_fn) {
       const n = new V();
       n.variable = this, this.grad_fn = n;
     }
-  }
-  get shape() {
-    return this._shape;
   }
   toArray_() {
   }
@@ -239,9 +236,6 @@ const U = class U {
   }
   dataLength() {
     return this.data.length;
-  }
-  set shape(e) {
-    this._shape = e;
   }
   _executeUnaryOp(e) {
     return (this.requires_grad ? new (T(e))() : Ke(e)).forward(this);
