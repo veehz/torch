@@ -106,12 +106,86 @@ def generate_matmul_tests():
 
     return tests
 
+def generate_linear_tests():
+    tests = []
+    # Test standard 2D inputs and batched 3D inputs
+    cases = [
+        (10, 5, (3, 10), "2D_input"), 
+        (4, 2, (2, 3, 4), "3D_batched_input")
+    ]
+    
+    for in_features, out_features, input_shape, desc in cases:
+        layer = torch.nn.Linear(in_features, out_features)
+        x = torch.randn(*input_shape, requires_grad=True)
+
+        out = layer(x)
+        out.sum().backward()
+
+        tests.append({
+            "test_name": f"linear_{desc}",
+            "in_features": in_features,
+            "out_features": out_features,
+            "input": x.detach().numpy().tolist(),
+            "weight": layer.weight.detach().numpy().tolist(),
+            "bias": layer.bias.detach().numpy().tolist(),
+            "expected_output": out.detach().numpy().tolist(),
+            "expected_grad_input": x.grad.numpy().tolist(),
+            "expected_grad_weight": layer.weight.grad.numpy().tolist(),
+            "expected_grad_bias": layer.bias.grad.numpy().tolist()
+        })
+    return tests
+
+def generate_optimizer_tests():
+    tests = []
+    configs = [
+        ("SGD_basic", torch.optim.SGD, {"lr": 0.1}),
+        ("SGD_momentum", torch.optim.SGD, {"lr": 0.1, "momentum": 0.9}),
+        ("Adam_basic", torch.optim.Adam, {"lr": 0.1}),
+        ("Adam_custom_betas", torch.optim.Adam, {"lr": 0.1, "betas": (0.95, 0.999)})
+    ]
+
+    for test_name, optim_class, kwargs in configs:
+        # 1. Initialize a generic parameter tensor
+        w = torch.randn(3, 3, requires_grad=True)
+        x = torch.randn(3, 3) # Dummy input to calculate a loss
+        
+        # Save exact starting state
+        initial_w = w.detach().clone()
+
+        # 2. Setup Optimizer
+        optimizer = optim_class([w], **kwargs)
+        optimizer.zero_grad()
+
+        # 3. Compute loss and gradients
+        loss = (w * x).sum()
+        loss.backward()
+        
+        # Save exact gradient computed by PyTorch
+        expected_grad = w.grad.detach().clone()
+
+        # 4. Step the optimizer
+        optimizer.step()
+
+        tests.append({
+            "test_name": test_name,
+            "optimizer": test_name.split("_")[0], # "SGD" or "Adam"
+            "kwargs": kwargs,
+            "initial_weight": initial_w.numpy().tolist(),
+            "input_x": x.numpy().tolist(),
+            "expected_grad": expected_grad.numpy().tolist(),
+            "expected_updated_weight": w.detach().numpy().tolist()
+        })
+        
+    return tests
+
 if __name__ == "__main__":
     suite = {
         "unary": {op: generate_unary_tests(op) for op in UNARY_OPS},
         "binary": {op: generate_binary_tests(op) for op in BINARY_OPS},
         "broadcasting": generate_broadcasting_tests(),
-        "matmul": generate_matmul_tests()
+        "matmul": generate_matmul_tests(),
+        "linear": generate_linear_tests(),
+        "optimizers": generate_optimizer_tests(),
     }
 
     print("export const testData = ", end="")
