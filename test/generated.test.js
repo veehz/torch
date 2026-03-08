@@ -1,12 +1,12 @@
 import { Tensor } from 'torch';
 import { assert } from 'chai';
-import { testData } from './tensor_ops_data.gen';
+import { testData } from './testcases.gen.js';
 
-function assertDeepCloseTo(actual, expected, delta = 1e-3) {
+function assertDeepCloseTo(actual, expected, delta = 1e-3, first_call = true) {
     if (Array.isArray(expected)) {
         assert.lengthOf(actual, expected.length, 'Array lengths do not match');
         for (let i = 0; i < expected.length; i++) {
-            assertDeepCloseTo(actual[i], expected[i], delta);
+            assertDeepCloseTo(actual[i], expected[i], delta, false);
         }
     } else {
         if (Number.isNaN(expected)) {
@@ -50,5 +50,37 @@ describe('Automated Tests', () => {
                 });
             });
         }
+    });
+
+    describe('Broadcasting Operations', () => {
+        testData.broadcasting?.forEach((test) => {
+            it(test.test_name, () => {
+                const x = new Tensor(test.input_x, { requires_grad: true });
+                const y = new Tensor(test.input_y, { requires_grad: true });
+
+                const out = x[test.op_name](y);
+
+                assertDeepCloseTo(out.toArray(), test.expected_output);
+                out.sum().backward();
+                assertDeepCloseTo(x.grad.toArray(), test.expected_grad_x);
+                assertDeepCloseTo(y.grad.toArray(), test.expected_grad_y);
+            });
+        });
+    });
+
+    describe('Matmul Operations', () => {
+        testData.matmul?.forEach((test) => {
+            it(test.test_name, () => {
+                const x = new Tensor(test.input_x, { requires_grad: true });
+                const y = new Tensor(test.input_y, { requires_grad: true });
+
+                const out = x.matmul(y);
+
+                assertDeepCloseTo(out.toArray(), test.expected_output);
+                out.sum().backward();
+                assertDeepCloseTo(x.grad.toArray(), test.expected_grad_x);
+                assertDeepCloseTo(y.grad.toArray(), test.expected_grad_y);
+            });
+        });
     });
 });

@@ -4,13 +4,19 @@ import {
   _get_original_index_from_transposed_index,
   _get_original_index,
   _get_original_index_kernel,
-  _pad_shape
+  _pad_shape,
+  _unbroadcast
 } from '../broadcasting';
 import { TorchFunction, BinaryFunction, UnaryFunction, nullOp, AccumulateGrad } from './base';
 import * as functional from './functional';
 import { registerOperation } from './registry';
 import { zeros_like } from '../creation';
 import { UnaryFunctionMixin, BinaryFunctionMixin } from './mixin';
+
+function unbroadcast(result: Tensor, original_shape: number[]): Tensor {
+  const unbroadcasted_result = _unbroadcast(result.shape, original_shape, result.data);
+  return new Tensor(unbroadcasted_result, { requires_grad: result.requires_grad }, { shape: original_shape });
+}
 
 // debug operations
 
@@ -237,6 +243,55 @@ export class Reshape extends TorchFunction {
 }
 registerOperation('reshape', Reshape);
 
+export class Squeeze extends TorchFunction {
+  protected _forward(a: Tensor, dim?: number) {
+    if (a.requires_grad) {
+      this.saved_tensors = [a];
+    }
+    if (a.grad_fn) {
+      this.next_functions.push(a.grad_fn);
+    } else if (a.requires_grad) {
+      const acc = new AccumulateGrad();
+      acc.variable = a;
+      this.next_functions.push(acc);
+    } else {
+      this.next_functions.push(nullOp);
+    }
+
+    let shape = [...a.shape];
+
+    if (dim !== undefined) {
+      if (dim < 0) {
+        dim += a.shape.length;
+      }
+      
+      // PyTorch only squeezes the specified dimension if its size is exactly 1
+      if (shape[dim] === 1) {
+        shape.splice(dim, 1);
+      }
+    } else {
+      // If no dim is provided, strip out all dimensions of size 1
+      shape = shape.filter((d) => d !== 1);
+    }
+
+    return new Tensor(
+      a.data,
+      { requires_grad: a.requires_grad },
+      { operation: a.requires_grad ? this : null, shape }
+    );
+  }
+
+  protected _backward(dz: Tensor) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+
+    // The derivative of squeeze is just reshaping the gradient 
+    // back to the original unsqueezed shape.
+    aFn.backward(dz.reshape(a.shape));
+  }
+}
+registerOperation('squeeze', Squeeze);
+
 export class Unsqueeze extends TorchFunction {
   protected _forward(a: Tensor, dim: number) {
     if (a.requires_grad) {
@@ -432,9 +487,9 @@ export class Transpose extends TorchFunction {
 }
 registerOperation('transpose', Transpose);
 
-function _matmul_tensor(a: Tensor, b: Tensor, operation: TorchFunction | null = null): Tensor {
+function _matmul_tensor(a: Tensor, b: Tensor, operation: TorchFunction | null = null): [Tensor, number[]] {
   if (a.shape.length == 1 && b.shape.length == 1) {
-    return a.mul(b).sum();
+    return [a.mul(b).sum(), []];
   }
 
   const a_1d = a.shape.length == 1;
@@ -489,51 +544,78 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: TorchFunction | null = 
     shape_after_removing_extra_dims = shape_after_removing_extra_dims.slice(0, -1);
   }
 
-  return new Tensor(
+  return [new Tensor(
     data,
     { requires_grad: a.requires_grad || b.requires_grad },
     { operation: operation, shape: shape_after_removing_extra_dims }
-  );
+  ), shape_after_removing_extra_dims];
 }
-// class generated from matmul_op_class()
+
 export class Matmul extends BinaryFunction {
+  private shape: number[];
+
   protected _forward(a: Tensor, b: Tensor): Tensor {
     if (a.requires_grad || b.requires_grad) {
       this.saved_tensors = [a, b];
     }
     this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    return _matmul_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
+    const result = _matmul_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
+    this.shape = result[1];
+    return result[0];
   }
-  protected _backward(dz: Tensor): void {
+protected _backward(dz: Tensor): void {
     const [a, b] = this.saved_tensors;
     const [aFn, bFn] = this.next_functions;
 
-    // backward_operations:
-    if (a.shape.length == 1 && b.shape.length == 1) {
-      aFn.backward(dz);
-      bFn.backward(dz);
+    // 1. 1D x 1D (Dot Product)
+    if (a.shape.length === 1 && b.shape.length === 1) {
+      aFn.backward(dz.mul(b));
+      bFn.backward(dz.mul(a));
       return;
     }
 
-    if (a.shape.length == 1) {
-      const dz1 = dz.unsqueeze(0);
-      const a1 = a.unsqueeze(0);
-      aFn.backward(dz1.matmul(b.transpose(-2, -1)));
-      bFn.backward(a1.transpose(0, 1).matmul(dz1));
+    // 2. 1D x ND
+    if (a.shape.length === 1) {
+      const dz1 = dz.unsqueeze(-2);
+      const a1 = a.unsqueeze(-2);
+      
+      let da = dz1.matmul(b.transpose(-2, -1));
+      let db = a1.transpose(-2, -1).matmul(dz1);
+      
+      da = da.squeeze(-2);
+      db = unbroadcast(db, b.shape);
+      
+      aFn.backward(da);
+      bFn.backward(db);
       return;
     }
 
-    if (b.shape.length == 1) {
-      const dz1 = dz.unsqueeze(0);
-      const b1 = b.unsqueeze(1);
-      aFn.backward(dz1.matmul(b1.transpose(0, 1)));
-      bFn.backward(a.transpose(-2, -1).matmul(dz1));
+    // 3. ND x 1D
+    if (b.shape.length === 1) {
+      const dz1 = dz.unsqueeze(-1);
+      const b1 = b.unsqueeze(-1);
+      
+      let da = dz1.matmul(b1.transpose(-2, -1));
+      let db = a.transpose(-2, -1).matmul(dz1);
+      
+      da = unbroadcast(da, a.shape);
+      db = db.squeeze(-1);
+      
+      aFn.backward(da);
+      bFn.backward(db);
       return;
     }
 
-    aFn.backward(dz.matmul(b.transpose(-2, -1)));
-    bFn.backward(a.transpose(-2, -1).matmul(dz));
+    // 4. ND x ND (Batched or Standard)
+    let da = dz.matmul(b.transpose(-2, -1));
+    let db = a.transpose(-2, -1).matmul(dz);
+
+    da = unbroadcast(da, a.shape);
+    db = unbroadcast(db, b.shape);
+
+    aFn.backward(da);
+    bFn.backward(db);
   }
 }
 registerOperation('matmul', Matmul);
@@ -542,36 +624,36 @@ registerOperation('matmul', Matmul);
 
 const Lt = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => (a[a_index] < b[b_index]) ? 1 : 0,
-  (a, b, aFn, bFn) => {},
+  (a, b, aFn, bFn) => { },
   "lt"
 );
 
 const Gt = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => (a[a_index] > b[b_index]) ? 1 : 0,
-  (a, b, aFn, bFn) => {},
+  (a, b, aFn, bFn) => { },
   "gt"
 );
 
 const Le = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => (a[a_index] <= b[b_index]) ? 1 : 0,
-  (a, b, aFn, bFn) => {},
+  (a, b, aFn, bFn) => { },
   "le"
 );
 
 const Ge = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => (a[a_index] >= b[b_index]) ? 1 : 0,
-  (a, b, aFn, bFn) => {},
+  (a, b, aFn, bFn) => { },
   "ge"
 );
 
 const Eq = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => (a[a_index] == b[b_index]) ? 1 : 0,
-  (a, b, aFn, bFn) => {},
+  (a, b, aFn, bFn) => { },
   "eq"
 );
 
 const Ne = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => (a[a_index] != b[b_index]) ? 1 : 0,
-  (a, b, aFn, bFn) => {},
+  (a, b, aFn, bFn) => { },
   "ne"
 );

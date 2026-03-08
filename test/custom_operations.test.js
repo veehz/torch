@@ -45,7 +45,7 @@ describe('Custom Operations', () => {
       const t2 = new Tensor([4, 5, 6]);
 
       const result = t1.matmul(t2);
-      assert.deepStrictEqual(result.shape, [1]);
+      assert.deepStrictEqual(result.shape, []);
       assert.deepStrictEqual(Array.from(result.toFlatArray()), [32]);
     });
 
@@ -85,7 +85,7 @@ describe('Custom Operations', () => {
 
       const t2Grad = Array.from(t2.grad.toFlatArray());
       assert.deepStrictEqual(t2Grad, [4, 4, 6, 6]);
-    });    
+    });
   });
 
   describe('Transpose', () => {

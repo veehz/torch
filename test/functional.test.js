@@ -61,7 +61,7 @@ describe('Functional', () => {
       const result = torch.matmul(t1, t2);
 
       assert.deepStrictEqual(Array.from(result.toFlatArray()), [200]);
-      assert.deepStrictEqual(result.shape, [1]);
+      assert.deepStrictEqual(result.shape, []);
     });
 
     it('should multiply two tensors with 1 dim', () => {
@@ -70,7 +70,7 @@ describe('Functional', () => {
       const result = torch.matmul(t1, t2);
 
       assert.deepStrictEqual(Array.from(result.toFlatArray()), [70]);
-      assert.deepStrictEqual(result.shape, [1]);
+      assert.deepStrictEqual(result.shape, []);
     });
 
     it('should multiply two tensors with shape (2, 3) and (3, 3) with the correct values', () => {

@@ -80,13 +80,8 @@ export class Tensor {
     }
   }
 
-  // TODO: Somehow having a shape of [] will have a weird error:
-  // TypeError: Cannot read properties of undefined (reading 'length')
-  // when running kernel (something to do with constants?)
-  // so a little hack to return [1] when the shape is []
   get shape(): number[] {
-    return this._shape.length === 0 ? [1] : this._shape;
-    // return this._shape;
+    return this._shape;
   }
 
   toArray_(): void {
@@ -154,7 +149,7 @@ export class Tensor {
     if (this.dataLength() !== 1) {
       throw new Error('Tensor.item() is only valid for scalars');
     }
-    return this.toArray()[0];
+    return this.data[0];
   }
 
   detach(): Tensor {
@@ -281,6 +276,10 @@ export class Tensor {
     return this._executeOpRaw('reshape', shape);
   }
 
+  squeeze(dim: number): Tensor {
+    return this._executeOpRaw('squeeze', dim);
+  }
+
   unsqueeze(dim: number): Tensor {
     return this._executeOpRaw('unsqueeze', dim);
   }
@@ -344,7 +343,7 @@ export class Tensor {
   ne(other: Tensor | number): Tensor {
     return this._executeBinaryOp('ne', other);
   }
-  
+
   // other
 
   sigmoid(): Tensor {

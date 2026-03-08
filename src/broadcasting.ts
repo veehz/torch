@@ -21,6 +21,15 @@ export function _broadcast_shape(a_shape: number[], b_shape: number[]): number[]
   return result_shape;
 }
 
+export function _unbroadcast(result_shape: number[], original_shape: number[], result: number[]) {
+  const this_shape = _pad_shape(original_shape, result_shape)
+  const unbroadcasted_result = new Array(original_shape.reduce((acc, cur) => acc * cur, 1)).fill(0);
+  for(let i = 0; i < result.length; i++){
+    unbroadcasted_result[_get_original_index(this_shape, result_shape, i)] += result[i];
+  }
+  return unbroadcasted_result;
+}
+
 export function _pad_shape(shape: number[], broadcast_shape: number[]): number[] {
   if (shape.length >= broadcast_shape.length) {
     return shape;

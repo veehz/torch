@@ -1,3 +1,4 @@
+import { _get_original_index, _pad_shape, _unbroadcast } from '../broadcasting';
 import { zeros_like } from '../creation';
 import { Tensor } from '../tensor';
 import { eventBus, getNextId, events } from '../util';
@@ -89,12 +90,17 @@ export class AccumulateGrad extends UnaryFunction {
     return variable;
   }
 
-  protected _backward(dz: Tensor): void {
+  protected _backward(dz: Tensor | number): void {
     if (!this.variable.grad) {
       this.variable.grad = zeros_like(this.variable);
     }
     eventBus.dispatchEvent(new CustomEvent(events.OPERATION_BEFORE_ACCUMULATE_GRAD, { detail: { operation: this, dz } }));
-    this.variable.grad = this.variable.grad.add(dz);
+    if(typeof dz === "number") {
+      this.variable.grad = this.variable.grad.add(dz);
+    } else {
+      const unbroadcasted_dz = _unbroadcast(dz.shape, this.variable.shape, dz.data);
+      this.variable.grad = this.variable.grad.add(new Tensor(unbroadcasted_dz, {}, { shape: this.variable.shape }));
+    }
     eventBus.dispatchEvent(new CustomEvent(events.OPERATION_AFTER_ACCUMULATE_GRAD, { detail: { operation: this, dz } }));
   }
 }
