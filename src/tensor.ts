@@ -52,12 +52,12 @@ export class Tensor {
   public name: string | null = null;
 
   public data: number[];
+
+  public shape: number[];
   public grad_fn: TorchFunction | null = null;
   public grad: Tensor | null = null;
-  
-  public requires_grad: boolean;
 
-  private _shape: number[];
+  public requires_grad: boolean;
 
   constructor(
     data: NestedNumberArray,
@@ -71,7 +71,7 @@ export class Tensor {
       this.name = options.name;
     }
 
-    this._shape = internal_options.shape ?? _get_shape(data);
+    this.shape = internal_options.shape ?? _get_shape(data);
     this.grad_fn = internal_options.operation ?? null;
 
     if (this.requires_grad && !this.grad_fn) {
@@ -79,10 +79,6 @@ export class Tensor {
       acc.variable = this;
       this.grad_fn = acc;
     }
-  }
-
-  get shape(): number[] {
-    return this._shape;
   }
 
   toArray_(): void {
@@ -122,10 +118,6 @@ export class Tensor {
 
   dataLength(): number {
     return this.data.length;
-  }
-
-  set shape(shape: number[]) {
-    this._shape = shape;
   }
 
   private _executeUnaryOp(opName: string): Tensor {
