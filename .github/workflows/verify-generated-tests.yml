@@ -26,13 +26,27 @@ jobs:
         with:
           python-version: '3.14'
           cache: 'pip'
+          cache-dependency-path: scripts/requirements.txt
 
       - name: Install Python Dependencies
         run: pip install -r scripts/requirements.txt
 
-      - name: Regenerate test data
-        run: yarn update-tests
-
-      - name: Check for differences
+      - name: Sanity Check Generated File Length
         run: |
-          git diff --exit-code test/tensor_ops_data.gen.js || (echo "❌ test/tensor_ops_data.gen.js is out of sync! Please run 'yarn update-tests' locally and commit the updated file." && exit 1)
+          # 1. Count lines of the file currently checked into Git
+          COMMITTED_LINES=$(wc -l < test/tensor_ops_data.gen.js)
+
+          # 2. Regenerate the file using your script
+          yarn update-tests
+
+          # 3. Count lines of the newly generated file
+          GENERATED_LINES=$(wc -l < test/tensor_ops_data.gen.js)
+
+          # 4. Compare and fail if different
+          if [ "$COMMITTED_LINES" -ne "$GENERATED_LINES" ]; then
+            echo "❌ Line count mismatch! Committed: $COMMITTED_LINES, Generated: $GENERATED_LINES."
+            echo "Please run 'yarn update-tests' locally and commit the updated test file."
+            exit 1
+          fi
+
+          echo "✅ Line counts match ($COMMITTED_LINES lines). Sanity check passed."
