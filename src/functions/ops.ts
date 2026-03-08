@@ -122,7 +122,7 @@ function _powint_tensor(a: Tensor, n: number, operation: TorchFunction | null = 
   );
 }
 
-export class PowInt extends TorchFunction {
+class PowInt extends TorchFunction {
   private n: number;
   protected _forward(a: Tensor, n: number): Tensor {
     if (a.requires_grad) {
@@ -210,7 +210,7 @@ const Reciprocal = UnaryFunctionMixin(
   "reciprocal"
 );
 
-export class Reshape extends TorchFunction {
+class Reshape extends TorchFunction {
   protected _forward(a: Tensor, shape: number[]) {
     const previous_length = a.dataLength();
     const target_length = shape.reduce((acc, val) => acc * val, 1);
@@ -244,7 +244,7 @@ export class Reshape extends TorchFunction {
 }
 registerOperation('reshape', Reshape);
 
-export class Squeeze extends TorchFunction {
+class Squeeze extends TorchFunction {
   protected _forward(a: Tensor, dim?: number) {
     if (a.requires_grad) {
       this.saved_tensors = [a];
@@ -289,7 +289,7 @@ export class Squeeze extends TorchFunction {
 }
 registerOperation('squeeze', Squeeze);
 
-export class Unsqueeze extends TorchFunction {
+class Unsqueeze extends TorchFunction {
   protected _forward(a: Tensor, dim: number) {
     if (a.requires_grad) {
       this.saved_tensors = [a];
@@ -323,7 +323,7 @@ export class Unsqueeze extends TorchFunction {
 }
 registerOperation('unsqueeze', Unsqueeze);
 
-export class Expand extends TorchFunction {
+class Expand extends TorchFunction {
   protected _forward(a: Tensor, expanded_shape: number[]): Tensor {
     if (a.requires_grad) {
       this.saved_tensors = [a];
@@ -491,7 +491,7 @@ function _transpose_tensor(
     { operation: operation, shape: output_shape }
   );
 }
-export class Transpose extends TorchFunction {
+class Transpose extends TorchFunction {
   private dim0: number;
   private dim1: number;
   protected _forward(a: Tensor, dim0: number, dim1: number): Tensor {
@@ -579,7 +579,7 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: TorchFunction | null = 
   ), shape_after_removing_extra_dims];
 }
 
-export class Matmul extends BinaryFunction {
+class Matmul extends BinaryFunction {
   private shape: number[];
 
   protected _forward(a: Tensor, b: Tensor): Tensor {

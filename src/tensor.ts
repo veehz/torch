@@ -51,12 +51,13 @@ export class Tensor {
   // Optional user-defined name
   public name: string | null = null;
 
-  data: number[];
-  _shape: number[];
-  grad_fn: TorchFunction | null = null;
+  public data: number[];
+  public grad_fn: TorchFunction | null = null;
   public grad: Tensor | null = null;
+  
+  public requires_grad: boolean;
 
-  requires_grad: boolean;
+  private _shape: number[];
 
   constructor(
     data: NestedNumberArray,
