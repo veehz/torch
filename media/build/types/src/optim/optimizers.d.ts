@@ -1,5 +1,5 @@
 import { Optimizer } from './base';
-import { Parameter } from '../nn/module';
+import { Parameter } from '../nn/base';
 export declare class SGD extends Optimizer {
     private state;
     private lr;

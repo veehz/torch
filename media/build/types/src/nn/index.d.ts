@@ -1,3 +1,4 @@
-export * from './module';
+export * from './base';
 export * from './loss';
+export * from './module';
 export * as functional from './functional';

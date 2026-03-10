@@ -1,23 +1,5 @@
-import { Tensor, NestedNumberArray } from '../tensor';
-import { TorchFunction } from '../functions/base';
-export declare class Parameter extends Tensor {
-    constructor(data: NestedNumberArray | Tensor | Parameter, options?: {
-        requires_grad?: boolean;
-    }, internal_options?: {
-        operation?: TorchFunction;
-        shape?: number[];
-    });
-}
-export declare abstract class Module {
-    private _modules;
-    private _parameters;
-    constructor();
-    private register_parameter;
-    private register_module;
-    protected register(name: string, value: Parameter | Module): void;
-    abstract forward(...args: Tensor[]): Tensor;
-    parameters(): Parameter[];
-}
+import { Module, Parameter } from './base';
+import { Tensor } from '../tensor';
 export declare class Linear extends Module {
     private weight;
     private bias;
@@ -32,11 +14,29 @@ export declare class Sigmoid extends Module {
     constructor();
     forward(input: Tensor): Tensor;
 }
-export declare class Sequential extends Module {
-    private _modulesArr;
-    constructor(...modules: Module[]);
-    append(module: Module): this;
-    extend(sequential: Sequential): this;
-    insert(index: number, module: Module): this;
+declare abstract class _ConvNd extends Module {
+    weight: Parameter;
+    bias: Parameter | null;
+    in_channels: number;
+    out_channels: number;
+    kernel_size: number | number[];
+    stride: number | number[];
+    padding: number | number[];
+    dilation: number | number[];
+    groups: number;
+    constructor(in_channels: number, out_channels: number, kernel_size: number | number[], stride: number | number[], padding: number | number[], dilation: number | number[], groups: number, bias: boolean, dims: number);
+    abstract forward(input: Tensor): Tensor;
+}
+export declare class Conv1d extends _ConvNd {
+    constructor(in_channels: number, out_channels: number, kernel_size: number | number[], stride?: number | number[], padding?: number | number[], dilation?: number | number[], groups?: number, bias?: boolean);
     forward(input: Tensor): Tensor;
 }
+export declare class Conv2d extends _ConvNd {
+    constructor(in_channels: number, out_channels: number, kernel_size: number | number[], stride?: number | number[], padding?: number | number[], dilation?: number | number[], groups?: number, bias?: boolean);
+    forward(input: Tensor): Tensor;
+}
+export declare class Conv3d extends _ConvNd {
+    constructor(in_channels: number, out_channels: number, kernel_size: number | number[], stride?: number | number[], padding?: number | number[], dilation?: number | number[], groups?: number, bias?: boolean);
+    forward(input: Tensor): Tensor;
+}
+export {};
