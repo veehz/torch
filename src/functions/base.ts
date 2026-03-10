@@ -21,7 +21,7 @@ abstract class TorchFunction {
   public _retained_tensors: Tensor[] = [];
 
   protected abstract _forward(...args: (Tensor | number | number[] | boolean)[]): Tensor;
-  protected abstract _backward(dz: Tensor): void;
+  protected abstract _backward(dz: Tensor | number): void;
 
   forward(...args: (Tensor | number | number[] | boolean)[]): Tensor {
     const requires_grad = resultRequiresGrad(...args);
@@ -44,7 +44,7 @@ abstract class TorchFunction {
     return result;
   }
 
-  backward(dz: Tensor): void {
+  backward(dz: Tensor | number): void {
     eventBus.dispatchEvent(new CustomEvent(events.OPERATION_BEFORE_BACKWARD, { detail: { operation: this, dz } }));
     for (const x of this._retained_tensors) {
       if (!x.grad) {
