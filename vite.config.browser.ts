@@ -20,9 +20,6 @@ export default defineConfig({
         minifyInternalExports: false,
       }
     },
-    watch: {
-      include: 'src/**',
-    },
   },
   esbuild: {
     keepNames: true,

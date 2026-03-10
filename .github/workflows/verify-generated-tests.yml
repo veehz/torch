@@ -5,6 +5,7 @@ on: [push]
 jobs:
   verify-sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check out source code
         uses: actions/checkout@v4

@@ -11,8 +11,5 @@ export default defineConfig({
     outDir: 'build/node',
     target: 'node20',
     minify: true,
-    watch: {
-      include: 'src/**',
-    },
   },
 });
