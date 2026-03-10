@@ -24,7 +24,7 @@ export function _get_reduction_shape(
   keepdim: boolean = false
 ): number[] {
   if (dim === undefined) return keepdim ? shape.map(() => 1) : [];
-  
+
   const dims = Array.isArray(dim) ? dim : [dim];
   const normalized_dims = dims.map((d) => (d < 0 ? d + shape.length : d));
 

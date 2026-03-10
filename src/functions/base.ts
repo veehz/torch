@@ -95,7 +95,7 @@ export class AccumulateGrad extends UnaryFunction {
       this.variable.grad = zeros_like(this.variable);
     }
     eventBus.dispatchEvent(new CustomEvent(events.OPERATION_BEFORE_ACCUMULATE_GRAD, { detail: { operation: this, dz } }));
-    if(typeof dz === "number") {
+    if (typeof dz === "number") {
       this.variable.grad = this.variable.grad.add(dz);
     } else {
       const unbroadcasted_dz = _unbroadcast(dz.shape, this.variable.shape, dz.data);

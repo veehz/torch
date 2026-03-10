@@ -333,7 +333,7 @@ class Expand extends TorchFunction {
     } else {
       this.next_functions.push(nullOp);
     }
-  
+
     const offset = expanded_shape.length - a.shape.length;
     const target_shape = expanded_shape.map((dim, i) => {
       if (dim === -1) {
@@ -406,7 +406,7 @@ export const Mean = ReductionFunctionMixin(
     const out_size = target_shape.length > 0 ? target_shape.reduce((acc, v) => acc * v, 1) : 1;
     const N = a.dataLength() / out_size;
 
-    return expanded_dz.mul(new Tensor([1 / N])); 
+    return expanded_dz.mul(new Tensor([1 / N]));
   },
   'mean',
   (acc, count) => acc / count
@@ -667,7 +667,7 @@ function _convNd_forward(
   const out_channels = weight.shape[0];
   const in_dims = input.shape.slice(2);
   const kernel_dims = weight.shape.slice(2);
-  
+
   if (in_channels !== weight.shape[1] * groups) {
     throw new Error(`in_channels (${in_channels}) must be divisible by groups (${groups}) and match weight.shape[1] * groups (${weight.shape[1] * groups})`);
   }
@@ -700,11 +700,11 @@ function _convNd_forward(
     for (let g = 0; g < groups; g++) {
       for (let oc_g = 0; oc_g < out_channels_per_group; oc_g++) {
         const oc = g * out_channels_per_group + oc_g;
-        
+
         // Iterate over output spatial dimensions
         const out_spatial_size = out_dims.reduce((a, b) => a * b, 1);
         for (let os_idx = 0; os_idx < out_spatial_size; os_idx++) {
-          
+
           // Decode output spatial index
           const os_coords = new Array(dims);
           let temp_os = os_idx;
@@ -718,7 +718,7 @@ function _convNd_forward(
           // Iterate over kernel spatial dimensions and in_channels
           for (let ic_g = 0; ic_g < in_channels_per_group; ic_g++) {
             const ic = g * in_channels_per_group + ic_g;
-            
+
             const kernel_spatial_size = kernel_dims.reduce((a, b) => a * b, 1);
             for (let ks_idx = 0; ks_idx < kernel_spatial_size; ks_idx++) {
               // Decode kernel spatial index
@@ -757,7 +757,7 @@ function _convNd_forward(
           // Calculate output flattened index
           let out_flat_idx = b * out_strides[0] + oc * out_strides[1];
           for (let d = 0; d < dims; d++) out_flat_idx += os_coords[d] * out_strides[d + 2];
-          
+
           output_data[out_flat_idx] = sum;
         }
       }
@@ -818,7 +818,7 @@ function _convNd_backward(
   if (weight_requires_grad) {
     dWeight_data = new Array(weight.dataLength()).fill(0);
   }
-  
+
   const in_channels_per_group = in_channels / groups;
   const out_channels_per_group = out_channels / groups;
 
@@ -826,10 +826,10 @@ function _convNd_backward(
     for (let g = 0; g < groups; g++) {
       for (let oc_g = 0; oc_g < out_channels_per_group; oc_g++) {
         const oc = g * out_channels_per_group + oc_g;
-        
+
         const out_spatial_size = out_dims.reduce((a, b) => a * b, 1);
         for (let os_idx = 0; os_idx < out_spatial_size; os_idx++) {
-          
+
           const os_coords = new Array(dims);
           let temp_os = os_idx;
           for (let d = dims - 1; d >= 0; d--) {
@@ -843,7 +843,7 @@ function _convNd_backward(
 
           for (let ic_g = 0; ic_g < in_channels_per_group; ic_g++) {
             const ic = g * in_channels_per_group + ic_g;
-            
+
             const kernel_spatial_size = kernel_dims.reduce((a, b) => a * b, 1);
             for (let ks_idx = 0; ks_idx < kernel_spatial_size; ks_idx++) {
               const ks_coords = new Array(dims);
@@ -889,7 +889,7 @@ function _convNd_backward(
   if (weight_requires_grad) dWeight = new Tensor(dWeight_data!, { requires_grad: false }, { shape: weight.shape });
   if (bias && bias.requires_grad) {
     const sum_dims = [0];
-    for(let d=2; d<dz.shape.length; d++) sum_dims.push(d);
+    for (let d = 2; d < dz.shape.length; d++) sum_dims.push(d);
     dBias = dz.sum(sum_dims);
   }
 
