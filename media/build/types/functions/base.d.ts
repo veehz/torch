@@ -6,13 +6,13 @@ declare abstract class TorchFunction {
     saved_tensors: Tensor[];
     _retained_tensors: Tensor[];
     protected abstract _forward(...args: (Tensor | number | number[] | boolean)[]): Tensor;
-    protected abstract _backward(dz: Tensor): void;
+    protected abstract _backward(dz: Tensor | number): void;
     forward(...args: (Tensor | number | number[] | boolean)[]): Tensor;
-    backward(dz: Tensor): void;
+    backward(dz: Tensor | number): void;
 }
 declare class NullOp extends TorchFunction {
-    protected _forward(...args: (Tensor | number | number[])[]): Tensor;
-    protected _backward(dz: Tensor): void;
+    protected _forward(..._args: (Tensor | number | number[])[]): Tensor;
+    protected _backward(_dz: Tensor): void;
 }
 export declare const nullOp: NullOp;
 declare abstract class UnaryFunction extends TorchFunction {
