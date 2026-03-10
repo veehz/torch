@@ -648,6 +648,411 @@ class Matmul extends BinaryFunction {
 }
 registerOperation('matmul', Matmul);
 
+function _convNd_forward(
+  input: Tensor,
+  weight: Tensor,
+  bias: Tensor | null,
+  stride: number | number[],
+  padding: number | number[],
+  dilation: number | number[],
+  groups: number,
+  dims: number
+): Tensor {
+  let stride_arr = typeof stride === 'number' ? new Array(dims).fill(stride) : stride;
+  let padding_arr = typeof padding === 'number' ? new Array(dims).fill(padding) : padding;
+  let dilation_arr = typeof dilation === 'number' ? new Array(dims).fill(dilation) : dilation;
+
+  const batch_size = input.shape[0];
+  const in_channels = input.shape[1];
+  const out_channels = weight.shape[0];
+  const in_dims = input.shape.slice(2);
+  const kernel_dims = weight.shape.slice(2);
+  
+  if (in_channels !== weight.shape[1] * groups) {
+    throw new Error(`in_channels (${in_channels}) must be divisible by groups (${groups}) and match weight.shape[1] * groups (${weight.shape[1] * groups})`);
+  }
+
+  const out_dims = in_dims.map((in_dim, i) => {
+    return Math.floor((in_dim + 2 * padding_arr[i] - dilation_arr[i] * (kernel_dims[i] - 1) - 1) / stride_arr[i] + 1);
+  });
+
+  const output_shape = [batch_size, out_channels, ...out_dims];
+  const output_size = output_shape.reduce((a, b) => a * b, 1);
+  const output_data = new Array(output_size).fill(0);
+
+  const get_strides = (shape: number[]) => {
+    const strides = new Array(shape.length);
+    let s = 1;
+    for (let i = shape.length - 1; i >= 0; i--) {
+      strides[i] = s;
+      s *= shape[i];
+    }
+    return strides;
+  };
+
+  const in_strides = get_strides(input.shape);
+  const w_strides = get_strides(weight.shape);
+  const out_strides = get_strides(output_shape);
+  const in_channels_per_group = in_channels / groups;
+  const out_channels_per_group = out_channels / groups;
+
+  for (let b = 0; b < batch_size; b++) {
+    for (let g = 0; g < groups; g++) {
+      for (let oc_g = 0; oc_g < out_channels_per_group; oc_g++) {
+        const oc = g * out_channels_per_group + oc_g;
+        
+        // Iterate over output spatial dimensions
+        const out_spatial_size = out_dims.reduce((a, b) => a * b, 1);
+        for (let os_idx = 0; os_idx < out_spatial_size; os_idx++) {
+          
+          // Decode output spatial index
+          const os_coords = new Array(dims);
+          let temp_os = os_idx;
+          for (let d = dims - 1; d >= 0; d--) {
+            os_coords[d] = temp_os % out_dims[d];
+            temp_os = Math.floor(temp_os / out_dims[d]);
+          }
+
+          let sum = bias ? bias.data[oc] : 0;
+
+          // Iterate over kernel spatial dimensions and in_channels
+          for (let ic_g = 0; ic_g < in_channels_per_group; ic_g++) {
+            const ic = g * in_channels_per_group + ic_g;
+            
+            const kernel_spatial_size = kernel_dims.reduce((a, b) => a * b, 1);
+            for (let ks_idx = 0; ks_idx < kernel_spatial_size; ks_idx++) {
+              // Decode kernel spatial index
+              const ks_coords = new Array(dims);
+              let temp_ks = ks_idx;
+              for (let d = dims - 1; d >= 0; d--) {
+                ks_coords[d] = temp_ks % kernel_dims[d];
+                temp_ks = Math.floor(temp_ks / kernel_dims[d]);
+              }
+
+              // Calculate input spatial coordinates
+              let is_valid = true;
+              const is_coords = new Array(dims);
+              for (let d = 0; d < dims; d++) {
+                const in_coord = os_coords[d] * stride_arr[d] + ks_coords[d] * dilation_arr[d] - padding_arr[d];
+                if (in_coord < 0 || in_coord >= in_dims[d]) {
+                  is_valid = false;
+                  break;
+                }
+                is_coords[d] = in_coord;
+              }
+
+              if (is_valid) {
+                // Calculate flattened indices
+                let in_flat_idx = b * in_strides[0] + ic * in_strides[1];
+                for (let d = 0; d < dims; d++) in_flat_idx += is_coords[d] * in_strides[d + 2];
+
+                let w_flat_idx = oc * w_strides[0] + ic_g * w_strides[1];
+                for (let d = 0; d < dims; d++) w_flat_idx += ks_coords[d] * w_strides[d + 2];
+
+                sum += input.data[in_flat_idx] * weight.data[w_flat_idx];
+              }
+            }
+          }
+
+          // Calculate output flattened index
+          let out_flat_idx = b * out_strides[0] + oc * out_strides[1];
+          for (let d = 0; d < dims; d++) out_flat_idx += os_coords[d] * out_strides[d + 2];
+          
+          output_data[out_flat_idx] = sum;
+        }
+      }
+    }
+  }
+
+  return new Tensor(output_data, { requires_grad: false }, { shape: output_shape });
+}
+
+function _convNd_backward(
+  dz: Tensor,
+  input: Tensor,
+  weight: Tensor,
+  bias: Tensor | null,
+  stride: number | number[],
+  padding: number | number[],
+  dilation: number | number[],
+  groups: number,
+  dims: number,
+  input_requires_grad: boolean,
+  weight_requires_grad: boolean
+): [Tensor | null, Tensor | null, Tensor | null] {
+  let stride_arr = typeof stride === 'number' ? new Array(dims).fill(stride) : stride;
+  let padding_arr = typeof padding === 'number' ? new Array(dims).fill(padding) : padding;
+  let dilation_arr = typeof dilation === 'number' ? new Array(dims).fill(dilation) : dilation;
+
+  const batch_size = input.shape[0];
+  const in_channels = input.shape[1];
+  const out_channels = weight.shape[0];
+  const in_dims = input.shape.slice(2);
+  const kernel_dims = weight.shape.slice(2);
+  const out_dims = dz.shape.slice(2);
+
+  const get_strides = (shape: number[]) => {
+    const strides = new Array(shape.length);
+    let s = 1;
+    for (let i = shape.length - 1; i >= 0; i--) {
+      strides[i] = s;
+      s *= shape[i];
+    }
+    return strides;
+  };
+
+  const in_strides = get_strides(input.shape);
+  const w_strides = get_strides(weight.shape);
+  const dz_strides = get_strides(dz.shape);
+
+  let dInput: Tensor | null = null;
+  let dWeight: Tensor | null = null;
+  let dBias: Tensor | null = null;
+
+  let dInput_data: number[] | null = null;
+  let dWeight_data: number[] | null = null;
+
+  if (input_requires_grad) {
+    dInput_data = new Array(input.dataLength()).fill(0);
+  }
+  if (weight_requires_grad) {
+    dWeight_data = new Array(weight.dataLength()).fill(0);
+  }
+  
+  const in_channels_per_group = in_channels / groups;
+  const out_channels_per_group = out_channels / groups;
+
+  for (let b = 0; b < batch_size; b++) {
+    for (let g = 0; g < groups; g++) {
+      for (let oc_g = 0; oc_g < out_channels_per_group; oc_g++) {
+        const oc = g * out_channels_per_group + oc_g;
+        
+        const out_spatial_size = out_dims.reduce((a, b) => a * b, 1);
+        for (let os_idx = 0; os_idx < out_spatial_size; os_idx++) {
+          
+          const os_coords = new Array(dims);
+          let temp_os = os_idx;
+          for (let d = dims - 1; d >= 0; d--) {
+            os_coords[d] = temp_os % out_dims[d];
+            temp_os = Math.floor(temp_os / out_dims[d]);
+          }
+
+          let dz_flat_idx = b * dz_strides[0] + oc * dz_strides[1];
+          for (let d = 0; d < dims; d++) dz_flat_idx += os_coords[d] * dz_strides[d + 2];
+          const dz_val = dz.data[dz_flat_idx];
+
+          for (let ic_g = 0; ic_g < in_channels_per_group; ic_g++) {
+            const ic = g * in_channels_per_group + ic_g;
+            
+            const kernel_spatial_size = kernel_dims.reduce((a, b) => a * b, 1);
+            for (let ks_idx = 0; ks_idx < kernel_spatial_size; ks_idx++) {
+              const ks_coords = new Array(dims);
+              let temp_ks = ks_idx;
+              for (let d = dims - 1; d >= 0; d--) {
+                ks_coords[d] = temp_ks % kernel_dims[d];
+                temp_ks = Math.floor(temp_ks / kernel_dims[d]);
+              }
+
+              let is_valid = true;
+              const is_coords = new Array(dims);
+              for (let d = 0; d < dims; d++) {
+                const in_coord = os_coords[d] * stride_arr[d] + ks_coords[d] * dilation_arr[d] - padding_arr[d];
+                if (in_coord < 0 || in_coord >= in_dims[d]) {
+                  is_valid = false;
+                  break;
+                }
+                is_coords[d] = in_coord;
+              }
+
+              if (is_valid) {
+                let in_flat_idx = b * in_strides[0] + ic * in_strides[1];
+                for (let d = 0; d < dims; d++) in_flat_idx += is_coords[d] * in_strides[d + 2];
+
+                let w_flat_idx = oc * w_strides[0] + ic_g * w_strides[1];
+                for (let d = 0; d < dims; d++) w_flat_idx += ks_coords[d] * w_strides[d + 2];
+
+                if (input_requires_grad) {
+                  dInput_data![in_flat_idx] += dz_val * weight.data[w_flat_idx];
+                }
+                if (weight_requires_grad) {
+                  dWeight_data![w_flat_idx] += dz_val * input.data[in_flat_idx];
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (input_requires_grad) dInput = new Tensor(dInput_data!, { requires_grad: false }, { shape: input.shape });
+  if (weight_requires_grad) dWeight = new Tensor(dWeight_data!, { requires_grad: false }, { shape: weight.shape });
+  if (bias && bias.requires_grad) {
+    const sum_dims = [0];
+    for(let d=2; d<dz.shape.length; d++) sum_dims.push(d);
+    dBias = dz.sum(sum_dims);
+  }
+
+  return [dInput, dWeight, dBias];
+}
+
+class Conv1dOp extends TorchFunction {
+  private stride: number | number[];
+  private padding: number | number[];
+  private dilation: number | number[];
+  private groups: number;
+
+  protected _forward(
+    input: Tensor,
+    weight: Tensor,
+    bias: Tensor | null,
+    stride: number | number[] = 1,
+    padding: number | number[] = 0,
+    dilation: number | number[] = 1,
+    groups: number = 1
+  ): Tensor {
+    if (input.requires_grad || weight.requires_grad || bias?.requires_grad) {
+      this.saved_tensors = [input, weight];
+      if (bias) this.saved_tensors.push(bias);
+    }
+    this.next_functions.push(input.grad_fn ? input.grad_fn : nullOp);
+    this.next_functions.push(weight.grad_fn ? weight.grad_fn : nullOp);
+    if (bias) this.next_functions.push(bias.grad_fn ? bias.grad_fn : nullOp);
+
+    this.stride = stride;
+    this.padding = padding;
+    this.dilation = dilation;
+    this.groups = groups;
+
+    const res = _convNd_forward(input, weight, bias, stride, padding, dilation, groups, 1);
+    res.requires_grad = input.requires_grad || weight.requires_grad || (bias?.requires_grad ?? false);
+    res.grad_fn = res.requires_grad ? this : null;
+    return res;
+  }
+
+  protected _backward(dz: Tensor): void {
+    const input = this.saved_tensors[0];
+    const weight = this.saved_tensors[1];
+    const bias = this.saved_tensors.length > 2 ? this.saved_tensors[2] : null;
+    const [inputFn, weightFn, biasFn] = this.next_functions;
+
+    const [dInput, dWeight, dBias] = _convNd_backward(
+      dz, input, weight, bias, this.stride, this.padding, this.dilation, this.groups, 1,
+      input.requires_grad, weight.requires_grad
+    );
+
+    if (input.requires_grad) inputFn.backward(dInput);
+    if (weight.requires_grad) weightFn.backward(dWeight);
+    if (bias && bias.requires_grad) biasFn.backward(dBias);
+  }
+}
+registerOperation('conv1d', Conv1dOp);
+
+class Conv2dOp extends TorchFunction {
+  private stride: number | number[];
+  private padding: number | number[];
+  private dilation: number | number[];
+  private groups: number;
+
+  protected _forward(
+    input: Tensor,
+    weight: Tensor,
+    bias: Tensor | null,
+    stride: number | number[] = 1,
+    padding: number | number[] = 0,
+    dilation: number | number[] = 1,
+    groups: number = 1
+  ): Tensor {
+    if (input.requires_grad || weight.requires_grad || bias?.requires_grad) {
+      this.saved_tensors = [input, weight];
+      if (bias) this.saved_tensors.push(bias);
+    }
+    this.next_functions.push(input.grad_fn ? input.grad_fn : nullOp);
+    this.next_functions.push(weight.grad_fn ? weight.grad_fn : nullOp);
+    if (bias) this.next_functions.push(bias.grad_fn ? bias.grad_fn : nullOp);
+
+    this.stride = stride;
+    this.padding = padding;
+    this.dilation = dilation;
+    this.groups = groups;
+
+    const res = _convNd_forward(input, weight, bias, stride, padding, dilation, groups, 2);
+    res.requires_grad = input.requires_grad || weight.requires_grad || (bias?.requires_grad ?? false);
+    res.grad_fn = res.requires_grad ? this : null;
+    return res;
+  }
+
+  protected _backward(dz: Tensor): void {
+    const input = this.saved_tensors[0];
+    const weight = this.saved_tensors[1];
+    const bias = this.saved_tensors.length > 2 ? this.saved_tensors[2] : null;
+    const [inputFn, weightFn, biasFn] = this.next_functions;
+
+    const [dInput, dWeight, dBias] = _convNd_backward(
+      dz, input, weight, bias, this.stride, this.padding, this.dilation, this.groups, 2,
+      input.requires_grad, weight.requires_grad
+    );
+
+    if (input.requires_grad) inputFn.backward(dInput);
+    if (weight.requires_grad) weightFn.backward(dWeight);
+    if (bias && bias.requires_grad) biasFn.backward(dBias);
+  }
+}
+registerOperation('conv2d', Conv2dOp);
+
+class Conv3dOp extends TorchFunction {
+  private stride: number | number[];
+  private padding: number | number[];
+  private dilation: number | number[];
+  private groups: number;
+
+  protected _forward(
+    input: Tensor,
+    weight: Tensor,
+    bias: Tensor | null,
+    stride: number | number[] = 1,
+    padding: number | number[] = 0,
+    dilation: number | number[] = 1,
+    groups: number = 1
+  ): Tensor {
+    if (input.requires_grad || weight.requires_grad || bias?.requires_grad) {
+      this.saved_tensors = [input, weight];
+      if (bias) this.saved_tensors.push(bias);
+    }
+    this.next_functions.push(input.grad_fn ? input.grad_fn : nullOp);
+    this.next_functions.push(weight.grad_fn ? weight.grad_fn : nullOp);
+    if (bias) this.next_functions.push(bias.grad_fn ? bias.grad_fn : nullOp);
+
+    this.stride = stride;
+    this.padding = padding;
+    this.dilation = dilation;
+    this.groups = groups;
+
+    const res = _convNd_forward(input, weight, bias, stride, padding, dilation, groups, 3);
+    res.requires_grad = input.requires_grad || weight.requires_grad || (bias?.requires_grad ?? false);
+    res.grad_fn = res.requires_grad ? this : null;
+    return res;
+  }
+
+  protected _backward(dz: Tensor): void {
+    const input = this.saved_tensors[0];
+    const weight = this.saved_tensors[1];
+    const bias = this.saved_tensors.length > 2 ? this.saved_tensors[2] : null;
+    const [inputFn, weightFn, biasFn] = this.next_functions;
+
+    const [dInput, dWeight, dBias] = _convNd_backward(
+      dz, input, weight, bias, this.stride, this.padding, this.dilation, this.groups, 3,
+      input.requires_grad, weight.requires_grad
+    );
+
+    if (input.requires_grad) inputFn.backward(dInput);
+    if (weight.requires_grad) weightFn.backward(dWeight);
+    if (bias && bias.requires_grad) biasFn.backward(dBias);
+  }
+}
+registerOperation('conv3d', Conv3dOp);
+
+
 // comparison
 
 const Lt = BinaryFunctionMixin(

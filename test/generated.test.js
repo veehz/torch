@@ -125,6 +125,42 @@ describe('Automated Tests', () => {
         });
       });
     });
+
+    describe('Convolutions', () => {
+      testData.conv?.forEach(test => {
+        it(test.test_name, () => {
+          const ConvClass = torch.nn[test.conv_type];
+          const layer = new ConvClass(
+            test.in_channels,
+            test.out_channels,
+            test.kernel_size,
+            test.stride,
+            test.padding,
+            test.dilation,
+            test.groups,
+            test.has_bias
+          );
+
+          layer.weight = new Tensor(test.weight, { requires_grad: true });
+          if (test.has_bias) {
+            layer.bias = new Tensor(test.bias, { requires_grad: true });
+          }
+
+          const x = new Tensor(test.input, { requires_grad: true });
+
+          const out = layer.forward(x);
+          assertDeepCloseTo(out.toArray(), test.expected_output);
+
+          out.sum().backward();
+
+          assertDeepCloseTo(x.grad.toArray(), test.expected_grad_input);
+          assertDeepCloseTo(layer.weight.grad.toArray(), test.expected_grad_weight);
+          if (test.has_bias) {
+            assertDeepCloseTo(layer.bias.grad.toArray(), test.expected_grad_bias);
+          }
+        });
+      });
+    });
   });
 
   describe('Optimizers', () => {
