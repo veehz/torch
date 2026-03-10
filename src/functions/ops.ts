@@ -5,7 +5,7 @@ import {
   _pad_shape,
   _unbroadcast
 } from '../broadcasting';
-import { TorchFunction, BinaryFunction, nullOp } from './base';
+import { TorchFunction, BinaryFunction, nullOp, resultRequiresGrad } from './base';
 import * as functional from './functional';
 import { registerOperation } from './registry';
 import { ones } from '../creation';
@@ -135,7 +135,7 @@ function _powint_tensor(a: Tensor, n: number, operation: TorchFunction | null = 
   }
   return new Tensor(
     data,
-    { requires_grad: a.requires_grad },
+    { requires_grad: resultRequiresGrad(a) },
     { operation: operation, shape: a.shape }
   );
 }
@@ -143,13 +143,14 @@ function _powint_tensor(a: Tensor, n: number, operation: TorchFunction | null = 
 class PowInt extends TorchFunction {
   private n: number;
   protected _forward(a: Tensor, n: number): Tensor {
-    if (a.requires_grad) {
+    const rg = resultRequiresGrad(a);
+    if (rg) {
       this.saved_tensors = [a];
       this.n = n;
     }
 
     this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _powint_tensor(a, n, a.requires_grad ? this : null);
+    return _powint_tensor(a, n, rg ? this : null);
   }
   protected _backward(dz: Tensor): void {
     const [a] = this.saved_tensors;
@@ -251,7 +252,8 @@ class Reshape extends TorchFunction {
       throw new Error('Shape mismatch: ' + a.shape + ' and ' + shape);
     }
 
-    if (a.requires_grad) {
+    const rg = resultRequiresGrad(a);
+    if (rg) {
       this.saved_tensors = [a];
     }
     if (a.grad_fn) {
@@ -262,8 +264,8 @@ class Reshape extends TorchFunction {
 
     return new Tensor(
       a.data,
-      { requires_grad: a.requires_grad },
-      { operation: a.requires_grad ? this : null, shape }
+      { requires_grad: rg },
+      { operation: rg ? this : null, shape }
     );
   }
   protected _backward(dz: Tensor) {
@@ -278,7 +280,8 @@ registerOperation('reshape', Reshape);
 
 class Squeeze extends TorchFunction {
   protected _forward(a: Tensor, dim?: number) {
-    if (a.requires_grad) {
+    const rg = resultRequiresGrad(a);
+    if (rg) {
       this.saved_tensors = [a];
     }
     if (a.grad_fn) {
@@ -305,8 +308,8 @@ class Squeeze extends TorchFunction {
 
     return new Tensor(
       a.data,
-      { requires_grad: a.requires_grad },
-      { operation: a.requires_grad ? this : null, shape }
+      { requires_grad: rg },
+      { operation: rg ? this : null, shape }
     );
   }
 
@@ -323,7 +326,8 @@ registerOperation('squeeze', Squeeze);
 
 class Unsqueeze extends TorchFunction {
   protected _forward(a: Tensor, dim: number) {
-    if (a.requires_grad) {
+    const rg = resultRequiresGrad(a);
+    if (rg) {
       this.saved_tensors = [a];
     }
     if (a.grad_fn) {
@@ -341,8 +345,8 @@ class Unsqueeze extends TorchFunction {
 
     return new Tensor(
       a.data,
-      { requires_grad: a.requires_grad },
-      { operation: a.requires_grad ? this : null, shape }
+      { requires_grad: rg },
+      { operation: rg ? this : null, shape }
     );
   }
   protected _backward(dz: Tensor) {
@@ -357,7 +361,8 @@ registerOperation('unsqueeze', Unsqueeze);
 
 class Expand extends TorchFunction {
   protected _forward(a: Tensor, expanded_shape: number[]): Tensor {
-    if (a.requires_grad) {
+    const rg = resultRequiresGrad(a);
+    if (rg) {
       this.saved_tensors = [a];
     }
     if (a.grad_fn) {
@@ -380,8 +385,8 @@ class Expand extends TorchFunction {
 
     return new Tensor(
       outData,
-      { requires_grad: a.requires_grad },
-      { operation: a.requires_grad ? this : null, shape: target_shape }
+      { requires_grad: rg },
+      { operation: rg ? this : null, shape: target_shape }
     );
   }
 
@@ -519,7 +524,7 @@ function _transpose_tensor(
 
   return new Tensor(
     data,
-    { requires_grad: a.requires_grad },
+    { requires_grad: resultRequiresGrad(a) },
     { operation: operation, shape: output_shape }
   );
 }
@@ -527,13 +532,14 @@ class Transpose extends TorchFunction {
   private dim0: number;
   private dim1: number;
   protected _forward(a: Tensor, dim0: number, dim1: number): Tensor {
-    if (a.requires_grad) {
+    const rg = resultRequiresGrad(a);
+    if (rg) {
       this.saved_tensors = [a];
       this.dim0 = dim0;
       this.dim1 = dim1;
     }
     this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-    return _transpose_tensor(a, dim0, dim1, this);
+    return _transpose_tensor(a, dim0, dim1, rg ? this : null);
   }
   protected _backward(dz: Tensor): void {
     const [a] = this.saved_tensors;
@@ -606,7 +612,7 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: TorchFunction | null = 
 
   return [new Tensor(
     data,
-    { requires_grad: a.requires_grad || b.requires_grad },
+    { requires_grad: resultRequiresGrad(a, b) },
     { operation: operation, shape: shape_after_removing_extra_dims }
   ), shape_after_removing_extra_dims];
 }
@@ -615,12 +621,13 @@ class Matmul extends BinaryFunction {
   private shape: number[];
 
   protected _forward(a: Tensor, b: Tensor): Tensor {
-    if (a.requires_grad || b.requires_grad) {
+    const rg = resultRequiresGrad(a, b);
+    if (rg) {
       this.saved_tensors = [a, b];
     }
     this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
     this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-    const result = _matmul_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
+    const result = _matmul_tensor(a, b, rg ? this : null);
     this.shape = result[1];
     return result[0];
   }
@@ -943,7 +950,8 @@ class Conv1dOp extends TorchFunction {
     dilation: number | number[] = 1,
     groups: number = 1
   ): Tensor {
-    if (input.requires_grad || weight.requires_grad || bias?.requires_grad) {
+    const rg = resultRequiresGrad(input, weight, ...(bias ? [bias] : []));
+    if (rg) {
       this.saved_tensors = [input, weight];
       if (bias) this.saved_tensors.push(bias);
     }
@@ -957,8 +965,8 @@ class Conv1dOp extends TorchFunction {
     this.groups = groups;
 
     const res = _convNd_forward(input, weight, bias, stride, padding, dilation, groups, 1);
-    res.requires_grad = input.requires_grad || weight.requires_grad || (bias?.requires_grad ?? false);
-    res.grad_fn = res.requires_grad ? this : null;
+    res.requires_grad = rg;
+    res.grad_fn = rg ? this : null;
     return res;
   }
 
@@ -995,7 +1003,8 @@ class Conv2dOp extends TorchFunction {
     dilation: number | number[] = 1,
     groups: number = 1
   ): Tensor {
-    if (input.requires_grad || weight.requires_grad || bias?.requires_grad) {
+    const rg = resultRequiresGrad(input, weight, ...(bias ? [bias] : []));
+    if (rg) {
       this.saved_tensors = [input, weight];
       if (bias) this.saved_tensors.push(bias);
     }
@@ -1009,8 +1018,8 @@ class Conv2dOp extends TorchFunction {
     this.groups = groups;
 
     const res = _convNd_forward(input, weight, bias, stride, padding, dilation, groups, 2);
-    res.requires_grad = input.requires_grad || weight.requires_grad || (bias?.requires_grad ?? false);
-    res.grad_fn = res.requires_grad ? this : null;
+    res.requires_grad = rg;
+    res.grad_fn = rg ? this : null;
     return res;
   }
 
@@ -1047,7 +1056,8 @@ class Conv3dOp extends TorchFunction {
     dilation: number | number[] = 1,
     groups: number = 1
   ): Tensor {
-    if (input.requires_grad || weight.requires_grad || bias?.requires_grad) {
+    const rg = resultRequiresGrad(input, weight, ...(bias ? [bias] : []));
+    if (rg) {
       this.saved_tensors = [input, weight];
       if (bias) this.saved_tensors.push(bias);
     }
@@ -1061,8 +1071,8 @@ class Conv3dOp extends TorchFunction {
     this.groups = groups;
 
     const res = _convNd_forward(input, weight, bias, stride, padding, dilation, groups, 3);
-    res.requires_grad = input.requires_grad || weight.requires_grad || (bias?.requires_grad ?? false);
-    res.grad_fn = res.requires_grad ? this : null;
+    res.requires_grad = rg;
+    res.grad_fn = rg ? this : null;
     return res;
   }
 

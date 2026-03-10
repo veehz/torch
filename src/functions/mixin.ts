@@ -4,7 +4,7 @@ import {
   _get_original_index,
   _pad_shape
 } from '../broadcasting';
-import { TorchFunction, BinaryFunction, UnaryFunction, nullOp } from './base';
+import { TorchFunction, BinaryFunction, UnaryFunction, nullOp, resultRequiresGrad } from './base';
 import { registerOperation } from './registry';
 import { _get_reduction_shape, _get_strides, _ravel_index, _unravel_index } from './util';
 
@@ -46,7 +46,7 @@ export function BinaryFunctionMixin(
         broadcast_shape,
         output_size
       ) as number[],
-      { requires_grad: a.requires_grad || b.requires_grad },
+      { requires_grad: resultRequiresGrad(a, b) },
       { operation: operation, shape: broadcast_shape }
     );
   };
@@ -54,12 +54,13 @@ export function BinaryFunctionMixin(
   const result = {
     [opName]: class extends BinaryFunction {
       protected _forward(a: Tensor, b: Tensor): Tensor {
-        if (a.requires_grad || b.requires_grad) {
+        const rg = resultRequiresGrad(a, b);
+        if (rg) {
           this.saved_tensors = [a, b];
         }
         this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
         this.next_functions.push(b.grad_fn ? b.grad_fn : nullOp);
-        return forward_tensor(a, b, a.requires_grad || b.requires_grad ? this : null);
+        return forward_tensor(a, b, rg ? this : null);
       }
 
       protected _backward(dz: Tensor): void {
@@ -93,7 +94,7 @@ export function UnaryFunctionMixin(
 
     return new Tensor(
       kernel(a.data, output_size) as number[],
-      { requires_grad: a.requires_grad },
+      { requires_grad: resultRequiresGrad(a) },
       { operation: operation, shape: a.shape }
     );
   };
@@ -101,11 +102,12 @@ export function UnaryFunctionMixin(
   const result = {
     [opName]: class extends UnaryFunction {
       protected _forward(a: Tensor): Tensor {
-        if (a.requires_grad) {
+        const rg = resultRequiresGrad(a);
+        if (rg) {
           this.saved_tensors = [a];
         }
         this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
-        return forward_tensor(a, a.requires_grad ? this : null);
+        return forward_tensor(a, rg ? this : null);
       }
 
       protected _backward(dz: Tensor): void {
@@ -143,7 +145,8 @@ export function ReductionFunctionMixin(
         this.dim = dim;
         this.keepdim = keepdim;
 
-        if (a.requires_grad) {
+        const rg = resultRequiresGrad(a);
+        if (rg) {
           this.saved_tensors = [a];
         }
         this.next_functions.push(a.grad_fn ? a.grad_fn : nullOp);
@@ -193,8 +196,8 @@ export function ReductionFunctionMixin(
 
         return new Tensor(
           res_data,
-          { requires_grad: a.requires_grad },
-          { operation: a.requires_grad ? this : null, shape: out_shape }
+          { requires_grad: rg },
+          { operation: rg ? this : null, shape: out_shape }
         );
       }
 

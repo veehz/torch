@@ -1,4 +1,4 @@
-import { AccumulateGrad, TorchFunction } from './functions/base';
+import { AccumulateGrad, TorchFunction, resultRequiresGrad } from './functions/base';
 import { getOperation, getOperationCache } from './functions/registry';
 import { getNextId, eventBus, events } from './util';
 
@@ -120,7 +120,7 @@ export class Tensor {
   }
 
   private _executeUnaryOp(opName: string): Tensor {
-    const operation = this.requires_grad ? new (getOperation(opName))() : getOperationCache(opName);
+    const operation = resultRequiresGrad(this) ? new (getOperation(opName))() : getOperationCache(opName);
     return operation.forward(this);
   }
 
@@ -128,7 +128,7 @@ export class Tensor {
     if (typeof other == 'number') {
       other = new Tensor(other);
     }
-    const operation = this.requires_grad || other.requires_grad ? new (getOperation(opName))() : getOperationCache(opName);
+    const operation = resultRequiresGrad(this, other) ? new (getOperation(opName))() : getOperationCache(opName);
     return operation.forward(this, other);
   }
 

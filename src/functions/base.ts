@@ -1,9 +1,11 @@
 import { _unbroadcast } from '../broadcasting';
 import { zeros_like } from '../creation';
+import { is_grad_enabled } from '../grad_mode';
 import { Tensor } from '../tensor';
 import { eventBus, getNextId, events } from '../util';
 
-function resultRequiresGrad(...args: (Tensor | number | number[] | boolean)[]): boolean {
+export function resultRequiresGrad(...args: (Tensor | number | number[] | boolean)[]): boolean {
+  if (!is_grad_enabled()) return false;
   for (const arg of args) {
     if (arg instanceof Tensor && arg.requires_grad) {
       return true;
