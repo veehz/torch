@@ -10,7 +10,7 @@ export default defineConfig(eslint.configs.recommended, tseslint.configs.recomme
       'warn',
       {
         argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
+        varsIgnorePattern: '(^_)|(^[A-Z])',
         caughtErrorsIgnorePattern: '^_',
         ignoreRestSiblings: true
       }

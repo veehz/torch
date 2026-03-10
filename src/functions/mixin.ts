@@ -10,7 +10,7 @@ import { _get_reduction_shape, _get_strides, _ravel_index, _unravel_index } from
 
 export function BinaryFunctionMixin(
   operation: (a: number[], b: number[], a_index: number, b_index: number) => number,
-  backward_operations: (a, b, aFn, bFn, dz) => void,
+  backward_operations: (a?: Tensor, b?: Tensor, aFn?: TorchFunction, bFn?: TorchFunction, dz?: Tensor) => void,
   opName: string | null = null
 ): typeof BinaryFunction {
   const kernel = (
@@ -79,7 +79,7 @@ export function BinaryFunctionMixin(
 
 export function UnaryFunctionMixin(
   operation: (a: number[], x: number) => number,
-  backward_operations: (a, aFn, dz) => void,
+  backward_operations: (a?: Tensor, aFn?: TorchFunction, dz?: Tensor) => void,
   opName: string | null = null
 ): typeof UnaryFunction {
   const kernel = (a: number[], output_size: number) => {

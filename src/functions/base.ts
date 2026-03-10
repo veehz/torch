@@ -58,10 +58,10 @@ abstract class TorchFunction {
 }
 
 class NullOp extends TorchFunction {
-  protected _forward(...args: (Tensor | number | number[])[]): Tensor {
+  protected _forward(..._args: (Tensor | number | number[])[]): Tensor {
     throw new Error('NullOp should not be called');
   }
-  protected _backward(dz: Tensor): void {
+  protected _backward(_dz: Tensor): void {
     return;
   }
 }

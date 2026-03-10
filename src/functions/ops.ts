@@ -24,14 +24,14 @@ function broadcast(tensor: Tensor, result_shape: number[]): Tensor {
 // debug operations
 
 const __Left_index__ = BinaryFunctionMixin(
-  (a: number[], b: number[], a_index: number, b_index: number) => a_index,
-  (a, b, aFn, bFn, dz) => { },
+  (a: number[], b: number[], a_index: number, _b_index: number) => a_index,
+  () => { },
   "__left_index__"
 );
 
 const __Right_index__ = BinaryFunctionMixin(
-  (a: number[], b: number[], a_index: number, b_index: number) => b_index,
-  (a, b, aFn, bFn, dz) => { },
+  (a: number[], b: number[], _a_index: number, b_index: number) => b_index,
+  () => { },
   "__right_index__"
 );
 
@@ -39,7 +39,7 @@ const __Right_index__ = BinaryFunctionMixin(
 
 const Add = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => a[a_index] + b[b_index],
-  (a, b, aFn, bFn, dz) => {
+  (_a, _b, aFn, bFn, dz) => {
     aFn.backward(dz);
     bFn.backward(dz);
   },
@@ -48,7 +48,7 @@ const Add = BinaryFunctionMixin(
 
 const Sub = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => a[a_index] - b[b_index],
-  (a, b, aFn, bFn, dz) => {
+  (_a, _b, aFn, bFn, dz) => {
     aFn.backward(dz);
     bFn.backward(dz.mul(new Tensor(-1)));
   },
@@ -96,7 +96,7 @@ const Pow = BinaryFunctionMixin(
 
 const Fmod = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => a[a_index] % b[b_index],
-  (a, b, aFn, bFn, dz) => {
+  (_a, _b, aFn, _bFn, dz) => {
     aFn.backward(dz);
   },
   "fmod"
@@ -207,7 +207,7 @@ const Abs = UnaryFunctionMixin(
 
 const Sign = UnaryFunctionMixin(
   (a: number[], x: number) => Math.sign(a[x]),
-  (a, aFn, dz) => {
+  (_a, aFn) => {
     aFn.backward(0);
   },
   "sign"
@@ -272,7 +272,6 @@ class Reshape extends TorchFunction {
     const [a] = this.saved_tensors;
     const [aFn] = this.next_functions;
 
-    // backward_operations:
     aFn.backward(dz.reshape(a.shape));
   }
 }
@@ -542,7 +541,7 @@ class Transpose extends TorchFunction {
     return _transpose_tensor(a, dim0, dim1, rg ? this : null);
   }
   protected _backward(dz: Tensor): void {
-    const [a] = this.saved_tensors;
+    // const [a] = this.saved_tensors;
     const dim0 = this.dim0;
     const dim1 = this.dim1;
     const [aFn] = this.next_functions;
@@ -1099,36 +1098,36 @@ registerOperation('conv3d', Conv3dOp);
 
 const Lt = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => (a[a_index] < b[b_index]) ? 1 : 0,
-  (a, b, aFn, bFn) => { },
+  () => { },
   "lt"
 );
 
 const Gt = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => (a[a_index] > b[b_index]) ? 1 : 0,
-  (a, b, aFn, bFn) => { },
+  () => { },
   "gt"
 );
 
 const Le = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => (a[a_index] <= b[b_index]) ? 1 : 0,
-  (a, b, aFn, bFn) => { },
+  () => { },
   "le"
 );
 
 const Ge = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => (a[a_index] >= b[b_index]) ? 1 : 0,
-  (a, b, aFn, bFn) => { },
+  () => { },
   "ge"
 );
 
 const Eq = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => (a[a_index] == b[b_index]) ? 1 : 0,
-  (a, b, aFn, bFn) => { },
+  () => { },
   "eq"
 );
 
 const Ne = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => (a[a_index] != b[b_index]) ? 1 : 0,
-  (a, b, aFn, bFn) => { },
+  () => { },
   "ne"
 );
