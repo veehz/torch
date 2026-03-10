@@ -91,7 +91,7 @@ abstract class _ConvNd extends Module {
       throw new Error('out_channels must be divisible by groups');
     }
 
-    let kernel_arr = typeof kernel_size === 'number' ? new Array(dims).fill(kernel_size) : kernel_size;
+    const kernel_arr = typeof kernel_size === 'number' ? new Array(dims).fill(kernel_size) : kernel_size;
     const kernel_vol = kernel_arr.reduce((a: number, b: number) => a * b, 1);
 
     const k = Math.sqrt(groups / (in_channels * kernel_vol));

@@ -1,9 +1,7 @@
 import { Tensor } from '../tensor';
 import {
   _broadcast_shape,
-  _get_original_index_from_transposed_index,
   _get_original_index,
-  _get_original_index_kernel,
   _pad_shape
 } from '../broadcasting';
 import { TorchFunction, BinaryFunction, UnaryFunction, nullOp } from './base';
@@ -212,7 +210,7 @@ export function ReductionFunctionMixin(
           restored_dz = dz.reshape(target_shape);
         }
 
-        let expanded_dz = restored_dz.expand(a.shape);
+        const expanded_dz = restored_dz.expand(a.shape);
         const grad_a = backward_operations(a, expanded_dz, this.dim, this.keepdim);
 
         aFn.backward(grad_a);

@@ -1,4 +1,3 @@
-import { _get_original_index } from './broadcasting';
 import { AccumulateGrad, TorchFunction } from './functions/base';
 import { getOperation, getOperationCache } from './functions/registry';
 import { getNextId, eventBus, events } from './util';
@@ -97,7 +96,7 @@ export class Tensor {
     let flatIndex = 0;
     const flatData = this.data;
 
-    const buildDimension = (currentDim: number): any[] => {
+    const buildDimension = (currentDim: number): NestedNumberArray => {
       const size = this.shape[currentDim];
       const result = new Array(size);
       const isLastDimension = currentDim === this.shape.length - 1;

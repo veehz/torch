@@ -4,12 +4,16 @@ import eslint from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
-export default defineConfig(
-  eslint.configs.recommended,
-  tseslint.configs.recommended,
-  {
-    rules: {
-      '@typescript-eslint/no-unused-vars': 'warn', // was error
-    },
-  },
-);
+export default defineConfig(eslint.configs.recommended, tseslint.configs.recommended, {
+  rules: {
+    '@typescript-eslint/no-unused-vars': [
+      'warn',
+      {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+        ignoreRestSiblings: true
+      }
+    ]
+  }
+});

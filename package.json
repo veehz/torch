@@ -35,6 +35,7 @@
     "build": "yarn clean && concurrently \"yarn build:node\" \"yarn build:browser\" \"yarn build:types\"",
     "dev": "concurrently \"yarn:build:browser:watch\" \"yarn:build:node:watch\" \"yarn:test:watch\" \"yarn:serve\"",
     "docs": "typedoc --out docs src",
+    "lint": "eslint src",
     "serve": "http-server -p 8080 -c-1",
     "test": "mocha test/**/*.test.ts test/**/*.test.js",
     "test:watch": "mocha --watch test/**/*.test.ts test/**/*.test.js --watch-files build",

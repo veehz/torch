@@ -1,4 +1,4 @@
-import { _get_original_index, _pad_shape, _unbroadcast } from '../broadcasting';
+import { _unbroadcast } from '../broadcasting';
 import { zeros_like } from '../creation';
 import { Tensor } from '../tensor';
 import { eventBus, getNextId, events } from '../util';

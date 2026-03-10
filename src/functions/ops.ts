@@ -1,9 +1,7 @@
 import { Tensor } from '../tensor';
 import {
   _broadcast_shape,
-  _get_original_index_from_transposed_index,
   _get_original_index,
-  _get_original_index_kernel,
   _pad_shape,
   _unbroadcast
 } from '../broadcasting';
@@ -550,8 +548,8 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: TorchFunction | null = 
     const m = Math.floor(mn_idx / dim_N);
     const n = mn_idx % dim_N;
 
-    let base_a = _get_original_index(padded_a_shape, broadcast_shape, i - n);
-    let base_b = _get_original_index(padded_b_shape, broadcast_shape, i - m * dim_N);
+    const base_a = _get_original_index(padded_a_shape, broadcast_shape, i - n);
+    const base_b = _get_original_index(padded_b_shape, broadcast_shape, i - m * dim_N);
 
     let sum = 0;
     for (let k = 0; k < dim_K; k++) {
@@ -658,9 +656,9 @@ function _convNd_forward(
   groups: number,
   dims: number
 ): Tensor {
-  let stride_arr = typeof stride === 'number' ? new Array(dims).fill(stride) : stride;
-  let padding_arr = typeof padding === 'number' ? new Array(dims).fill(padding) : padding;
-  let dilation_arr = typeof dilation === 'number' ? new Array(dims).fill(dilation) : dilation;
+  const stride_arr = typeof stride === 'number' ? new Array(dims).fill(stride) : stride;
+  const padding_arr = typeof padding === 'number' ? new Array(dims).fill(padding) : padding;
+  const dilation_arr = typeof dilation === 'number' ? new Array(dims).fill(dilation) : dilation;
 
   const batch_size = input.shape[0];
   const in_channels = input.shape[1];
@@ -780,9 +778,9 @@ function _convNd_backward(
   input_requires_grad: boolean,
   weight_requires_grad: boolean
 ): [Tensor | null, Tensor | null, Tensor | null] {
-  let stride_arr = typeof stride === 'number' ? new Array(dims).fill(stride) : stride;
-  let padding_arr = typeof padding === 'number' ? new Array(dims).fill(padding) : padding;
-  let dilation_arr = typeof dilation === 'number' ? new Array(dims).fill(dilation) : dilation;
+  const stride_arr = typeof stride === 'number' ? new Array(dims).fill(stride) : stride;
+  const padding_arr = typeof padding === 'number' ? new Array(dims).fill(padding) : padding;
+  const dilation_arr = typeof dilation === 'number' ? new Array(dims).fill(dilation) : dilation;
 
   const batch_size = input.shape[0];
   const in_channels = input.shape[1];

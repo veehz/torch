@@ -47,7 +47,7 @@ export class SGD extends Optimizer {
           this.state.set(param, { velocity: g });
         }
 
-        let buf = this.state.get(param)!.velocity;
+        const buf = this.state.get(param)!.velocity;
 
         if (this.nesterov) {
           g = g.add(buf.mul(this.momentum));
