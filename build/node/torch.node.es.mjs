@@ -371,7 +371,7 @@ function N(s) {
 function k(s) {
   return (e, t) => (typeof e == "number" && (e = new h(e)), typeof t == "number" && (t = new h(t)), new (V(s))().forward(e, t));
 }
-const Mt = k("__left_index__"), Bt = k("__right_index__"), Ct = k("add"), Tt = k("sub"), Ut = k("mul"), Lt = k("div"), It = k("pow"), St = k("fmod"), zt = k("maximum"), Dt = k("minimum"), Pt = N("log"), Wt = N("sqrt"), Nt = N("exp"), $t = N("square"), Gt = N("abs"), Je = N("sign"), jt = N("neg"), Kt = N("reciprocal"), Vt = H("reshape"), Ht = H("squeeze"), Jt = H("unsqueeze"), Qt = H("expand"), Xt = N("sin"), Yt = N("cos"), Zt = N("tan"), es = H("sum"), ts = H("mean"), ss = H("min"), rs = H("max"), ns = H("transpose"), as = k("matmul"), is = k("lt"), os = k("gt"), us = k("le"), ds = k("ge"), cs = k("eq"), hs = k("ne");
+const Mt = k("__left_index__"), Bt = k("__right_index__"), Ct = k("add"), Tt = k("sub"), Ut = k("mul"), Lt = k("div"), It = k("pow"), St = k("fmod"), zt = k("maximum"), Dt = k("minimum"), Pt = N("log"), Wt = N("sqrt"), Nt = N("exp"), $t = N("square"), Gt = N("abs"), Je = N("sign"), jt = N("neg"), Kt = N("reciprocal"), Vt = H("reshape"), Ht = H("squeeze"), Jt = H("unsqueeze"), Qt = H("expand"), Xt = N("sin"), Yt = N("cos"), Zt = N("tan"), es = H("sum"), ts = H("mean"), ss = H("min"), rs = H("max"), ns = H("transpose"), as = k("matmul"), is = k("lt"), os = k("gt"), us = k("le"), cs = k("ge"), ds = k("eq"), hs = k("ne");
 function Re(s) {
   const e = new Array(s.length).fill(1);
   for (let t = s.length - 2; t >= 0; t--)
@@ -393,26 +393,26 @@ function we(s, e, t = !1) {
   return t ? s.map((i, a) => n.includes(a) ? 1 : i) : s.filter((i, a) => !n.includes(a));
 }
 function F(s, e, t = null) {
-  const r = (a, o, u, d, c, l) => {
+  const r = (a, o, u, c, d, l) => {
     const _ = Array(l);
     for (let f = 0; f < l; f++) {
-      const E = ue(o, c, f), x = ue(d, c, f);
+      const E = ue(o, d, f), x = ue(c, d, f);
       _[f] = s(a, u, E, x);
     }
     return _;
   }, n = (a, o, u = null) => {
-    const d = Me(a.shape, o.shape), c = oe(a.shape, d), l = oe(o.shape, d), _ = d.reduce((f, E) => f * E, 1);
+    const c = Me(a.shape, o.shape), d = oe(a.shape, c), l = oe(o.shape, c), _ = c.reduce((f, E) => f * E, 1);
     return new h(
       r(
         a.data,
-        c,
+        d,
         o.data,
         l,
-        d,
+        c,
         _
       ),
       { requires_grad: a.requires_grad || o.requires_grad },
-      { operation: u, shape: d }
+      { operation: u, shape: c }
     );
   }, i = {
     [t]: class extends Le {
@@ -420,8 +420,8 @@ function F(s, e, t = null) {
         return (a.requires_grad || o.requires_grad) && (this.saved_tensors = [a, o]), this.next_functions.push(a.grad_fn ? a.grad_fn : w), this.next_functions.push(o.grad_fn ? o.grad_fn : w), n(a, o, a.requires_grad || o.requires_grad ? this : null);
       }
       _backward(a) {
-        const [o, u] = this.saved_tensors, [d, c] = this.next_functions;
-        e(o, u, d, c, a);
+        const [o, u] = this.saved_tensors, [c, d] = this.next_functions;
+        e(o, u, c, d, a);
       }
     }
   }[t];
@@ -430,8 +430,8 @@ function F(s, e, t = null) {
 function S(s, e, t = null) {
   const r = (a, o) => {
     const u = Array(o);
-    for (let d = 0; d < o; d++)
-      u[d] = s(a, d);
+    for (let c = 0; c < o; c++)
+      u[c] = s(a, c);
     return u;
   }, n = (a, o = null) => {
     const u = a.dataLength();
@@ -460,7 +460,7 @@ function ge(s, e, t, r = null, n) {
       keepdim;
       _forward(a, o, u = !1) {
         this.dim = o, this.keepdim = u, a.requires_grad && (this.saved_tensors = [a]), this.next_functions.push(a.grad_fn ? a.grad_fn : w);
-        const d = we(a.shape, o, u), c = d.reduce((p, C) => p * C, 1), l = new Array(c).fill(s), _ = new Array(c).fill(0), f = Re(a.shape), E = Re(d), y = (o === void 0 ? [] : Array.isArray(o) ? o : [o]).map((p) => p < 0 ? p + a.shape.length : p), z = o === void 0;
+        const c = we(a.shape, o, u), d = c.reduce((p, C) => p * C, 1), l = new Array(d).fill(s), _ = new Array(d).fill(0), f = Re(a.shape), E = Re(c), y = (o === void 0 ? [] : Array.isArray(o) ? o : [o]).map((p) => p < 0 ? p + a.shape.length : p), z = o === void 0;
         for (let p = 0; p < a.data.length; p++) {
           const C = Qe(p, f);
           let R;
@@ -475,21 +475,20 @@ function ge(s, e, t, r = null, n) {
           l[T] = e(l[T], a.data[p]), _[T]++;
         }
         if (n)
-          for (let p = 0; p < c; p++)
+          for (let p = 0; p < d; p++)
             l[p] = n(l[p], _[p]);
         return new h(
           l,
           { requires_grad: a.requires_grad },
-          { operation: a.requires_grad ? this : null, shape: d }
+          { operation: a.requires_grad ? this : null, shape: c }
         );
       }
       _backward(a) {
         const [o] = this.saved_tensors, [u] = this.next_functions;
-        let d = a;
-        const c = we(o.shape, this.dim, !0);
-        a.shape.length !== c.length && (d = a.reshape(c));
-        let l = d.expand(o.shape);
-        const _ = t(o, l, this.dim, this.keepdim);
+        let c = a;
+        const d = we(o.shape, this.dim, !0);
+        a.shape.length !== d.length && (c = a.reshape(d));
+        const l = c.expand(o.shape), _ = t(o, l, this.dim, this.keepdim);
         u.backward(_);
       }
     }
@@ -778,19 +777,19 @@ function at(s, e, t, r = null) {
   const n = [...s.shape];
   [n[e], n[t]] = [n[t], n[e]];
   const i = s.dataLength(), a = new Array(i), o = new Array(s.shape.length), u = new Array(n.length);
-  for (let d = s.shape.length - 1, c = 1; d >= 0; d--)
-    o[d] = c, c *= s.shape[d];
-  for (let d = n.length - 1, c = 1; d >= 0; d--)
-    u[d] = c, c *= n[d];
-  for (let d = 0; d < i; d++) {
-    let c = d, l = 0;
+  for (let c = s.shape.length - 1, d = 1; c >= 0; c--)
+    o[c] = d, d *= s.shape[c];
+  for (let c = n.length - 1, d = 1; c >= 0; c--)
+    u[c] = d, d *= n[c];
+  for (let c = 0; c < i; c++) {
+    let d = c, l = 0;
     for (let _ = 0; _ < n.length; _++) {
-      const f = u[_], E = Math.floor(c / f);
-      c %= f;
+      const f = u[_], E = Math.floor(d / f);
+      d %= f;
       let x = _;
       _ === e ? x = t : _ === t && (x = e), l += E * o[x];
     }
-    a[d] = s.data[l];
+    a[c] = s.data[l];
   }
   return new h(
     a,
@@ -819,17 +818,17 @@ function ot(s, e, t = null) {
   const o = Me(i.slice(0, -2), a.slice(0, -2)).concat([
     i[i.length - 2],
     a[a.length - 1]
-  ]), u = o.reduce((y, z) => y * z, 1), d = new Array(u).fill(0), c = oe(i, o), l = oe(a, o), _ = o[o.length - 2], f = o[o.length - 1], E = i[i.length - 1];
+  ]), u = o.reduce((y, z) => y * z, 1), c = new Array(u).fill(0), d = oe(i, o), l = oe(a, o), _ = o[o.length - 2], f = o[o.length - 1], E = i[i.length - 1];
   for (let y = 0; y < u; y++) {
-    const z = y % (_ * f), p = Math.floor(z / f), C = z % f;
-    let R = ue(c, o, y - C), T = ue(l, o, y - p * f), M = 0;
+    const z = y % (_ * f), p = Math.floor(z / f), C = z % f, R = ue(d, o, y - C), T = ue(l, o, y - p * f);
+    let M = 0;
     for (let D = 0; D < E; D++)
       M += s.data[R + D] * e.data[T + D * f];
-    d[y] = M;
+    c[y] = M;
   }
   let x = [...o];
   return r && (x = x.slice(0, -2).concat([o[o.length - 1]])), n && (x = x.slice(0, -1)), [new h(
-    d,
+    c,
     { requires_grad: s.requires_grad || e.requires_grad },
     { operation: t, shape: x }
   ), x];
@@ -848,15 +847,15 @@ class ut extends Le {
       return;
     }
     if (t.shape.length === 1) {
-      const u = e.unsqueeze(-2), d = t.unsqueeze(-2);
-      let c = u.matmul(r.transpose(-2, -1)), l = d.transpose(-2, -1).matmul(u);
-      c = c.squeeze(-2), l = ie(l, r.shape), n.backward(c), i.backward(l);
+      const u = e.unsqueeze(-2), c = t.unsqueeze(-2);
+      let d = u.matmul(r.transpose(-2, -1)), l = c.transpose(-2, -1).matmul(u);
+      d = d.squeeze(-2), l = ie(l, r.shape), n.backward(d), i.backward(l);
       return;
     }
     if (r.shape.length === 1) {
-      const u = e.unsqueeze(-1), d = r.unsqueeze(-1);
-      let c = u.matmul(d.transpose(-2, -1)), l = t.transpose(-2, -1).matmul(u);
-      c = ie(c, t.shape), l = l.squeeze(-1), n.backward(c), i.backward(l);
+      const u = e.unsqueeze(-1), c = r.unsqueeze(-1);
+      let d = u.matmul(c.transpose(-2, -1)), l = t.transpose(-2, -1).matmul(u);
+      d = ie(d, t.shape), l = l.squeeze(-1), n.backward(d), i.backward(l);
       return;
     }
     let a = e.matmul(r.transpose(-2, -1)), o = t.transpose(-2, -1).matmul(e);
@@ -865,11 +864,10 @@ class ut extends Le {
 }
 I("matmul", ut);
 function xe(s, e, t, r, n, i, a, o) {
-  let u = typeof r == "number" ? new Array(o).fill(r) : r, d = typeof n == "number" ? new Array(o).fill(n) : n, c = typeof i == "number" ? new Array(o).fill(i) : i;
-  const l = s.shape[0], _ = s.shape[1], f = e.shape[0], E = s.shape.slice(2), x = e.shape.slice(2);
+  const u = typeof r == "number" ? new Array(o).fill(r) : r, c = typeof n == "number" ? new Array(o).fill(n) : n, d = typeof i == "number" ? new Array(o).fill(i) : i, l = s.shape[0], _ = s.shape[1], f = e.shape[0], E = s.shape.slice(2), x = e.shape.slice(2);
   if (_ !== e.shape[1] * a)
     throw new Error(`in_channels (${_}) must be divisible by groups (${a}) and match weight.shape[1] * groups (${e.shape[1] * a})`);
-  const y = E.map((B, v) => Math.floor((B + 2 * d[v] - c[v] * (x[v] - 1) - 1) / u[v] + 1)), z = [l, f, ...y], p = z.reduce((B, v) => B * v, 1), C = new Array(p).fill(0), R = (B) => {
+  const y = E.map((B, v) => Math.floor((B + 2 * c[v] - d[v] * (x[v] - 1) - 1) / u[v] + 1)), z = [l, f, ...y], p = z.reduce((B, v) => B * v, 1), C = new Array(p).fill(0), R = (B) => {
     const v = new Array(B.length);
     let $ = 1;
     for (let W = B.length - 1; W >= 0; W--)
@@ -879,8 +877,8 @@ function xe(s, e, t, r, n, i, a, o) {
   for (let B = 0; B < l; B++)
     for (let v = 0; v < a; v++)
       for (let $ = 0; $ < ne; $++) {
-        const W = v * ne + $, de = y.reduce((A, O) => A * O, 1);
-        for (let A = 0; A < de; A++) {
+        const W = v * ne + $, ce = y.reduce((A, O) => A * O, 1);
+        for (let A = 0; A < ce; A++) {
           const O = new Array(o);
           let G = A;
           for (let m = o - 1; m >= 0; m--)
@@ -896,7 +894,7 @@ function xe(s, e, t, r, n, i, a, o) {
               let he = !0;
               const le = new Array(o);
               for (let g = 0; g < o; g++) {
-                const P = O[g] * u[g] + Q[g] * c[g] - d[g];
+                const P = O[g] * u[g] + Q[g] * d[g] - c[g];
                 if (P < 0 || P >= E[g]) {
                   he = !1;
                   break;
@@ -912,16 +910,15 @@ function xe(s, e, t, r, n, i, a, o) {
               }
             }
           }
-          let ce = B * D[0] + W * D[1];
-          for (let m = 0; m < o; m++) ce += O[m] * D[m + 2];
-          C[ce] = j;
+          let de = B * D[0] + W * D[1];
+          for (let m = 0; m < o; m++) de += O[m] * D[m + 2];
+          C[de] = j;
         }
       }
   return new h(C, { requires_grad: !1 }, { shape: z });
 }
-function be(s, e, t, r, n, i, a, o, u, d, c) {
-  let l = typeof n == "number" ? new Array(u).fill(n) : n, _ = typeof i == "number" ? new Array(u).fill(i) : i, f = typeof a == "number" ? new Array(u).fill(a) : a;
-  const E = e.shape[0], x = e.shape[1], y = t.shape[0], z = e.shape.slice(2), p = t.shape.slice(2), C = s.shape.slice(2), R = (A) => {
+function be(s, e, t, r, n, i, a, o, u, c, d) {
+  const l = typeof n == "number" ? new Array(u).fill(n) : n, _ = typeof i == "number" ? new Array(u).fill(i) : i, f = typeof a == "number" ? new Array(u).fill(a) : a, E = e.shape[0], x = e.shape[1], y = t.shape[0], z = e.shape.slice(2), p = t.shape.slice(2), C = s.shape.slice(2), R = (A) => {
     const O = new Array(A.length);
     let G = 1;
     for (let j = A.length - 1; j >= 0; j--)
@@ -929,13 +926,13 @@ function be(s, e, t, r, n, i, a, o, u, d, c) {
     return O;
   }, T = R(e.shape), M = R(t.shape), D = R(s.shape);
   let re = null, ne = null, B = null, v = null, $ = null;
-  d && (v = new Array(e.dataLength()).fill(0)), c && ($ = new Array(t.dataLength()).fill(0));
-  const W = x / o, de = y / o;
+  c && (v = new Array(e.dataLength()).fill(0)), d && ($ = new Array(t.dataLength()).fill(0));
+  const W = x / o, ce = y / o;
   for (let A = 0; A < E; A++)
     for (let O = 0; O < o; O++)
-      for (let G = 0; G < de; G++) {
-        const j = O * de + G, ce = C.reduce((m, ee) => m * ee, 1);
-        for (let m = 0; m < ce; m++) {
+      for (let G = 0; G < ce; G++) {
+        const j = O * ce + G, de = C.reduce((m, ee) => m * ee, 1);
+        for (let m = 0; m < de; m++) {
           const ee = new Array(u);
           let ae = m;
           for (let b = u - 1; b >= 0; b--)
@@ -965,20 +962,20 @@ function be(s, e, t, r, n, i, a, o, u, d, c) {
                 for (let K = 0; K < u; K++) q += ke[K] * T[K + 2];
                 let te = j * M[0] + b * M[1];
                 for (let K = 0; K < u; K++) te += P[K] * M[K + 2];
-                d && (v[q] += Q * t.data[te]), c && ($[te] += Q * e.data[q]);
+                c && (v[q] += Q * t.data[te]), d && ($[te] += Q * e.data[q]);
               }
             }
           }
         }
       }
-  if (d && (re = new h(v, { requires_grad: !1 }, { shape: e.shape })), c && (ne = new h($, { requires_grad: !1 }, { shape: t.shape })), r && r.requires_grad) {
+  if (c && (re = new h(v, { requires_grad: !1 }, { shape: e.shape })), d && (ne = new h($, { requires_grad: !1 }, { shape: t.shape })), r && r.requires_grad) {
     const A = [0];
     for (let O = 2; O < s.shape.length; O++) A.push(O);
     B = s.sum(A);
   }
   return [re, ne, B];
 }
-class dt extends L {
+class ct extends L {
   stride;
   padding;
   dilation;
@@ -989,7 +986,7 @@ class dt extends L {
     return u.requires_grad = e.requires_grad || t.requires_grad || (r?.requires_grad ?? !1), u.grad_fn = u.requires_grad ? this : null, u;
   }
   _backward(e) {
-    const t = this.saved_tensors[0], r = this.saved_tensors[1], n = this.saved_tensors.length > 2 ? this.saved_tensors[2] : null, [i, a, o] = this.next_functions, [u, d, c] = be(
+    const t = this.saved_tensors[0], r = this.saved_tensors[1], n = this.saved_tensors.length > 2 ? this.saved_tensors[2] : null, [i, a, o] = this.next_functions, [u, c, d] = be(
       e,
       t,
       r,
@@ -1002,11 +999,11 @@ class dt extends L {
       t.requires_grad,
       r.requires_grad
     );
-    t.requires_grad && i.backward(u), r.requires_grad && a.backward(d), n && n.requires_grad && o.backward(c);
+    t.requires_grad && i.backward(u), r.requires_grad && a.backward(c), n && n.requires_grad && o.backward(d);
   }
 }
-I("conv1d", dt);
-class ct extends L {
+I("conv1d", ct);
+class dt extends L {
   stride;
   padding;
   dilation;
@@ -1017,7 +1014,7 @@ class ct extends L {
     return u.requires_grad = e.requires_grad || t.requires_grad || (r?.requires_grad ?? !1), u.grad_fn = u.requires_grad ? this : null, u;
   }
   _backward(e) {
-    const t = this.saved_tensors[0], r = this.saved_tensors[1], n = this.saved_tensors.length > 2 ? this.saved_tensors[2] : null, [i, a, o] = this.next_functions, [u, d, c] = be(
+    const t = this.saved_tensors[0], r = this.saved_tensors[1], n = this.saved_tensors.length > 2 ? this.saved_tensors[2] : null, [i, a, o] = this.next_functions, [u, c, d] = be(
       e,
       t,
       r,
@@ -1030,10 +1027,10 @@ class ct extends L {
       t.requires_grad,
       r.requires_grad
     );
-    t.requires_grad && i.backward(u), r.requires_grad && a.backward(d), n && n.requires_grad && o.backward(c);
+    t.requires_grad && i.backward(u), r.requires_grad && a.backward(c), n && n.requires_grad && o.backward(d);
   }
 }
-I("conv2d", ct);
+I("conv2d", dt);
 class ht extends L {
   stride;
   padding;
@@ -1045,7 +1042,7 @@ class ht extends L {
     return u.requires_grad = e.requires_grad || t.requires_grad || (r?.requires_grad ?? !1), u.grad_fn = u.requires_grad ? this : null, u;
   }
   _backward(e) {
-    const t = this.saved_tensors[0], r = this.saved_tensors[1], n = this.saved_tensors.length > 2 ? this.saved_tensors[2] : null, [i, a, o] = this.next_functions, [u, d, c] = be(
+    const t = this.saved_tensors[0], r = this.saved_tensors[1], n = this.saved_tensors.length > 2 ? this.saved_tensors[2] : null, [i, a, o] = this.next_functions, [u, c, d] = be(
       e,
       t,
       r,
@@ -1058,7 +1055,7 @@ class ht extends L {
       t.requires_grad,
       r.requires_grad
     );
-    t.requires_grad && i.backward(u), r.requires_grad && a.backward(d), n && n.requires_grad && o.backward(c);
+    t.requires_grad && i.backward(u), r.requires_grad && a.backward(c), n && n.requires_grad && o.backward(d);
   }
 }
 I("conv3d", ht);
@@ -1254,15 +1251,14 @@ class ye extends se {
   padding;
   dilation;
   groups;
-  constructor(e, t, r, n, i, a, o, u, d) {
+  constructor(e, t, r, n, i, a, o, u, c) {
     if (super(), this.in_channels = e, this.out_channels = t, this.kernel_size = r, this.stride = n, this.padding = i, this.dilation = a, this.groups = o, e % o !== 0)
       throw new Error("in_channels must be divisible by groups");
     if (t % o !== 0)
       throw new Error("out_channels must be divisible by groups");
-    let c = typeof r == "number" ? new Array(d).fill(r) : r;
-    const l = c.reduce((f, E) => f * E, 1), _ = Math.sqrt(o / (e * l));
+    const d = typeof r == "number" ? new Array(c).fill(r) : r, l = d.reduce((f, E) => f * E, 1), _ = Math.sqrt(o / (e * l));
     this.weight = new Z(
-      fe([t, e / o, ...c]).mul(2 * _).sub(_)
+      fe([t, e / o, ...d]).mul(2 * _).sub(_)
     ), this.register("weight", this.weight), u ? (this.bias = new Z(
       fe([t]).mul(2 * _).sub(_)
     ), this.register("bias", this.bias)) : this.bias = null;
@@ -1339,7 +1335,7 @@ class yt extends Ae {
           i = i.mul(this.momentum), i = i.add(t.mul(1 - this.dampening)), this.state.set(e, { velocity: i });
         } else
           this.state.set(e, { velocity: t });
-        let n = this.state.get(e).velocity;
+        const n = this.state.get(e).velocity;
         this.nesterov ? t = t.add(n.mul(this.momentum)) : t = n, this.state.set(e, { velocity: n });
       }
       const r = e.sub(t.mul(this.lr));
@@ -1375,8 +1371,8 @@ class At extends Ae {
       let a;
       const o = r.m.div(n);
       this.amsgrad ? (r.vmax = r.vmax.maximum(r.v), a = r.vmax.div(i)) : a = r.v.div(i);
-      const u = o.div(a.sqrt().add(this.eps)).mul(this.lr), d = e.sub(u);
-      e.data = d.data;
+      const u = o.div(a.sqrt().add(this.eps)).mul(this.lr), c = e.sub(u);
+      e.data = c.data;
     }
   }
 }
@@ -1401,13 +1397,13 @@ export {
   Rt as arange,
   Yt as cos,
   Lt as div,
-  cs as eq,
+  ds as eq,
   X as eventBus,
   Y as events,
   Nt as exp,
   Qt as expand,
   St as fmod,
-  ds as ge,
+  cs as ge,
   os as gt,
   us as le,
   Ft as linspace,

@@ -1,4 +1,4 @@
-import { Tensor } from '../tensor';
+import { Tensor } from "../tensor";
 declare abstract class Loss {
     abstract forward(input: Tensor, target: Tensor): Tensor;
 }

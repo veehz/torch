@@ -1,4 +1,4 @@
-import { Parameter } from '../nn/base';
+import { Parameter } from "../nn/base";
 export declare abstract class Optimizer {
     params: Parameter[];
     defaults: {

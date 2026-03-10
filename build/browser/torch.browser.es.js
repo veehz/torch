@@ -530,8 +530,7 @@ function ke(s, e, t, r = null, n) {
         let d = a;
         const h = Re(o.shape, this.dim, !0);
         a.shape.length !== h.length && (d = a.reshape(h));
-        let _ = d.expand(o.shape);
-        const f = t(o, _, this.dim, this.keepdim);
+        const _ = d.expand(o.shape), f = t(o, _, this.dim, this.keepdim);
         u.backward(f);
       }
     }
@@ -860,8 +859,8 @@ function ns(s, e, t = null) {
     a[a.length - 1]
   ]), u = o.reduce((A, S) => A * S, 1), d = new Array(u).fill(0), h = ce(i, o), _ = ce(a, o), f = o[o.length - 2], p = o[o.length - 1], R = i[i.length - 1];
   for (let A = 0; A < u; A++) {
-    const S = A % (f * p), g = Math.floor(S / p), D = S % p;
-    let M = de(h, o, A - D), W = de(_, o, A - g * p), B = 0;
+    const S = A % (f * p), g = Math.floor(S / p), D = S % p, M = de(h, o, A - D), W = de(_, o, A - g * p);
+    let B = 0;
     for (let z = 0; z < R; z++)
       B += s.data[M + z] * e.data[W + z * p];
     d[A] = B;
@@ -907,8 +906,7 @@ c(ht, "Matmul");
 let We = ht;
 P("matmul", We);
 function Xe(s, e, t, r, n, i, a, o) {
-  let u = typeof r == "number" ? new Array(o).fill(r) : r, d = typeof n == "number" ? new Array(o).fill(n) : n, h = typeof i == "number" ? new Array(o).fill(i) : i;
-  const _ = s.shape[0], f = s.shape[1], p = e.shape[0], R = s.shape.slice(2), b = e.shape.slice(2);
+  const u = typeof r == "number" ? new Array(o).fill(r) : r, d = typeof n == "number" ? new Array(o).fill(n) : n, h = typeof i == "number" ? new Array(o).fill(i) : i, _ = s.shape[0], f = s.shape[1], p = e.shape[0], R = s.shape.slice(2), b = e.shape.slice(2);
   if (f !== e.shape[1] * a)
     throw new Error(`in_channels (${f}) must be divisible by groups (${a}) and match weight.shape[1] * groups (${e.shape[1] * a})`);
   const A = R.map((T, v) => Math.floor((T + 2 * d[v] - h[v] * (b[v] - 1) - 1) / u[v] + 1)), S = [_, p, ...A], g = S.reduce((T, v) => T * v, 1), D = new Array(g).fill(0), M = /* @__PURE__ */ c((T) => {
@@ -963,8 +961,7 @@ function Xe(s, e, t, r, n, i, a, o) {
 }
 c(Xe, "_convNd_forward");
 function Ye(s, e, t, r, n, i, a, o, u, d, h) {
-  let _ = typeof n == "number" ? new Array(u).fill(n) : n, f = typeof i == "number" ? new Array(u).fill(i) : i, p = typeof a == "number" ? new Array(u).fill(a) : a;
-  const R = e.shape[0], b = e.shape[1], A = t.shape[0], S = e.shape.slice(2), g = t.shape.slice(2), D = s.shape.slice(2), M = /* @__PURE__ */ c((k) => {
+  const _ = typeof n == "number" ? new Array(u).fill(n) : n, f = typeof i == "number" ? new Array(u).fill(i) : i, p = typeof a == "number" ? new Array(u).fill(a) : a, R = e.shape[0], b = e.shape[1], A = t.shape[0], S = e.shape.slice(2), g = t.shape.slice(2), D = s.shape.slice(2), M = /* @__PURE__ */ c((k) => {
     const O = new Array(k.length);
     let L = 1;
     for (let G = k.length - 1; G >= 0; G--)
@@ -1322,8 +1319,7 @@ const At = class At extends te {
       throw new Error("in_channels must be divisible by groups");
     if (t % o !== 0)
       throw new Error("out_channels must be divisible by groups");
-    let h = typeof r == "number" ? new Array(d).fill(r) : r;
-    const _ = h.reduce((p, R) => p * R, 1), f = Math.sqrt(o / (e * _));
+    const h = typeof r == "number" ? new Array(d).fill(r) : r, _ = h.reduce((p, R) => p * R, 1), f = Math.sqrt(o / (e * _));
     this.weight = new ee(
       xe([t, e / o, ...h]).mul(2 * f).sub(f)
     ), this.register("weight", this.weight), u ? (this.bias = new ee(
@@ -1411,7 +1407,7 @@ const Ft = class Ft extends _e {
           i = i.mul(this.momentum), i = i.add(t.mul(1 - this.dampening)), this.state.set(e, { velocity: i });
         } else
           this.state.set(e, { velocity: t });
-        let n = this.state.get(e).velocity;
+        const n = this.state.get(e).velocity;
         this.nesterov ? t = t.add(n.mul(this.momentum)) : t = n, this.state.set(e, { velocity: n });
       }
       const r = e.sub(t.mul(this.lr));

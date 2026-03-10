@@ -1,3 +1,4 @@
+import './ops';
 export * from './base';
 export * from './loss';
 export * from './module';

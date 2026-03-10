@@ -1,5 +1,5 @@
-import { Module, Parameter } from './base';
-import { Tensor } from '../tensor';
+import { Module, Parameter } from "./base";
+import { Tensor } from "../tensor";
 export declare class Linear extends Module {
     private weight;
     private bias;
