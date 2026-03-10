@@ -16,6 +16,7 @@
   "types": "./build/types/src/index.d.ts",
   "exports": {
     ".": {
+      "torch-src": "./src/index.ts",
       "types": "./build/types/src/index.d.ts",
       "browser": "./build/browser/torch.browser.es.js",
       "import": "./build/node/torch.node.es.mjs",
@@ -37,14 +38,25 @@
     "docs": "typedoc --out docs src",
     "lint": "eslint src",
     "serve": "http-server -p 8080 -c-1",
-    "test": "mocha test/**/*.test.ts test/**/*.test.js",
-    "test:watch": "mocha --watch test/**/*.test.ts test/**/*.test.js --watch-files build",
+    "test": "mocha --node-option conditions=torch-src test/**/*.test.ts test/**/*.test.js",
+    "test:build": "mocha test/**/*.test.ts test/**/*.test.js",
+    "test:coverage": "c8 mocha --node-option conditions=torch-src test/**/*.test.ts test/**/*.test.js",
+    "test:watch": "mocha --node-option conditions=torch-src --watch test/**/*.test.ts test/**/*.test.js",
     "update-tests": "python3 scripts/generate_tests.py > test/testcases.gen.js"
+  },
+  "scriptsComments": {
+    "build": "Builds the library for browser and node.",
+    "dev": "Starts a dev session. Watch and build, test, and serve on localhost:8080",
+    "test": "Tests on code in src/",
+    "test:build": "Tests on built library in build/",
+    "test:coverage": "Provide test coverage",
+    "update-tests": "Updates test using scripts/generate_tests.py to test/testcases.gen.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^24.6.2",
+    "c8": "^11.0.0",
     "chai": "^6.2.0",
     "concurrently": "^9.2.1",
     "eslint": "^9.37.0",
