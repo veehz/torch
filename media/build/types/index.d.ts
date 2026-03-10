@@ -1,4 +1,5 @@
 export * from './tensor';
+export { no_grad, enable_no_grad, disable_no_grad, is_grad_enabled } from './grad_mode';
 export { TorchFunction, AccumulateGrad } from './functions/base';
 export * from './functions/ops';
 export * from './functions/functional';

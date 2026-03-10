@@ -1,4 +1,5 @@
 import { Tensor } from '../tensor';
+export declare function resultRequiresGrad(...args: (Tensor | number | number[] | boolean)[]): boolean;
 declare abstract class TorchFunction {
     id: number;
     next_functions: TorchFunction[];
