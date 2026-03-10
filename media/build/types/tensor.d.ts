@@ -46,6 +46,7 @@ export declare class Tensor {
     sign(): Tensor;
     neg(): Tensor;
     reciprocal(): Tensor;
+    nan_to_num(): Tensor;
     reshape(shape: number[]): Tensor;
     squeeze(dim: number): Tensor;
     unsqueeze(dim: number): Tensor;
