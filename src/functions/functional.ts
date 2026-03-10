@@ -60,6 +60,7 @@ export const abs = generate_unary_function('abs');
 export const sign = generate_unary_function('sign');
 export const neg = generate_unary_function('neg');
 export const reciprocal = generate_unary_function('reciprocal');
+export const nan_to_num = generate_unary_function('nan_to_num');
 export const reshape = generate_function('reshape');
 export const squeeze = generate_function('squeeze');
 export const unsqueeze = generate_function('unsqueeze');

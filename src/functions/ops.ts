@@ -73,11 +73,23 @@ const Div = BinaryFunctionMixin(
   "div"
 );
 
+function _where(mask: Tensor, x: Tensor, fallback: Tensor | number): Tensor {
+  const fb = typeof fallback === 'number' ? fallback : null;
+  const data = new Array(x.dataLength());
+  for (let i = 0; i < data.length; i++) {
+    data[i] = mask.data[i] ? x.data[i] : (fb !== null ? fb : (fallback as Tensor).data[i]);
+  }
+  return new Tensor(data, {}, { shape: x.shape });
+}
+
 const Pow = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => Math.pow(a[a_index], b[b_index]),
   (a, b, aFn, bFn, dz) => {
-    aFn.backward(dz.mul(b).mul(a.pow(b.sub(new Tensor(1)))));
-    bFn.backward(dz.mul(a.pow(b)).mul(a.log()));
+    const ga = dz.mul(b).mul(a.pow(b.sub(new Tensor(1))));
+    const gb = dz.mul(a.pow(b)).mul(a.log());
+    // When a==0, grads can produce NaN/Inf (from 0*Inf or log(0)); replace with 0
+    aFn.backward(_where(a.ne(0), ga, ga.nan_to_num()));
+    bFn.backward(_where(a.ne(0), gb, 0));
   },
   "pow"
 );
@@ -93,8 +105,12 @@ const Fmod = BinaryFunctionMixin(
 const Maximum = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => Math.max(a[a_index], b[b_index]),
   (a, b, aFn, bFn, dz) => {
-    aFn.backward(dz.mul(a.ge(b)));
-    bFn.backward(dz.mul(b.gt(a)));
+    // When a == b, PyTorch splits gradient 0.5 each
+    const eq_mask = a.eq(b);
+    const a_mask = a.gt(b).add(eq_mask.mul(new Tensor(0.5)));
+    const b_mask = b.gt(a).add(eq_mask.mul(new Tensor(0.5)));
+    aFn.backward(dz.mul(a_mask));
+    bFn.backward(dz.mul(b_mask));
   },
   "maximum"
 );
@@ -102,8 +118,12 @@ const Maximum = BinaryFunctionMixin(
 const Minimum = BinaryFunctionMixin(
   (a: number[], b: number[], a_index: number, b_index: number) => Math.min(a[a_index], b[b_index]),
   (a, b, aFn, bFn, dz) => {
-    aFn.backward(dz.mul(a.le(b)));
-    bFn.backward(dz.mul(b.lt(a)));
+    // When a == b, PyTorch splits gradient 0.5 each
+    const eq_mask = a.eq(b);
+    const a_mask = a.lt(b).add(eq_mask.mul(new Tensor(0.5)));
+    const b_mask = b.lt(a).add(eq_mask.mul(new Tensor(0.5)));
+    aFn.backward(dz.mul(a_mask));
+    bFn.backward(dz.mul(b_mask));
   },
   "minimum"
 );
@@ -206,6 +226,20 @@ const Reciprocal = UnaryFunctionMixin(
     aFn.backward(dz.mul(dz.mul(a.pow(-2))).neg());
   },
   "reciprocal"
+);
+
+const NanToNum = UnaryFunctionMixin(
+  (a: number[], x: number) => {
+    const v = a[x];
+    if (Number.isNaN(v)) return 0;
+    if (v === Infinity) return 3.4028235e+38;
+    if (v === -Infinity) return -3.4028235e+38;
+    return v;
+  },
+  (a, aFn, dz) => {
+    aFn.backward(dz);
+  },
+  "nan_to_num"
 );
 
 class Reshape extends TorchFunction {

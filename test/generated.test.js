@@ -3,17 +3,19 @@ import { Tensor } from 'torch';
 import { assert } from 'chai';
 import { testData } from './testcases.gen.js';
 
-function assertDeepCloseTo(actual, expected, delta = 1e-3, first_call = true) {
+function assertDeepCloseTo(actual, expected, name = null, delta = 1e-3, first_call = true) {
   if (Array.isArray(expected)) {
     assert.lengthOf(actual, expected.length, 'Array lengths do not match');
     for (let i = 0; i < expected.length; i++) {
-      assertDeepCloseTo(actual[i], expected[i], delta, false);
+      assertDeepCloseTo(actual[i], expected[i], name, delta, false);
     }
   } else {
     if (Number.isNaN(expected)) {
-      assert.isTrue(Number.isNaN(actual), `Expected NaN but got ${actual}`);
+      assert.isTrue(Number.isNaN(actual), `${name}: Expected NaN but got ${actual}`);
+    } else if(!Number.isFinite(expected)) {
+      assert.equal(actual, expected, `${name}: Expected ${expected} but got ${actual}`);
     } else {
-      assert.closeTo(actual, expected, delta);
+      assert.closeTo(actual, expected, delta, `${name}: Expected ${expected} but got ${actual}`);
     }
   }
 }
@@ -26,9 +28,9 @@ describe('Automated Tests', () => {
           it(`case ${idx + 1}`, () => {
             const x = new Tensor(test.input, { requires_grad: true });
             const y = x[opName]();
-            assertDeepCloseTo(y.toArray(), test.expected_output);
+            assertDeepCloseTo(y.toArray(), test.expected_output, `${opName} output`);
             y.sum().backward();
-            assertDeepCloseTo(x.grad.toArray(), test.expected_grad);
+            assertDeepCloseTo(x.grad.toArray(), test.expected_grad, `${opName} grad`);
           });
         });
       });
@@ -43,10 +45,10 @@ describe('Automated Tests', () => {
             const x = new Tensor(test.input_x, { requires_grad: true });
             const y = new Tensor(test.input_y, { requires_grad: true });
             const out = x[opName](y);
-            assertDeepCloseTo(out.toArray(), test.expected_output);
+            assertDeepCloseTo(out.toArray(), test.expected_output, `${opName} output`);
             out.sum().backward();
-            assertDeepCloseTo(x.grad.toArray(), test.expected_grad_x);
-            assertDeepCloseTo(y.grad.toArray(), test.expected_grad_y);
+            assertDeepCloseTo(x.grad.toArray(), test.expected_grad_x, `${opName} grad x`);
+            assertDeepCloseTo(y.grad.toArray(), test.expected_grad_y, `${opName} grad y`);
           });
         });
       });
@@ -61,10 +63,10 @@ describe('Automated Tests', () => {
 
         const out = x[test.op_name](y);
 
-        assertDeepCloseTo(out.toArray(), test.expected_output);
+        assertDeepCloseTo(out.toArray(), test.expected_output, `${test.test_name} output`);
         out.sum().backward();
-        assertDeepCloseTo(x.grad.toArray(), test.expected_grad_x);
-        assertDeepCloseTo(y.grad.toArray(), test.expected_grad_y);
+        assertDeepCloseTo(x.grad.toArray(), test.expected_grad_x, `${test.test_name} grad x`);
+        assertDeepCloseTo(y.grad.toArray(), test.expected_grad_y, `${test.test_name} grad y`);
       });
     });
   });
@@ -77,10 +79,10 @@ describe('Automated Tests', () => {
 
         const out = x.matmul(y);
 
-        assertDeepCloseTo(out.toArray(), test.expected_output);
+        assertDeepCloseTo(out.toArray(), test.expected_output, `${test.test_name} output`);
         out.sum().backward();
-        assertDeepCloseTo(x.grad.toArray(), test.expected_grad_x);
-        assertDeepCloseTo(y.grad.toArray(), test.expected_grad_y);
+        assertDeepCloseTo(x.grad.toArray(), test.expected_grad_x, `${test.test_name} grad x`);
+        assertDeepCloseTo(y.grad.toArray(), test.expected_grad_y, `${test.test_name} grad y`);
       });
     });
   });
@@ -95,9 +97,9 @@ describe('Automated Tests', () => {
         } else {
           out = x[test.op_name](test.dim, test.keepdim);
         }
-        assertDeepCloseTo(out.toArray(), test.expected_output);
+        assertDeepCloseTo(out.toArray(), test.expected_output, `${test.test_name} output`);
         out.sum().backward();
-        assertDeepCloseTo(x.grad.toArray(), test.expected_grad);
+        assertDeepCloseTo(x.grad.toArray(), test.expected_grad, `${test.test_name} grad`);
       });
     });
   });
@@ -115,13 +117,13 @@ describe('Automated Tests', () => {
           const x = new Tensor(test.input, { requires_grad: true });
 
           const out = layer.forward(x);
-          assertDeepCloseTo(out.toArray(), test.expected_output);
+          assertDeepCloseTo(out.toArray(), test.expected_output, `${test.test_name} output`);
 
           out.sum().backward();
 
-          assertDeepCloseTo(x.grad.toArray(), test.expected_grad_input);
-          assertDeepCloseTo(layer.weight.grad.toArray(), test.expected_grad_weight);
-          assertDeepCloseTo(layer.bias.grad.toArray(), test.expected_grad_bias);
+          assertDeepCloseTo(x.grad.toArray(), test.expected_grad_input, `${test.test_name} grad input`);
+          assertDeepCloseTo(layer.weight.grad.toArray(), test.expected_grad_weight, `${test.test_name} grad weight`);
+          assertDeepCloseTo(layer.bias.grad.toArray(), test.expected_grad_bias, `${test.test_name} grad bias`);
         });
       });
     });
@@ -149,14 +151,14 @@ describe('Automated Tests', () => {
           const x = new Tensor(test.input, { requires_grad: true });
 
           const out = layer.forward(x);
-          assertDeepCloseTo(out.toArray(), test.expected_output);
+          assertDeepCloseTo(out.toArray(), test.expected_output, `${test.test_name} output`);
 
           out.sum().backward();
 
-          assertDeepCloseTo(x.grad.toArray(), test.expected_grad_input);
-          assertDeepCloseTo(layer.weight.grad.toArray(), test.expected_grad_weight);
+          assertDeepCloseTo(x.grad.toArray(), test.expected_grad_input, `${test.test_name} grad input`);
+          assertDeepCloseTo(layer.weight.grad.toArray(), test.expected_grad_weight, `${test.test_name} grad weight`);
           if (test.has_bias) {
-            assertDeepCloseTo(layer.bias.grad.toArray(), test.expected_grad_bias);
+            assertDeepCloseTo(layer.bias.grad.toArray(), test.expected_grad_bias, `${test.test_name} grad bias`);
           }
         });
       });
@@ -198,11 +200,11 @@ describe('Automated Tests', () => {
         const loss = w.mul(x).sum();
         loss.backward();
 
-        assertDeepCloseTo(w.grad.toArray(), test.expected_grad);
+        assertDeepCloseTo(w.grad.toArray(), test.expected_grad, `${test.test_name} grad`);
 
         optimizer.step();
 
-        assertDeepCloseTo(w.toArray(), test.expected_updated_weight);
+        assertDeepCloseTo(w.toArray(), test.expected_updated_weight, `${test.test_name} updated weight`);
       });
     });
   });
@@ -212,9 +214,9 @@ describe('Automated Tests', () => {
       it(test.test_name, () => {
         const x = new Tensor(test.input, { requires_grad: true });
         const out = x.expand(test.expand_shape);
-        assertDeepCloseTo(out.toArray(), test.expected_output);
+        assertDeepCloseTo(out.toArray(), test.expected_output, `${test.test_name} output`);
         out.sum().backward();
-        assertDeepCloseTo(x.grad.toArray(), test.expected_grad);
+        assertDeepCloseTo(x.grad.toArray(), test.expected_grad, `${test.test_name} grad`);
       });
     });
   });

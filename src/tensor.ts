@@ -264,6 +264,10 @@ export class Tensor {
     return this._executeUnaryOp('reciprocal');
   }
 
+  nan_to_num(): Tensor {
+    return this._executeUnaryOp('nan_to_num');
+  }
+
   reshape(shape: number[]): Tensor {
     return this._executeOpRaw('reshape', shape);
   }

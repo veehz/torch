@@ -10,6 +10,11 @@ def generate_unary_tests(op_name, num_tests=3):
     tests = []
     for i in range(num_tests):
         x = torch.randn(3, 3, requires_grad=True)
+        with torch.no_grad():
+            x[0, 0] = 0
+            x[0, 1] = 1
+            x[0, 2] = -1
+
         torch_op = getattr(torch, op_name)
         y = torch_op(x)
         y.sum().backward()
@@ -24,8 +29,15 @@ def generate_unary_tests(op_name, num_tests=3):
 def generate_binary_tests(op_name, num_tests=3):
     tests = []
     for i in range(num_tests):
-        x = torch.randn(3, 3, requires_grad=True)
-        y = torch.randn(3, 3, requires_grad=True)
+        x = torch.randn(4, 4, requires_grad=True)
+        y = torch.randn(4, 4, requires_grad=True)
+        with torch.no_grad():
+            x[0:2, 0] = 0
+            x[0:2, 1] = 1
+            x[0:2, 2] = -1
+            y[0, 0:2] = 0
+            y[1, 0:2] = 1
+            y[2, 0:2] = -1
 
         torch_op = getattr(torch, op_name)
         out = torch_op(x, y)
