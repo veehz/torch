@@ -36,7 +36,7 @@
     "generate": "python3 scripts/generate.py",
     "serve": "http-server -p 8080 -c-1",
     "test": "mocha test/**/*.test.ts test/**/*.test.js",
-    "test:watch": "mocha --watch test/**/*.test.ts test/**/*.test.js",
+    "test:watch": "mocha --watch test/**/*.test.ts test/**/*.test.js --watch-files build",
     "update-tests": "python3 scripts/generate_tests.py > test/testcases.gen.js",
     "watch": "concurrently \"yarn:build:browser:watch\" \"yarn:build:node:watch\" \"yarn:test:watch\""
   },

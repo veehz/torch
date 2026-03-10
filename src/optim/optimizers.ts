@@ -1,5 +1,5 @@
 import { Optimizer } from "./base";
-import { Parameter } from "../nn/module";
+import { Parameter } from "../nn/base";
 import { Tensor } from "../tensor";
 import { zeros_like } from "../creation";
 
