@@ -31,14 +31,14 @@
     "build:browser:watch": "vite build --config vite.config.browser.ts --watch",
     "build:node": "vite build --config vite.config.node.ts",
     "build:node:watch": "vite build --config vite.config.node.ts --watch",
-    "build": "yarn clean && yarn build:node && yarn build:browser",
+    "build:types": "tsc -p tsconfig.build.json",
+    "build": "yarn clean && concurrently \"yarn build:node\" \"yarn build:browser\" \"yarn build:types\"",
+    "dev": "concurrently \"yarn:build:browser:watch\" \"yarn:build:node:watch\" \"yarn:test:watch\" \"yarn:serve\"",
     "docs": "typedoc --out docs src",
-    "generate": "python3 scripts/generate.py",
     "serve": "http-server -p 8080 -c-1",
     "test": "mocha test/**/*.test.ts test/**/*.test.js",
     "test:watch": "mocha --watch test/**/*.test.ts test/**/*.test.js --watch-files build",
-    "update-tests": "python3 scripts/generate_tests.py > test/testcases.gen.js",
-    "watch": "concurrently \"yarn:build:browser:watch\" \"yarn:build:node:watch\" \"yarn:test:watch\""
+    "update-tests": "python3 scripts/generate_tests.py > test/testcases.gen.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",

@@ -1,13 +1,7 @@
 import { defineConfig } from 'vite';
 import path from 'path';
-import dts from 'vite-plugin-dts';
 
 export default defineConfig({
-  plugins: [
-    dts({
-      outDir: 'build/types'
-    })
-  ],
   build: {
     minify: true,
     sourcemap: true,
@@ -25,7 +19,10 @@ export default defineConfig({
         inlineDynamicImports: false,
         minifyInternalExports: false,
       }
-    }
+    },
+    watch: {
+      include: 'src/**',
+    },
   },
   esbuild: {
     keepNames: true,
