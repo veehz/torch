@@ -3,7 +3,7 @@ import { UnaryFunctionMixin } from '../functions/mixin';
 const Relu = UnaryFunctionMixin(
   (a: number[], x: number) => Math.max(a[x], 0),
   (a, aFn, dz) => {
-    aFn.backward(dz.mul(dz.mul(a.gt(0))));
+    aFn.backward(dz.mul(a.gt(0)));
   },
   "relu"
 );

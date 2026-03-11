@@ -181,6 +181,22 @@ describe('Automated Tests', () => {
         });
       });
     });
+
+    describe('Activation Functions', () => {
+      testData.activations?.forEach(test => {
+        it(test.test_name, () => {
+          const activation = new torch.nn[test.activation_type]();
+
+          const input = new Tensor(test.input, { requires_grad: true });
+
+          const output = activation.forward(input);
+          assertDeepCloseTo(output.toArray(), test.expected_output, `${test.test_name} output`);
+
+          output.sum().backward();
+          assertDeepCloseTo(input.grad.toArray(), test.expected_grad_input, `${test.test_name} grad input`);
+        });
+      });
+    });
   });
 
   describe('Optimizers', () => {
