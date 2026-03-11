@@ -23,13 +23,13 @@ jobs:
         - name: Install dependencies
           run: yarn install --immutable
 
-        - name: Test on src/
+        - name: Test on src/ and get test coverage
           run: yarn test:coverage
 
         - name: Build
           run: yarn build
 
-        - name: Test on build/
+        - name: Test on build/ to check minification does not break functionality
           run: yarn test:build
 
         - name: Build docs
@@ -59,7 +59,7 @@ jobs:
           uses: peaceiris/actions-gh-pages@v4
           with:
             github_token: ${{ secrets.GITHUB_TOKEN }}
-            publish_dir: ./docs # The folder the action should deploy.
+            publish_dir: ./docs
 
         - name: Publish package
           run: yarn pkg-pr-new publish
