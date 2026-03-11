@@ -30,7 +30,7 @@ function ct(s, t, e) {
 function mt(s) {
   return Array.isArray(s[0]) ? s[0] : s;
 }
-function $e(...s) {
+function Ue(...s) {
   const t = mt(s), e = new l(Array(t.reduce((n, r) => n * r, 1)).fill(Math.random()));
   return e.shape = t, e;
 }
@@ -38,13 +38,13 @@ function pt(...s) {
   const t = mt(s), e = new l(Array(t.reduce((n, r) => n * r, 1)).fill(Math.random()));
   return e.shape = t, e;
 }
-function ze(s, t, e) {
+function $e(s, t, e) {
   const n = new l(
     Array(e.reduce((r, a) => r * a, 1)).fill(Math.floor(Math.random() * (t - s) + s))
   );
   return n.shape = e, n;
 }
-function Ut(...s) {
+function zt(...s) {
   const t = mt(s), e = new l(Array(t.reduce((n, r) => n * r, 1)).fill(1));
   return e.shape = t, e;
 }
@@ -53,7 +53,7 @@ function Jt(...s) {
   return e.shape = t, e;
 }
 function Se(s) {
-  return Ut(s.shape);
+  return zt(s.shape);
 }
 function ft(s) {
   return Jt(s.shape);
@@ -90,7 +90,7 @@ function Yt(s) {
   }
 }
 let Zt = 0;
-const $t = () => Zt++, V = new EventTarget(), J = {
+const Ut = () => Zt++, V = new EventTarget(), J = {
   TENSOR_BEFORE_BACKWARD: "tensor.beforeBackward",
   TENSOR_AFTER_BACKWARD: "tensor.afterBackward",
   OPERATION_BEFORE_FORWARD: "operation.beforeForward",
@@ -108,7 +108,7 @@ function y(...s) {
   return !1;
 }
 class S {
-  id = $t();
+  id = Ut();
   opName = "";
   next_functions = [];
   saved_tensors = [];
@@ -147,11 +147,11 @@ class te extends S {
   }
 }
 const v = new te();
-class zt extends S {
+class $t extends S {
 }
 class St extends S {
 }
-class Rt extends zt {
+class Rt extends $t {
   variable;
   _forward(t) {
     return this.variable = t, t;
@@ -201,7 +201,7 @@ function Lt(s) {
 }
 class l {
   // Auto-generated ID
-  id = $t();
+  id = Ut();
   // Optional user-defined name
   name = null;
   data;
@@ -460,7 +460,7 @@ function C(s, t, e = null) {
   }[e];
   return e && P(e, a), a;
 }
-function $(s, t, e = null) {
+function U(s, t, e = null) {
   const n = (o, i) => {
     const u = Array(i);
     for (let c = 0; c < i; c++)
@@ -474,7 +474,7 @@ function $(s, t, e = null) {
       { operation: i, shape: o.shape }
     );
   }, a = {
-    [e]: class extends zt {
+    [e]: class extends $t {
       _forward(o) {
         const i = y(o);
         return i && (this.saved_tensors = [o]), this.next_functions.push(o.grad_fn ? o.grad_fn : v), r(o, i ? this : null);
@@ -507,8 +507,8 @@ function wt(s, t, e, n = null, r) {
             for (let R = 0; R < o.shape.length; R++)
               B.includes(R) ? u && k.push(0) : k.push(E[R]);
           }
-          const U = re(k, p);
-          _[U] = t(_[U], o.data[g]), h[U]++;
+          const z = re(k, p);
+          _[z] = t(_[z], o.data[g]), h[z]++;
         }
         if (r)
           for (let g = 0; g < f; g++)
@@ -536,7 +536,7 @@ function it(s, t) {
   return new l(e, { requires_grad: s.requires_grad }, { shape: t });
 }
 function ae(s, t) {
-  return s.mul(Ut(t));
+  return s.mul(zt(t));
 }
 C(
   (s, t, e, n) => e,
@@ -637,63 +637,63 @@ class ie extends S {
   }
 }
 P("powint", ie);
-$(
+U(
   (s, t) => Math.log(s[t]),
   (s, t, e) => {
     t.backward(e.mul(new l(1).div(s)));
   },
   "log"
 );
-$(
+U(
   (s, t) => Math.sqrt(s[t]),
   (s, t, e) => {
     t.backward(e.mul(new l(1).div(s.sqrt()).div(2)));
   },
   "sqrt"
 );
-$(
+U(
   (s, t) => Math.exp(s[t]),
   (s, t, e) => {
     t.backward(e.mul(s.exp()));
   },
   "exp"
 );
-$(
+U(
   (s, t) => s[t] * s[t],
   (s, t, e) => {
     t.backward(e.mul(s).mul(new l(2)));
   },
   "square"
 );
-$(
+U(
   (s, t) => Math.abs(s[t]),
   (s, t, e) => {
     t.backward(e.mul(se(s)));
   },
   "abs"
 );
-$(
+U(
   (s, t) => Math.sign(s[t]),
   (s, t) => {
     t.backward(0);
   },
   "sign"
 );
-$(
+U(
   (s, t) => -s[t],
   (s, t, e) => {
     t.backward(e.mul(new l(-1)));
   },
   "neg"
 );
-$(
+U(
   (s, t) => 1 / s[t],
   (s, t, e) => {
     t.backward(e.mul(s.pow(-2)).neg());
   },
   "reciprocal"
 );
-$(
+U(
   (s, t) => {
     const e = s[t];
     return Number.isNaN(e) ? 0 : e === 1 / 0 ? 34028235e31 : e === -1 / 0 ? -34028235e31 : e;
@@ -778,21 +778,21 @@ class le extends S {
   }
 }
 P("expand", le);
-$(
+U(
   (s, t) => Math.sin(s[t]),
   (s, t, e) => {
     t.backward(e.mul(s.cos()));
   },
   "sin"
 );
-$(
+U(
   (s, t) => Math.cos(s[t]),
   (s, t, e) => {
     t.backward(e.mul(s.sin().neg()));
   },
   "cos"
 );
-$(
+U(
   (s, t) => Math.tan(s[t]),
   (s, t, e) => {
     t.backward(e.mul(s.cos().pow(-2)));
@@ -882,10 +882,10 @@ function fe(s, t, e = null) {
   ]), u = i.reduce((w, B) => w * B, 1), c = new Array(u).fill(0), d = ut(a, i), f = ut(o, i), _ = i[i.length - 2], h = i[i.length - 1], m = a[a.length - 1];
   for (let w = 0; w < u; w++) {
     const B = w % (_ * h), I = Math.floor(B / h), g = B % h, E = ct(d, i, w - g), k = ct(f, i, w - I * h);
-    let U = 0;
+    let z = 0;
     for (let R = 0; R < m; R++)
-      U += s.data[E + R] * t.data[k + R * h];
-    c[w] = U;
+      z += s.data[E + R] * t.data[k + R * h];
+    c[w] = z;
   }
   let p = [...i];
   return n && (p = p.slice(0, -2).concat([i[i.length - 1]])), r && (p = p.slice(0, -1)), [new l(
@@ -935,7 +935,7 @@ function bt(s, t, e, n, r, a, o, i) {
     for (let W = N.length - 1; W >= 0; W--)
       q[W] = j, j *= N[W];
     return q;
-  }, k = E(s.shape), U = E(t.shape), R = E(B), rt = _ / o, at = h / o;
+  }, k = E(s.shape), z = E(t.shape), R = E(B), rt = _ / o, at = h / o;
   for (let N = 0; N < f; N++)
     for (let q = 0; q < o; q++)
       for (let j = 0; j < at; j++) {
@@ -965,9 +965,9 @@ function bt(s, t, e, n, r, a, o, i) {
               }
               if (ht) {
                 let x = N * k[0] + et * k[1];
-                for (let z = 0; z < i; z++) x += _t[z] * k[z + 2];
-                let L = W * U[0] + b * U[1];
-                for (let z = 0; z < i; z++) L += Y[z] * U[z + 2];
+                for (let $ = 0; $ < i; $++) x += _t[$] * k[$ + 2];
+                let L = W * z[0] + b * z[1];
+                for (let $ = 0; $ < i; $++) L += Y[$] * z[$ + 2];
                 K += s.data[x] * t.data[L];
               }
             }
@@ -986,7 +986,7 @@ function vt(s, t, e, n, r, a, o, i, u, c, d) {
     for (let K = M.length - 1; K >= 0; K--)
       T[K] = G, G *= M[K];
     return T;
-  }, k = E(t.shape), U = E(e.shape), R = E(s.shape);
+  }, k = E(t.shape), z = E(e.shape), R = E(s.shape);
   let rt = null, at = null, N = null, q = null, j = null;
   c && (q = new Array(t.dataLength()).fill(0)), d && (j = new Array(e.dataLength()).fill(0));
   const W = p / i, dt = w / i;
@@ -1006,9 +1006,9 @@ function vt(s, t, e, n, r, a, o, i, u, c, d) {
             const ht = T * W + A, _t = I.reduce((x, L) => x * L, 1);
             for (let x = 0; x < _t; x++) {
               const L = new Array(u);
-              let z = x;
+              let $ = x;
               for (let O = u - 1; O >= 0; O--)
-                L[O] = z % I[O], z = Math.floor(z / I[O]);
+                L[O] = $ % I[O], $ = Math.floor($ / I[O]);
               let qt = !0;
               const Et = new Array(u);
               for (let O = 0; O < u; O++) {
@@ -1022,8 +1022,8 @@ function vt(s, t, e, n, r, a, o, i, u, c, d) {
               if (qt) {
                 let O = M * k[0] + ht * k[1];
                 for (let H = 0; H < u; H++) O += Et[H] * k[H + 2];
-                let st = K * U[0] + A * U[1];
-                for (let H = 0; H < u; H++) st += L[H] * U[H + 2];
+                let st = K * z[0] + A * z[1];
+                for (let H = 0; H < u; H++) st += L[H] * z[H + 2];
                 c && (q[O] += Y * e.data[st]), d && (j[st] += Y * t.data[O]);
               }
             }
@@ -1160,14 +1160,14 @@ C(
   },
   "ne"
 );
-$(
+U(
   (s, t) => Math.max(s[t], 0),
   (s, t, e) => {
-    t.backward(e.mul(e.mul(s.gt(0))));
+    t.backward(e.mul(s.gt(0)));
   },
   "relu"
 );
-$(
+U(
   (s, t) => 1 / (1 + Math.exp(-s[t])),
   (s, t, e) => {
     const n = s.sigmoid();
@@ -1513,7 +1513,7 @@ class Ne {
     return this.counts.set(t, e + 1), e === 0 ? t : `${t}_${e}`;
   }
 }
-class Ue {
+class ze {
   constructor(t, e, n) {
     this.graph = t, this.graph_signature = e, this.parameters = n;
   }
@@ -1616,7 +1616,7 @@ function Ts(s, t) {
       data: [...m.data],
       shape: [...m.shape]
     });
-  return new Ue(
+  return new ze(
     e,
     { input_specs: i, output_specs: f },
     _
@@ -1624,7 +1624,7 @@ function Ts(s, t) {
 }
 export {
   Rt as AccumulateGrad,
-  Ue as ExportedProgram,
+  ze as ExportedProgram,
   qs as Max,
   ks as Mean,
   Es as Min,
@@ -1666,13 +1666,13 @@ export {
   ss as neg,
   Rs as nn,
   Yt as no_grad,
-  Ut as ones,
+  zt as ones,
   Se as ones_like,
   Ms as optim,
   Ve as pow,
   pt as rand,
-  ze as randint,
-  $e as randn,
+  $e as randint,
+  Ue as randn,
   ns as reciprocal,
   as as reshape,
   se as sign,
