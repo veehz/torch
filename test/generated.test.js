@@ -163,6 +163,24 @@ describe('Automated Tests', () => {
         });
       });
     });
+
+    describe('Loss Functions', () => {
+      testData.loss?.forEach(test => {
+        it(test.test_name, () => {
+          const LossClass = torch.nn[test.loss_type];
+          const loss_fn = new LossClass();
+
+          const input = new Tensor(test.input, { requires_grad: true });
+          const target = new Tensor(test.target);
+
+          const output = loss_fn.forward(input, target);
+          assertDeepCloseTo(output.toArray(), test.expected_output, `${test.test_name} output`);
+
+          output.backward();
+          assertDeepCloseTo(input.grad.toArray(), test.expected_grad_input, `${test.test_name} grad input`);
+        });
+      });
+    });
   });
 
   describe('Optimizers', () => {

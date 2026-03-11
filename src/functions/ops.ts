@@ -184,7 +184,7 @@ const Sqrt = UnaryFunctionMixin(
 const Exp = UnaryFunctionMixin(
   (a: number[], x: number) => Math.exp(a[x]),
   (a, aFn, dz) => {
-    aFn.backward(dz.mul(dz.mul(a.exp())));
+    aFn.backward(dz.mul(a.exp()));
   },
   "exp"
 );
@@ -192,7 +192,7 @@ const Exp = UnaryFunctionMixin(
 const Square = UnaryFunctionMixin(
   (a: number[], x: number) => a[x] * a[x],
   (a, aFn, dz) => {
-    aFn.backward(dz.mul(dz.mul(a).mul(new Tensor(2))));
+    aFn.backward(dz.mul(a).mul(new Tensor(2)));
   },
   "square"
 );
@@ -200,7 +200,7 @@ const Square = UnaryFunctionMixin(
 const Abs = UnaryFunctionMixin(
   (a: number[], x: number) => Math.abs(a[x]),
   (a, aFn, dz) => {
-    aFn.backward(dz.mul(dz.mul(functional.sign(a))));
+    aFn.backward(dz.mul(functional.sign(a)));
   },
   "abs"
 );
@@ -215,8 +215,8 @@ const Sign = UnaryFunctionMixin(
 
 const Neg = UnaryFunctionMixin(
   (a: number[], x: number) => -a[x],
-  (a, aFn, dz) => {
-    aFn.backward(dz.mul(dz.mul(new Tensor(-1))));
+  (_a, aFn, dz) => {
+    aFn.backward(dz.mul(new Tensor(-1)));
   },
   "neg"
 );
@@ -224,7 +224,7 @@ const Neg = UnaryFunctionMixin(
 const Reciprocal = UnaryFunctionMixin(
   (a: number[], x: number) => 1 / a[x],
   (a, aFn, dz) => {
-    aFn.backward(dz.mul(dz.mul(a.pow(-2))).neg());
+    aFn.backward(dz.mul(a.pow(-2)).neg());
   },
   "reciprocal"
 );
@@ -404,7 +404,7 @@ registerOperation('expand', Expand)
 const Sin = UnaryFunctionMixin(
   (a: number[], x: number) => Math.sin(a[x]),
   (a, aFn, dz) => {
-    aFn.backward(dz.mul(dz.mul(a.cos())));
+    aFn.backward(dz.mul(a.cos()));
   },
   "sin"
 );
@@ -412,7 +412,7 @@ const Sin = UnaryFunctionMixin(
 const Cos = UnaryFunctionMixin(
   (a: number[], x: number) => Math.cos(a[x]),
   (a, aFn, dz) => {
-    aFn.backward(dz.mul(dz.mul(a.sin().neg())));
+    aFn.backward(dz.mul(a.sin().neg()));
   },
   "cos"
 );
@@ -420,7 +420,7 @@ const Cos = UnaryFunctionMixin(
 const Tan = UnaryFunctionMixin(
   (a: number[], x: number) => Math.tan(a[x]),
   (a, aFn, dz) => {
-    aFn.backward(dz.mul(dz.mul(a.cos().pow(-2))));
+    aFn.backward(dz.mul(a.cos().pow(-2)));
   },
   "tan"
 );
