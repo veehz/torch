@@ -1,6 +1,11 @@
 # See https://help.github.com/ignore-files/ for more about ignoring files.
 /docs
 
+.direnv
+.idea
+/test.js
+/test.py
+
 # dependencies
 /node_modules
 
@@ -52,6 +57,3 @@ yarn-error.log
 
 # We use .node-version
 /.tool-versions
-
-.direnv
-.idea
