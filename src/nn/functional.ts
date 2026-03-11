@@ -1,9 +1,9 @@
 import { Tensor } from "../tensor";
-import { getOperation } from "../functions/registry";
+import { createOperation } from "../functions/registry";
 
 function generate_function(opname: string) {
   return (...args: (Tensor | number | number[] | null)[]) => {
-    const operation = new (getOperation(opname))();
+    const operation = createOperation(opname);
     return operation.forward(...args);
   };
 }
@@ -14,7 +14,7 @@ function generate_unary_function(opname: string) {
       a = new Tensor(a);
     }
 
-    const operation = new (getOperation(opname))();
+    const operation = createOperation(opname);
     return operation.forward(a);
   };
 }

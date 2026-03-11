@@ -16,6 +16,7 @@ export function resultRequiresGrad(...args: (Tensor | number | number[] | boolea
 
 abstract class TorchFunction {
   public id: number = getNextId();
+  public opName: string = '';
   public next_functions: TorchFunction[] = [];
   public saved_tensors: Tensor[] = [];
   public _retained_tensors: Tensor[] = [];

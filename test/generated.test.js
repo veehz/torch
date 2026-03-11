@@ -220,4 +220,94 @@ describe('Automated Tests', () => {
       });
     });
   });
+  describe('Export', () => {
+    testData.export?.forEach(test => {
+      it(`export_${test.test_name}`, () => {
+        let model;
+
+        if (test.model_type === 'LinearReLU') {
+          const linear = new torch.nn.Linear(test.in_features, test.out_features);
+          linear.weight = new Tensor(test.weight, { requires_grad: true });
+          linear.bias = new Tensor(test.bias, { requires_grad: true });
+          const relu = new torch.nn.ReLU();
+          model = new torch.nn.Sequential(linear, relu);
+        } else if (test.model_type === 'TwoLayer') {
+          const linear1 = new torch.nn.Linear(test.linear1_in, test.linear1_out);
+          linear1.weight = new Tensor(test.linear1_weight, { requires_grad: true });
+          linear1.bias = new Tensor(test.linear1_bias, { requires_grad: true });
+          const relu = new torch.nn.ReLU();
+          const linear2 = new torch.nn.Linear(test.linear2_in, test.linear2_out);
+          linear2.weight = new Tensor(test.linear2_weight, { requires_grad: true });
+          linear2.bias = new Tensor(test.linear2_bias, { requires_grad: true });
+          const sigmoid = new torch.nn.Sigmoid();
+          model = new torch.nn.Sequential(linear1, relu, linear2, sigmoid);
+        }
+
+        const x = new Tensor(test.input);
+        const ep = torch.export_(model, [x]);
+
+        // Verify graph structure: must have placeholder, call_function, and output nodes
+        const placeholders = ep.graph.filter(n => n.op === 'placeholder');
+        const callFunctions = ep.graph.filter(n => n.op === 'call_function');
+        const outputs = ep.graph.filter(n => n.op === 'output');
+
+        assert.isAbove(placeholders.length, 0, 'Should have placeholder nodes');
+        assert.isAbove(callFunctions.length, 0, 'Should have call_function nodes');
+        assert.equal(outputs.length, 1, 'Should have exactly one output node');
+
+        // Verify all call_function nodes have aten.* targets
+        for (const node of callFunctions) {
+          assert.match(node.target, /^aten\./, `Target should start with aten.: ${node.target}`);
+        }
+
+        // Verify graph signature matches PyTorch's
+        // Input specs: parameters should be PARAMETER, user inputs should be USER_INPUT
+        const expectedParamSpecs = test.expected_input_specs.filter(s => s.kind === 'PARAMETER');
+        const expectedUserSpecs = test.expected_input_specs.filter(s => s.kind === 'USER_INPUT');
+
+        const actualParamSpecs = ep.graph_signature.input_specs.filter(s => s.kind === 'PARAMETER');
+        const actualUserSpecs = ep.graph_signature.input_specs.filter(s => s.kind === 'USER_INPUT');
+
+        assert.equal(actualParamSpecs.length, expectedParamSpecs.length, 'Number of parameter specs should match');
+        assert.equal(actualUserSpecs.length, expectedUserSpecs.length, 'Number of user input specs should match');
+
+        // Verify parameter placeholder naming matches PyTorch convention
+        for (let i = 0; i < expectedParamSpecs.length; i++) {
+          assert.equal(actualParamSpecs[i].name, expectedParamSpecs[i].name,
+            `Parameter spec name should match: expected ${expectedParamSpecs[i].name}`);
+          assert.equal(actualParamSpecs[i].kind, 'PARAMETER');
+        }
+
+        // Verify user input naming
+        for (let i = 0; i < expectedUserSpecs.length; i++) {
+          assert.equal(actualUserSpecs[i].name, expectedUserSpecs[i].name,
+            `User input spec name should match: expected ${expectedUserSpecs[i].name}`);
+        }
+
+        // Verify output spec
+        assert.equal(ep.graph_signature.output_specs.length, test.expected_output_specs.length);
+        assert.equal(ep.graph_signature.output_specs[0].kind, 'USER_OUTPUT');
+
+        // Verify placeholder node shapes match
+        const expectedPlaceholders = test.expected_nodes.filter(n => n.op === 'placeholder');
+        for (let i = 0; i < expectedPlaceholders.length; i++) {
+          assert.equal(placeholders[i].name, expectedPlaceholders[i].name,
+            `Placeholder name should match: expected ${expectedPlaceholders[i].name}`);
+          if (expectedPlaceholders[i].val_shape) {
+            assert.deepEqual(placeholders[i].val_shape, expectedPlaceholders[i].val_shape,
+              `Placeholder shape should match for ${expectedPlaceholders[i].name}`);
+          }
+        }
+
+        // Verify output node references a valid graph node
+        const outputArgs = outputs[0].args;
+        assert.isAbove(outputArgs.length, 0, 'Output should reference at least one node');
+
+        // All node names should be unique
+        const allNames = ep.graph.map(n => n.name);
+        const uniqueNames = new Set(allNames);
+        assert.equal(allNames.length, uniqueNames.size, 'All node names should be unique');
+      });
+    });
+  });
 });

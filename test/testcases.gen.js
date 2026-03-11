@@ -21559,5 +21559,331 @@ export const testData = {
         64.0
       ]
     }
+  ],
+  "export": [
+    {
+      "test_name": "linear_relu",
+      "model_type": "LinearReLU",
+      "input": [
+        [
+          -1.1228563785552979,
+          -0.18632829189300537,
+          2.2082014083862305
+        ],
+        [
+          -0.637997031211853,
+          0.46165722608566284,
+          0.2673508822917938
+        ]
+      ],
+      "weight": [
+        [
+          0.4414065182209015,
+          0.47920528054237366,
+          -0.1352572739124298
+        ],
+        [
+          0.5303604602813721,
+          -0.1264995038509369,
+          0.11650390923023224
+        ]
+      ],
+      "bias": [
+        -0.28108587861061096,
+        0.3390677869319916
+      ],
+      "in_features": 3,
+      "out_features": 2,
+      "expected_nodes": [
+        {
+          "op": "placeholder",
+          "name": "p_0_weight",
+          "target": "p_0_weight",
+          "args": [],
+          "val_shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "op": "placeholder",
+          "name": "p_0_bias",
+          "target": "p_0_bias",
+          "args": [],
+          "val_shape": [
+            2
+          ]
+        },
+        {
+          "op": "placeholder",
+          "name": "input",
+          "target": "input",
+          "args": [],
+          "val_shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "op": "call_function",
+          "name": "linear",
+          "target": "aten.linear.default",
+          "args": [
+            "input",
+            "p_0_weight",
+            "p_0_bias"
+          ],
+          "val_shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "op": "call_function",
+          "name": "relu",
+          "target": "aten.relu.default",
+          "args": [
+            "linear"
+          ],
+          "val_shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "op": "output",
+          "name": "output",
+          "target": "output",
+          "args": [
+            [
+              "relu"
+            ]
+          ]
+        }
+      ],
+      "expected_input_specs": [
+        {
+          "kind": "PARAMETER",
+          "name": "p_0_weight"
+        },
+        {
+          "kind": "PARAMETER",
+          "name": "p_0_bias"
+        },
+        {
+          "kind": "USER_INPUT",
+          "name": "input"
+        }
+      ],
+      "expected_output_specs": [
+        {
+          "kind": "USER_OUTPUT",
+          "name": "relu"
+        }
+      ]
+    },
+    {
+      "test_name": "two_layer",
+      "model_type": "TwoLayer",
+      "input": [
+        [
+          -0.331889808177948,
+          -0.4784944951534271,
+          -0.2630537450313568,
+          -0.17855434119701385
+        ],
+        [
+          -1.1858534812927246,
+          -0.8860282301902771,
+          -0.7149547338485718,
+          0.12802214920520782
+        ]
+      ],
+      "linear1_weight": [
+        [
+          0.3822692632675171,
+          0.4150039553642273,
+          -0.11713624000549316,
+          0.45930564403533936
+        ],
+        [
+          -0.10955178737640381,
+          0.10089534521102905,
+          -0.24342751502990723,
+          0.2936413288116455
+        ],
+        [
+          0.4407714605331421,
+          -0.3668140769004822,
+          0.43459808826446533,
+          0.09357964992523193
+        ]
+      ],
+      "linear1_bias": [
+        0.3694044351577759,
+        0.06771528720855713,
+        0.24109405279159546
+      ],
+      "linear2_weight": [
+        [
+          -0.08151666074991226,
+          0.44507113099098206,
+          0.08533751219511032
+        ],
+        [
+          -0.26953014731407166,
+          0.14716561138629913,
+          -0.2660064101219177
+        ]
+      ],
+      "linear2_bias": [
+        -0.06770750880241394,
+        -0.234495609998703
+      ],
+      "linear1_in": 4,
+      "linear1_out": 3,
+      "linear2_in": 3,
+      "linear2_out": 2,
+      "expected_nodes": [
+        {
+          "op": "placeholder",
+          "name": "p_0_weight",
+          "target": "p_0_weight",
+          "args": [],
+          "val_shape": [
+            3,
+            4
+          ]
+        },
+        {
+          "op": "placeholder",
+          "name": "p_0_bias",
+          "target": "p_0_bias",
+          "args": [],
+          "val_shape": [
+            3
+          ]
+        },
+        {
+          "op": "placeholder",
+          "name": "p_2_weight",
+          "target": "p_2_weight",
+          "args": [],
+          "val_shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "op": "placeholder",
+          "name": "p_2_bias",
+          "target": "p_2_bias",
+          "args": [],
+          "val_shape": [
+            2
+          ]
+        },
+        {
+          "op": "placeholder",
+          "name": "input",
+          "target": "input",
+          "args": [],
+          "val_shape": [
+            2,
+            4
+          ]
+        },
+        {
+          "op": "call_function",
+          "name": "linear",
+          "target": "aten.linear.default",
+          "args": [
+            "input",
+            "p_0_weight",
+            "p_0_bias"
+          ],
+          "val_shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "op": "call_function",
+          "name": "relu",
+          "target": "aten.relu.default",
+          "args": [
+            "linear"
+          ],
+          "val_shape": [
+            2,
+            3
+          ]
+        },
+        {
+          "op": "call_function",
+          "name": "linear_1",
+          "target": "aten.linear.default",
+          "args": [
+            "relu",
+            "p_2_weight",
+            "p_2_bias"
+          ],
+          "val_shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "op": "call_function",
+          "name": "sigmoid",
+          "target": "aten.sigmoid.default",
+          "args": [
+            "linear_1"
+          ],
+          "val_shape": [
+            2,
+            2
+          ]
+        },
+        {
+          "op": "output",
+          "name": "output",
+          "target": "output",
+          "args": [
+            [
+              "sigmoid"
+            ]
+          ]
+        }
+      ],
+      "expected_input_specs": [
+        {
+          "kind": "PARAMETER",
+          "name": "p_0_weight"
+        },
+        {
+          "kind": "PARAMETER",
+          "name": "p_0_bias"
+        },
+        {
+          "kind": "PARAMETER",
+          "name": "p_2_weight"
+        },
+        {
+          "kind": "PARAMETER",
+          "name": "p_2_bias"
+        },
+        {
+          "kind": "USER_INPUT",
+          "name": "input"
+        }
+      ],
+      "expected_output_specs": [
+        {
+          "kind": "USER_OUTPUT",
+          "name": "sigmoid"
+        }
+      ]
+    }
   ]
 };

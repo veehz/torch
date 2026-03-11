@@ -55,6 +55,19 @@ export abstract class Module {
     }
     return params;
   }
+
+  public named_parameters(prefix: string = ''): [string, Parameter][] {
+    const result: [string, Parameter][] = [];
+    for (const [name, param] of Object.entries(this._parameters)) {
+      const fullName = prefix ? `${prefix}.${name}` : name;
+      result.push([fullName, param]);
+    }
+    for (const [name, module] of Object.entries(this._modules)) {
+      const fullName = prefix ? `${prefix}.${name}` : name;
+      result.push(...module.named_parameters(fullName));
+    }
+    return result;
+  }
 }
 
 export class Sequential extends Module {
