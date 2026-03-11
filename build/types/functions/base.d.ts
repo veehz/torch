@@ -2,6 +2,7 @@ import { Tensor } from '../tensor';
 export declare function resultRequiresGrad(...args: (Tensor | number | number[] | boolean)[]): boolean;
 declare abstract class TorchFunction {
     id: number;
+    opName: string;
     next_functions: TorchFunction[];
     saved_tensors: Tensor[];
     _retained_tensors: Tensor[];

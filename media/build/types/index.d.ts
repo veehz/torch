@@ -1,4 +1,5 @@
-export * from './tensor';
+export { Tensor } from './tensor';
+export type { TypedArray, NestedNumberArray } from './tensor';
 export { no_grad, enable_no_grad, disable_no_grad, is_grad_enabled } from './grad_mode';
 export { TorchFunction, AccumulateGrad } from './functions/base';
 export * from './functions/ops';
@@ -7,3 +8,5 @@ export * from './creation/index';
 export * as nn from './nn/index';
 export * as optim from './optim/index';
 export { eventBus, events } from './util';
+export { export_, ExportedProgram } from './export';
+export type { GraphNode, InputSpec, OutputSpec, GraphSignature } from './export';

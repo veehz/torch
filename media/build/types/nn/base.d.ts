@@ -18,6 +18,7 @@ export declare abstract class Module {
     protected register(name: string, value: Parameter | Module): void;
     abstract forward(...args: Tensor[]): Tensor;
     parameters(): Parameter[];
+    named_parameters(prefix?: string): [string, Parameter][];
 }
 export declare class Sequential extends Module {
     private _modulesArr;
