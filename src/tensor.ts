@@ -2,11 +2,6 @@ import { AccumulateGrad, TorchFunction, resultRequiresGrad } from './functions/b
 import { getOperationCache, createOperation } from './functions/registry';
 import { getNextId, eventBus, events } from './util';
 
-/*
- * TODO:
- * - Add support for Textures to be stored in Tensors
- */
-
 export type TypedArray =
   | Int8Array
   | Uint8Array
@@ -170,8 +165,6 @@ export class Tensor {
 
   backward(grad?: Tensor | null): void {
     if (!this.requires_grad) {
-      // If this tensor does not require gradients, stop propagation.
-      // TODO: check pytorch behaviour
       return;
     }
 
