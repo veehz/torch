@@ -1,0 +1,10 @@
+{
+  "name": "example-pyodide",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "pyodide": "^0.29.3",
+    "torch": "portal:../../"
+  }
+}
