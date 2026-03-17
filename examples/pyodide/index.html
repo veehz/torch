@@ -11,24 +11,26 @@
 <body>
     <h1>Torch + Pyodide</h1>
     <div>
-        <textarea id="code" rows="10" cols="50" placeholder="Enter Python code here...">
-x = torch.tensor([1, 2, 3], requires_grad=True)
-y = torch.tensor([4, 5, 6], requires_grad=True)
-
-print("x:", x)
-print("y:", y)
-
-print("Sum of x:", x.sum())
-
-z = x * y
-
-print("z:", z)
-
-zsum = z.sum()
-zsum.backward()
-
-print("grad of x:", x.grad)
-print("grad of y:", y.grad)</textarea>
+        <label>Load example:
+            <select id="example-select" onchange="loadExample()">
+                <option value="">-- custom --</option>
+                <option value="py/basic_ops.py">basic_ops.py</option>
+                <option value="py/no_grad.py">no_grad.py</option>
+                <option value="py/linear_model.py">linear_model.py</option>
+                <option value="py/training_sgd.py">training_sgd.py</option>
+                <option value="py/custom_module.py">custom_module.py</option>
+            </select>
+        </label>
+    </div>
+    <div>
+        <textarea id="code" rows="14" cols="70" placeholder="Enter Python code here...">
+x = torch.tensor([1.0, 2.0, 3.0], requires_grad=True)
+y = torch.tensor([4.0, 5.0, 6.0], requires_grad=True)
+z = (x * y).sum()
+z.backward()
+print("x.grad:", x.grad)
+print("y.grad:", y.grad)
+</textarea>
     </div>
 
     <div>
@@ -42,44 +44,28 @@ print("grad of y:", y.grad)</textarea>
 
     <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
     <script>
-        const { Tensor } = window.torch;
         let pyodide;
 
         async function main() {
             pyodide = await loadPyodide();
 
-            // Set up torch utilities
-            const torch_utils = {
-                get_data_from_tensor: function (tensor) {
-                    return tensor.data;
-                },
-                create_tensor_from_python_data: function (data, requires_grad) {
-                    const jsData = typeof data.toJs === "function" ? data.toJs() : data;
-                    console.log("creating tensor from python data", jsData);
-                    return new Tensor(jsData, { requires_grad });
-                },
-                to_js_list: function (data) {
-                    return data.toJs();
-                },
-            };
-
-            // Make torch and torch_utils available to Python
-            pyodide.globals.set("js_torch", torch);
-            pyodide.globals.set("torch_utils", torch_utils);
-
-            // Load the bridge.py file first
             try {
+                if (!window.torch) {
+                    throw new Error("torch.js failed to load. Run `yarn build` first.");
+                }
+
+                // Make torch available to Python
+                pyodide.globals.set("js_torch", window.torch);
+
                 const response = await fetch('./bridge.py');
                 const bridgeCode = await response.text();
-
-                console.log(bridgeCode);
 
                 // Load the bridge code into Pyodide
                 pyodide.runPython(bridgeCode);
 
                 document.getElementById("output").textContent = "Pyodide and bridge.py loaded successfully!";
             } catch (error) {
-                document.getElementById("output").textContent = `Error loading bridge.py: ${error.message}`;
+                document.getElementById("output").textContent = `Error during initialization: ${error.message}`;
             }
         }
 
@@ -88,18 +74,21 @@ print("grad of y:", y.grad)</textarea>
             const output = document.getElementById("output");
 
             try {
-                // Capture stdout
+                // Capture stdout, always restoring even on exception
                 pyodide.runPython(`
-                    import sys
-                    from io import StringIO
-                    sys.stdout = StringIO()
-                `);
+import sys
+from io import StringIO
+_bridge_saved_stdout = sys.stdout
+sys.stdout = StringIO()
+`);
 
-                // Run user code
-                pyodide.runPython(code);
-
-                // Get output
-                const result = pyodide.runPython("sys.stdout.getvalue()");
+                let result = "";
+                try {
+                    pyodide.runPython(code);
+                    result = pyodide.runPython("sys.stdout.getvalue()");
+                } finally {
+                    pyodide.runPython("sys.stdout = _bridge_saved_stdout");
+                }
                 output.textContent = result || "No output";
             } catch (error) {
                 output.textContent = `Error: ${error.message}`;
@@ -108,6 +97,19 @@ print("grad of y:", y.grad)</textarea>
 
         function clearOutput() {
             document.getElementById("output").textContent = "";
+        }
+
+        async function loadExample() {
+            const sel = document.getElementById("example-select");
+            const path = sel.value;
+            if (!path) return;
+            try {
+                const resp = await fetch(path);
+                const code = await resp.text();
+                document.getElementById("code").value = code;
+            } catch (e) {
+                document.getElementById("output").textContent = `Error loading example: ${e.message}`;
+            }
         }
 
         main();

@@ -120,4 +120,47 @@ describe('Functional', () => {
       assert.deepStrictEqual(result.shape, [2, 2]);
     });
   });
+
+  describe('allclose', () => {
+    it('returns true for identical tensors', () => {
+      const a = new Tensor([1, 2, 3]);
+      assert.strictEqual(torch.allclose(a, a), true);
+    });
+
+    it('returns true for tensors within default tolerance', () => {
+      const a = new Tensor([1.0, 2.0, 3.0]);
+      const b = new Tensor([1.0, 2.0, 3.0 + 1e-7]);
+      assert.strictEqual(torch.allclose(a, b), true);
+    });
+
+    it('returns false for tensors outside default tolerance', () => {
+      const a = new Tensor([1.0, 2.0, 3.0]);
+      const b = new Tensor([1.0, 2.0, 4.0]);
+      assert.strictEqual(torch.allclose(a, b), false);
+    });
+
+    it('returns false for tensors of different sizes', () => {
+      const a = new Tensor([1, 2, 3]);
+      const b = new Tensor([1, 2]);
+      assert.strictEqual(torch.allclose(a, b), false);
+    });
+
+    it('returns false for NaN when equal_nan=false', () => {
+      const a = new Tensor([1, NaN, 3]);
+      const b = new Tensor([1, NaN, 3]);
+      assert.strictEqual(torch.allclose(a, b, 1e-5, 1e-8, false), false);
+    });
+
+    it('returns true for NaN when equal_nan=true', () => {
+      const a = new Tensor([1, NaN, 3]);
+      const b = new Tensor([1, NaN, 3]);
+      assert.strictEqual(torch.allclose(a, b, 1e-5, 1e-8, true), true);
+    });
+
+    it('tensor.allclose() method matches torch.allclose()', () => {
+      const a = new Tensor([1.0, 2.0, 3.0]);
+      const b = new Tensor([1.0, 2.0, 3.0 + 1e-7]);
+      assert.strictEqual(a.allclose(b), torch.allclose(a, b));
+    });
+  });
 });

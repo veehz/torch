@@ -1,5 +1,9 @@
-import { Tensor } from '../tensor';
+import { Tensor, NestedNumberArray } from '../tensor';
 import { get_shape_from_args } from './utils';
+
+export function tensor(data: NestedNumberArray, requires_grad: boolean = false): Tensor {
+  return new Tensor(data, { requires_grad });
+}
 
 export function ones(...args: number[] | number[][]): Tensor {
   const shape = get_shape_from_args(args);

@@ -345,6 +345,17 @@ export class Tensor {
     return this._executeBinaryOp('ne', other);
   }
 
+  allclose(other: Tensor, rtol: number = 1e-5, atol: number = 1e-8, equal_nan: boolean = false): boolean {
+    if (this.data.length !== other.data.length) return false;
+    for (let i = 0; i < this.data.length; i++) {
+      const av = this.data[i], bv = other.data[i];
+      if (equal_nan && isNaN(av) && isNaN(bv)) continue;
+      if (isNaN(av) || isNaN(bv)) return false;
+      if (Math.abs(av - bv) > atol + rtol * Math.abs(bv)) return false;
+    }
+    return true;
+  }
+
   // other
 
   sigmoid(): Tensor {

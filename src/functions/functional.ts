@@ -92,3 +92,7 @@ export const le = generate_binary_function('le');
 export const ge = generate_binary_function('ge');
 export const eq = generate_binary_function('eq');
 export const ne = generate_binary_function('ne');
+
+export function allclose(a: Tensor, b: Tensor, rtol: number = 1e-5, atol: number = 1e-8, equal_nan: boolean = false): boolean {
+  return a.allclose(b, rtol, atol, equal_nan);
+}
