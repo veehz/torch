@@ -1,4 +1,4 @@
-function Ct(s, t) {
+function Nt(s, t) {
   const e = Math.max(s.length, t.length), n = [...Array(e - s.length).fill(1), ...s], r = [...Array(e - t.length).fill(1), ...t], a = [];
   for (let o = 0; o < e; o++) {
     if (n[o] !== r[o] && n[o] !== 1 && r[o] !== 1)
@@ -7,7 +7,7 @@ function Ct(s, t) {
   }
   return a;
 }
-function Nt(s, t, e) {
+function Ct(s, t, e) {
   const n = ut(t, s), r = new Array(t.reduce((a, o) => a * o, 1)).fill(0);
   for (let a = 0; a < e.length; a++)
     r[ct(n, s, a)] += e[a];
@@ -44,6 +44,9 @@ function $e(s, t, e) {
   );
   return n.shape = e, n;
 }
+function Se(s, t = !1) {
+  return new l(s, { requires_grad: t });
+}
 function zt(...s) {
   const t = mt(s), e = new l(Array(t.reduce((n, r) => n * r, 1)).fill(1));
   return e.shape = t, e;
@@ -52,19 +55,19 @@ function Jt(...s) {
   const t = mt(s), e = new l(Array(t.reduce((n, r) => n * r, 1)).fill(0));
   return e.shape = t, e;
 }
-function Se(s) {
+function Pe(s) {
   return zt(s.shape);
 }
 function ft(s) {
   return Jt(s.shape);
 }
-function Pe(s, t, e) {
+function Ie(s, t, e) {
   const n = [], r = (t - s) / (e - 1);
   for (let a = 0; a < e - 1; a++)
     n.push(s + a * r);
   return n.push(t), new l(n);
 }
-function Ie(s, t = void 0, e = 1) {
+function Le(s, t = void 0, e = 1) {
   const n = [];
   for (let r = s; r < t; r += e)
     n.push(r);
@@ -160,7 +163,7 @@ class Rt extends $t {
     if (this.variable.grad || (this.variable.grad = ft(this.variable)), V.dispatchEvent(new CustomEvent(J.OPERATION_BEFORE_ACCUMULATE_GRAD, { detail: { operation: this, dz: t } })), typeof t == "number")
       this.variable.grad = this.variable.grad.add(t);
     else {
-      const e = Nt(t.shape, this.variable.shape, t.data);
+      const e = Ct(t.shape, this.variable.shape, t.data);
       this.variable.grad = this.variable.grad.add(new l(e, {}, { shape: this.variable.shape }));
     }
     V.dispatchEvent(new CustomEvent(J.OPERATION_AFTER_ACCUMULATE_GRAD, { detail: { operation: this, dz: t } }));
@@ -389,6 +392,15 @@ class l {
   ne(t) {
     return this._executeBinaryOp("ne", t);
   }
+  allclose(t, e = 1e-5, n = 1e-8, r = !1) {
+    if (this.data.length !== t.data.length) return !1;
+    for (let a = 0; a < this.data.length; a++) {
+      const o = this.data[a], i = t.data[a];
+      if (!(r && isNaN(o) && isNaN(i)) && (isNaN(o) || isNaN(i) || Math.abs(o - i) > n + e * Math.abs(i)))
+        return !1;
+    }
+    return !0;
+  }
   // other
   sigmoid() {
     return this._executeUnaryOp("sigmoid");
@@ -403,7 +415,10 @@ function D(s) {
 function F(s) {
   return (t, e) => (typeof t == "number" && (t = new l(t)), typeof e == "number" && (e = new l(e)), Z(s).forward(t, e));
 }
-const Le = F("__left_index__"), De = F("__right_index__"), We = F("add"), je = F("sub"), Ge = F("mul"), Ke = F("div"), Ve = F("pow"), Je = F("fmod"), He = F("maximum"), Qe = F("minimum"), Xe = D("log"), Ye = D("sqrt"), Ze = D("exp"), ts = D("square"), es = D("abs"), se = D("sign"), ss = D("neg"), ns = D("reciprocal"), rs = D("nan_to_num"), as = Q("reshape"), os = Q("squeeze"), is = Q("unsqueeze"), us = Q("expand"), cs = D("sin"), ds = D("cos"), ls = D("tan"), hs = Q("sum"), _s = Q("mean"), fs = Q("min"), ps = Q("max"), gs = Q("transpose"), ms = F("matmul"), ws = F("lt"), xs = F("gt"), bs = F("le"), vs = F("ge"), ys = F("eq"), As = F("ne");
+const De = F("__left_index__"), We = F("__right_index__"), je = F("add"), Ge = F("sub"), Ke = F("mul"), Ve = F("div"), Je = F("pow"), He = F("fmod"), Qe = F("maximum"), Xe = F("minimum"), Ye = D("log"), Ze = D("sqrt"), ts = D("exp"), es = D("square"), ss = D("abs"), se = D("sign"), ns = D("neg"), rs = D("reciprocal"), as = D("nan_to_num"), os = Q("reshape"), is = Q("squeeze"), us = Q("unsqueeze"), cs = Q("expand"), ds = D("sin"), ls = D("cos"), hs = D("tan"), _s = Q("sum"), fs = Q("mean"), ps = Q("min"), gs = Q("max"), ms = Q("transpose"), ws = F("matmul"), xs = F("lt"), bs = F("gt"), vs = F("le"), ys = F("ge"), As = F("eq"), Os = F("ne");
+function ks(s, t, e = 1e-5, n = 1e-8, r = !1) {
+  return s.allclose(t, e, n, r);
+}
 function Ft(s) {
   const t = new Array(s.length).fill(1);
   for (let e = s.length - 2; e >= 0; e--)
@@ -424,7 +439,7 @@ function xt(s, t, e = !1) {
   const r = (Array.isArray(t) ? t : [t]).map((a) => a < 0 ? a + s.length : a);
   return e ? s.map((a, o) => r.includes(o) ? 1 : a) : s.filter((a, o) => !r.includes(o));
 }
-function C(s, t, e = null) {
+function N(s, t, e = null) {
   const n = (o, i, u, c, d, f) => {
     const _ = Array(f);
     for (let h = 0; h < f; h++) {
@@ -433,7 +448,7 @@ function C(s, t, e = null) {
     }
     return _;
   }, r = (o, i, u = null) => {
-    const c = Ct(o.shape, i.shape), d = ut(o.shape, c), f = ut(i.shape, c), _ = c.reduce((h, m) => h * m, 1);
+    const c = Nt(o.shape, i.shape), d = ut(o.shape, c), f = ut(i.shape, c), _ = c.reduce((h, m) => h * m, 1);
     return new l(
       n(
         o.data,
@@ -532,46 +547,46 @@ function wt(s, t, e, n = null, r) {
   return n && P(n, a), a;
 }
 function it(s, t) {
-  const e = Nt(s.shape, t, s.data);
+  const e = Ct(s.shape, t, s.data);
   return new l(e, { requires_grad: s.requires_grad }, { shape: t });
 }
 function ae(s, t) {
   return s.mul(zt(t));
 }
-C(
+N(
   (s, t, e, n) => e,
   () => {
   },
   "__left_index__"
 );
-C(
+N(
   (s, t, e, n) => n,
   () => {
   },
   "__right_index__"
 );
-C(
+N(
   (s, t, e, n) => s[e] + t[n],
   (s, t, e, n, r) => {
     e.backward(r), n.backward(r);
   },
   "add"
 );
-C(
+N(
   (s, t, e, n) => s[e] - t[n],
   (s, t, e, n, r) => {
     e.backward(r), n.backward(r.mul(new l(-1)));
   },
   "sub"
 );
-C(
+N(
   (s, t, e, n) => s[e] * t[n],
   (s, t, e, n, r) => {
     e.backward(r.mul(t)), n.backward(r.mul(s));
   },
   "mul"
 );
-C(
+N(
   (s, t, e, n) => s[e] / t[n],
   (s, t, e, n, r) => {
     e.backward(r.div(t)), n.backward(r.mul(s).mul(new l(-1)).div(t).div(t));
@@ -584,7 +599,7 @@ function Bt(s, t, e) {
     r[a] = s.data[a] ? t.data[a] : n !== null ? n : e.data[a];
   return new l(r, {}, { shape: t.shape });
 }
-C(
+N(
   (s, t, e, n) => Math.pow(s[e], t[n]),
   (s, t, e, n, r) => {
     const a = r.mul(t).mul(s.pow(t.sub(new l(1)))), o = r.mul(s.pow(t)).mul(s.log());
@@ -592,14 +607,14 @@ C(
   },
   "pow"
 );
-C(
+N(
   (s, t, e, n) => s[e] % t[n],
   (s, t, e, n, r) => {
     e.backward(r);
   },
   "fmod"
 );
-C(
+N(
   (s, t, e, n) => Math.max(s[e], t[n]),
   (s, t, e, n, r) => {
     const a = s.eq(t), o = s.gt(t).add(a.mul(new l(0.5))), i = t.gt(s).add(a.mul(new l(0.5)));
@@ -607,7 +622,7 @@ C(
   },
   "maximum"
 );
-C(
+N(
   (s, t, e, n) => Math.min(s[e], t[n]),
   (s, t, e, n, r) => {
     const a = s.eq(t), o = s.lt(t).add(a.mul(new l(0.5))), i = t.lt(s).add(a.mul(new l(0.5)));
@@ -799,12 +814,12 @@ U(
   },
   "tan"
 );
-const Os = wt(
+const qs = wt(
   0,
   (s, t) => s + t,
   (s, t) => t,
   "sum"
-), ks = wt(
+), Es = wt(
   0,
   (s, t) => s + t,
   (s, t, e) => {
@@ -813,7 +828,7 @@ const Os = wt(
   },
   "mean",
   (s, t) => s / t
-), qs = wt(
+), Rs = wt(
   -1 / 0,
   (s, t) => Math.max(s, t),
   (s, t, e) => {
@@ -821,7 +836,7 @@ const Os = wt(
     return t.mul(a);
   },
   "max"
-), Es = wt(
+), Ms = wt(
   1 / 0,
   (s, t) => Math.min(s, t),
   (s, t, e) => {
@@ -876,7 +891,7 @@ function fe(s, t, e = null) {
   const n = s.shape.length == 1, r = t.shape.length == 1, a = n ? [1, s.shape[0]] : s.shape, o = r ? [t.shape[0], 1] : t.shape;
   if (a[a.length - 1] != o[o.length - 2])
     throw new Error("Shape mismatch: " + s.shape + " and " + t.shape);
-  const i = Ct(a.slice(0, -2), o.slice(0, -2)).concat([
+  const i = Nt(a.slice(0, -2), o.slice(0, -2)).concat([
     a[a.length - 2],
     o[o.length - 1]
   ]), u = i.reduce((w, B) => w * B, 1), c = new Array(u).fill(0), d = ut(a, i), f = ut(o, i), _ = i[i.length - 2], h = i[i.length - 1], m = a[a.length - 1];
@@ -929,14 +944,14 @@ function bt(s, t, e, n, r, a, o, i) {
   const u = typeof n == "number" ? new Array(i).fill(n) : n, c = typeof r == "number" ? new Array(i).fill(r) : r, d = typeof a == "number" ? new Array(i).fill(a) : a, f = s.shape[0], _ = s.shape[1], h = t.shape[0], m = s.shape.slice(2), p = t.shape.slice(2);
   if (_ !== t.shape[1] * o)
     throw new Error(`in_channels (${_}) must be divisible by groups (${o}) and match weight.shape[1] * groups (${t.shape[1] * o})`);
-  const w = m.map((N, q) => Math.floor((N + 2 * c[q] - d[q] * (p[q] - 1) - 1) / u[q] + 1)), B = [f, h, ...w], I = B.reduce((N, q) => N * q, 1), g = new Array(I).fill(0), E = (N) => {
-    const q = new Array(N.length);
+  const w = m.map((C, q) => Math.floor((C + 2 * c[q] - d[q] * (p[q] - 1) - 1) / u[q] + 1)), B = [f, h, ...w], I = B.reduce((C, q) => C * q, 1), g = new Array(I).fill(0), E = (C) => {
+    const q = new Array(C.length);
     let j = 1;
-    for (let W = N.length - 1; W >= 0; W--)
-      q[W] = j, j *= N[W];
+    for (let W = C.length - 1; W >= 0; W--)
+      q[W] = j, j *= C[W];
     return q;
   }, k = E(s.shape), z = E(t.shape), R = E(B), rt = _ / o, at = h / o;
-  for (let N = 0; N < f; N++)
+  for (let C = 0; C < f; C++)
     for (let q = 0; q < o; q++)
       for (let j = 0; j < at; j++) {
         const W = q * at + j, dt = w.reduce((M, T) => M * T, 1);
@@ -964,7 +979,7 @@ function bt(s, t, e, n, r, a, o, i) {
                 _t[x] = L;
               }
               if (ht) {
-                let x = N * k[0] + et * k[1];
+                let x = C * k[0] + et * k[1];
                 for (let $ = 0; $ < i; $++) x += _t[$] * k[$ + 2];
                 let L = W * z[0] + b * z[1];
                 for (let $ = 0; $ < i; $++) L += Y[$] * z[$ + 2];
@@ -972,7 +987,7 @@ function bt(s, t, e, n, r, a, o, i) {
               }
             }
           }
-          let lt = N * R[0] + W * R[1];
+          let lt = C * R[0] + W * R[1];
           for (let b = 0; b < i; b++) lt += T[b] * R[b + 2];
           g[lt] = K;
         }
@@ -987,7 +1002,7 @@ function vt(s, t, e, n, r, a, o, i, u, c, d) {
       T[K] = G, G *= M[K];
     return T;
   }, k = E(t.shape), z = E(e.shape), R = E(s.shape);
-  let rt = null, at = null, N = null, q = null, j = null;
+  let rt = null, at = null, C = null, q = null, j = null;
   c && (q = new Array(t.dataLength()).fill(0)), d && (j = new Array(e.dataLength()).fill(0));
   const W = p / i, dt = w / i;
   for (let M = 0; M < m; M++)
@@ -1033,9 +1048,9 @@ function vt(s, t, e, n, r, a, o, i, u, c, d) {
   if (c && (rt = new l(q, { requires_grad: !1 }, { shape: t.shape })), d && (at = new l(j, { requires_grad: !1 }, { shape: e.shape })), n && n.requires_grad) {
     const M = [0];
     for (let T = 2; T < s.shape.length; T++) M.push(T);
-    N = s.sum(M);
+    C = s.sum(M);
   }
-  return [rt, at, N];
+  return [rt, at, C];
 }
 class ge extends S {
   stride;
@@ -1124,37 +1139,37 @@ class we extends S {
   }
 }
 P("conv3d", we);
-C(
+N(
   (s, t, e, n) => s[e] < t[n] ? 1 : 0,
   () => {
   },
   "lt"
 );
-C(
+N(
   (s, t, e, n) => s[e] > t[n] ? 1 : 0,
   () => {
   },
   "gt"
 );
-C(
+N(
   (s, t, e, n) => s[e] <= t[n] ? 1 : 0,
   () => {
   },
   "le"
 );
-C(
+N(
   (s, t, e, n) => s[e] >= t[n] ? 1 : 0,
   () => {
   },
   "ge"
 );
-C(
+N(
   (s, t, e, n) => s[e] == t[n] ? 1 : 0,
   () => {
   },
   "eq"
 );
-C(
+N(
   (s, t, e, n) => s[e] != t[n] ? 1 : 0,
   () => {
   },
@@ -1365,7 +1380,7 @@ class Me extends Ot {
     return Vt(t, this.weight, this.bias, this.stride, this.padding, this.dilation, this.groups);
   }
 }
-const Rs = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const Ts = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   BCELoss: ye,
   Conv1d: Ee,
@@ -1453,7 +1468,7 @@ class Fe extends kt {
     }
   }
 }
-const Ms = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const Fs = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   Adam: Fe,
   Optimizer: kt,
@@ -1503,10 +1518,10 @@ const Ms = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   conv3d: "aten.conv3d.default",
   linear: "aten.linear.default"
 };
-function Ce(s) {
+function Ne(s) {
   return Be[s] || `aten.${s}.default`;
 }
-class Ne {
+class Ce {
   counts = /* @__PURE__ */ new Map();
   generate(t) {
     const e = this.counts.get(t) || 0;
@@ -1540,8 +1555,8 @@ class ze {
 `);
   }
 }
-function Ts(s, t) {
-  const e = [], n = new Ne(), r = /* @__PURE__ */ new Map(), a = s.named_parameters(), o = /* @__PURE__ */ new Set(), i = [];
+function Bs(s, t) {
+  const e = [], n = new Ce(), r = /* @__PURE__ */ new Map(), a = s.named_parameters(), o = /* @__PURE__ */ new Set(), i = [];
   for (const [h, m] of a) {
     const p = "p_" + h.replace(/\./g, "_"), w = n.generate(p);
     r.set(m.id, w), o.add(m.id), e.push({
@@ -1582,7 +1597,7 @@ function Ts(s, t) {
     r.set(w.id, g), e.push({
       op: "call_function",
       name: g,
-      target: Ce(B),
+      target: Ne(B),
       args: I,
       val_shape: w.shape
     });
@@ -1625,66 +1640,68 @@ function Ts(s, t) {
 export {
   Rt as AccumulateGrad,
   ze as ExportedProgram,
-  qs as Max,
-  ks as Mean,
-  Es as Min,
-  Os as Sum,
+  Rs as Max,
+  Es as Mean,
+  Ms as Min,
+  qs as Sum,
   l as Tensor,
   S as TorchFunction,
-  Le as __left_index__,
-  De as __right_index__,
-  es as abs,
-  We as add,
-  Ie as arange,
-  ds as cos,
+  De as __left_index__,
+  We as __right_index__,
+  ss as abs,
+  je as add,
+  ks as allclose,
+  Le as arange,
+  ls as cos,
   Xt as disable_no_grad,
-  Ke as div,
+  Ve as div,
   Qt as enable_no_grad,
-  ys as eq,
+  As as eq,
   V as eventBus,
   J as events,
-  Ze as exp,
-  us as expand,
-  Ts as export_,
-  Je as fmod,
-  vs as ge,
-  xs as gt,
+  ts as exp,
+  cs as expand,
+  Bs as export_,
+  He as fmod,
+  ys as ge,
+  bs as gt,
   Ht as is_grad_enabled,
-  bs as le,
-  Pe as linspace,
-  Xe as log,
-  ws as lt,
-  ms as matmul,
-  ps as max,
-  He as maximum,
-  _s as mean,
-  fs as min,
-  Qe as minimum,
-  Ge as mul,
-  rs as nan_to_num,
-  As as ne,
-  ss as neg,
-  Rs as nn,
+  vs as le,
+  Ie as linspace,
+  Ye as log,
+  xs as lt,
+  ws as matmul,
+  gs as max,
+  Qe as maximum,
+  fs as mean,
+  ps as min,
+  Xe as minimum,
+  Ke as mul,
+  as as nan_to_num,
+  Os as ne,
+  ns as neg,
+  Ts as nn,
   Yt as no_grad,
   zt as ones,
-  Se as ones_like,
-  Ms as optim,
-  Ve as pow,
+  Pe as ones_like,
+  Fs as optim,
+  Je as pow,
   pt as rand,
   $e as randint,
   Ue as randn,
-  ns as reciprocal,
-  as as reshape,
+  rs as reciprocal,
+  os as reshape,
   se as sign,
-  cs as sin,
-  Ye as sqrt,
-  ts as square,
-  os as squeeze,
-  je as sub,
-  hs as sum,
-  ls as tan,
-  gs as transpose,
-  is as unsqueeze,
+  ds as sin,
+  Ze as sqrt,
+  es as square,
+  is as squeeze,
+  Ge as sub,
+  _s as sum,
+  hs as tan,
+  Se as tensor,
+  ms as transpose,
+  us as unsqueeze,
   Jt as zeros,
   ft as zeros_like
 };

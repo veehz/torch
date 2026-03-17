@@ -66,5 +66,6 @@ export declare class Tensor {
     ge(other: Tensor | number): Tensor;
     eq(other: Tensor | number): Tensor;
     ne(other: Tensor | number): Tensor;
+    allclose(other: Tensor, rtol?: number, atol?: number, equal_nan?: boolean): boolean;
     sigmoid(): Tensor;
 }
