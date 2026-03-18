@@ -3,6 +3,52 @@ import * as torch from 'torch';
 import { Tensor } from 'torch';
 
 describe('Creation Functions', () => {
+  describe('tensor', () => {
+    it('should create a scalar tensor', () => {
+      const t = torch.tensor(5);
+      assert.deepStrictEqual(t.toArray(), 5);
+      assert.deepStrictEqual(t.shape, []);
+    });
+
+    it('should create a tensor with 1D array', () => {
+      const t = torch.tensor([1, 2, 3]);
+      assert.deepStrictEqual(t.toArray(), [1, 2, 3]);
+      assert.deepStrictEqual(t.shape, [3]);
+    });
+
+    it('should create a tensor with nested 2D array', () => {
+      const t = torch.tensor([[1, 2], [3, 4]]);
+      assert.deepStrictEqual(t.toArray(), [[1, 2], [3, 4]]);
+      assert.deepStrictEqual(t.shape, [2, 2]);
+    });
+
+    it('should create a tensor with nested 3D array', () => {
+      const t = torch.tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]);
+      assert.deepStrictEqual(t.toArray(), [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]);
+      assert.deepStrictEqual(t.shape, [2, 2, 2]);
+    });
+
+    it('should create empty tensors', () => {
+      const t = torch.tensor([]);
+      assert.deepStrictEqual(t.toArray(), []);
+      assert.deepStrictEqual(t.shape, [0]);
+
+      const t2 = torch.tensor([[]]);
+      assert.deepStrictEqual(t2.toArray(), [[]]);
+      assert.deepStrictEqual(t2.shape, [1, 0]);
+
+      const t3 = torch.tensor([[], []]);
+      assert.deepStrictEqual(t3.toArray(), [[], []]);
+      assert.deepStrictEqual(t3.shape, [2, 0]);
+    });
+
+    it('should not create tensor with inconsistent shape', () => {
+      assert.throws(() => torch.tensor([[1, 2], [3]]));
+      assert.throws(() => torch.tensor([1, [2, 3]]));
+      assert.throws(() => torch.tensor([[1, 2], [3, 4, 5]]));
+      assert.throws(() => torch.tensor([[[1, 2], [3, 4]], [[5, 6]]]));
+    });
+  });
   describe('ones', () => {
     it('should create a 1D tensor of ones', () => {
       const t = torch.ones(5);

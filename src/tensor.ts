@@ -28,6 +28,34 @@ function _get_shape(data: NestedNumberArray): number[] {
   return shape;
 }
 
+function _assert_shape(data: NestedNumberArray, shape: number[]): void {
+  if (Array.isArray(data)) {
+    if (data.length !== shape[0]) {
+      throw new Error(`Shape mismatch at dim ${shape.length}: expected ${shape[0]}, got ${data.length}`);
+    }
+    for (let i = 0; i < data.length; i++) {
+      _assert_shape(data[i], shape.slice(1));
+    }
+  } else if (ArrayBuffer.isView(data)) {
+    if (shape.length !== 1) {
+      throw new Error(`Shape mismatch at dim ${shape.length}: expected 1D, got ${shape}`);
+    }
+    if (data.length !== shape[0]) {
+      throw new Error(`Shape mismatch at dim ${shape.length}: expected ${shape[0]}, got ${data.length}`);
+    }
+  } else {
+    if (shape.length !== 0) {
+      throw new Error(`Shape mismatch at dim ${shape.length}: expected scalar, got ${data}`);
+    }
+  }
+}
+
+function _get_and_assert_shape(data: NestedNumberArray): number[] {
+  const shape = _get_shape(data);
+  _assert_shape(data, shape);
+  return shape;
+}
+
 function _flatten(data: NestedNumberArray): number[] {
   if (Array.isArray(data)) {
     return data.flatMap(item => _flatten(item));
@@ -65,7 +93,7 @@ export class Tensor {
       this.name = options.name;
     }
 
-    this.shape = internal_options.shape ?? _get_shape(data);
+    this.shape = internal_options.shape ?? _get_and_assert_shape(data);
     this.grad_fn = internal_options.operation ?? null;
 
     if (this.requires_grad && !this.grad_fn) {
@@ -108,6 +136,20 @@ export class Tensor {
     };
 
     return buildDimension(0);
+  }
+
+  toString(): string {
+    let extra = "";
+    if (this.name) {
+      extra += `, name="${this.name}"`;
+    }
+    if (this.dataLength() == 0 && this.shape.length > 0) {
+      extra += `, size=(${this.shape.join(', ')})`;
+    }
+    if (this.requires_grad) {
+      extra += ", requires_grad=True";
+    }
+    return `Tensor(${JSON.stringify(this.toArray())}${extra})`;
   }
 
   dataLength(): number {
