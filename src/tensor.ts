@@ -103,6 +103,19 @@ export class Tensor {
     }
   }
 
+  size(dim?: number): number | number[] {
+    if (dim !== undefined) {
+      if (dim < 0) {
+        dim += this.shape.length;
+      }
+      if (dim < 0 || dim >= this.shape.length) {
+        throw new Error(`Dimension out of range (expected to be in range of [${-this.shape.length}, ${this.shape.length - 1}], but got ${dim})`);
+      }
+      return this.shape[dim];
+    }
+    return this.shape;
+  }
+
   toArray_(): void {
     return;
   }
