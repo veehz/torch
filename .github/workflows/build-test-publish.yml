@@ -48,6 +48,12 @@ jobs:
               cp -r build docs/media/build
             fi
 
+        - name: Copy examples to docs/examples
+          run: |
+            if [ -d "examples" ]; then
+              cp -r examples docs/examples
+            fi
+
         - name: Copy examples to docs/media/examples
           run: |
             if [ -d "examples" ]; then
