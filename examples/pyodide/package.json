@@ -1,0 +1,14 @@
+{
+  "name": "example-pyodide",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "gen-cache": "node main.js gen",
+    "test-pyodide": "node main.js test"
+  },
+  "dependencies": {
+    "pyodide": "^0.29.3",
+    "torch": "portal:../../"
+  }
+}

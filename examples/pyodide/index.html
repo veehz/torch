@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>torch+pyodide browser backprop example</title>
+    <script src="../../build/browser/torch.browser.umd.js" onerror="console.log('torch.js loading failed');"></script>
+</head>
+
+<body>
+    <h1>Torch + Pyodide</h1>
+    <div>
+        <label>Load example:
+            <select id="example-select" onchange="loadExample()">
+                <option value="">-- custom --</option>
+                <option value="py/basic_ops.py">basic_ops.py</option>
+                <option value="py/no_grad.py">no_grad.py</option>
+                <option value="py/linear_model.py">linear_model.py</option>
+                <option value="py/training_sgd.py">training_sgd.py</option>
+                <option value="py/custom_module.py">custom_module.py</option>
+            </select>
+        </label>
+    </div>
+    <div>
+        <textarea id="code" rows="14" cols="70" placeholder="Enter Python code here...">
+x = torch.tensor([1.0, 2.0, 3.0], requires_grad=True)
+y = torch.tensor([4.0, 5.0, 6.0], requires_grad=True)
+z = (x * y).sum()
+z.backward()
+print("x.grad:", x.grad)
+print("y.grad:", y.grad)
+</textarea>
+    </div>
+
+    <div>
+        <button onclick="runCode()">Run Code</button>
+        <button onclick="clearOutput()">Clear</button>
+    </div>
+    <div>
+        <h3>Output:</h3>
+        <pre id="output"></pre>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <script>
+        let pyodide;
+
+        async function main() {
+            pyodide = await loadPyodide();
+
+            try {
+                if (!window.torch) {
+                    throw new Error("torch.js failed to load. Run `yarn build` first.");
+                }
+
+                // Make torch available to Python
+                pyodide.globals.set("js_torch", window.torch);
+
+                const response = await fetch('./bridge.py');
+                const bridgeCode = await response.text();
+
+                // Load the bridge code into Pyodide
+                pyodide.runPython(bridgeCode);
+
+                document.getElementById("output").textContent = "Pyodide and bridge.py loaded successfully!";
+            } catch (error) {
+                document.getElementById("output").textContent = `Error during initialization: ${error.message}`;
+            }
+        }
+
+        function runCode() {
+            const code = document.getElementById("code").value;
+            const output = document.getElementById("output");
+
+            try {
+                // Capture stdout, always restoring even on exception
+                pyodide.runPython(`
+import sys
+from io import StringIO
+_bridge_saved_stdout = sys.stdout
+sys.stdout = StringIO()
+`);
+
+                let result = "";
+                try {
+                    pyodide.runPython(code);
+                    result = pyodide.runPython("sys.stdout.getvalue()");
+                } finally {
+                    pyodide.runPython("sys.stdout = _bridge_saved_stdout");
+                }
+                output.textContent = result || "No output";
+            } catch (error) {
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        function clearOutput() {
+            document.getElementById("output").textContent = "";
+        }
+
+        async function loadExample() {
+            const sel = document.getElementById("example-select");
+            const path = sel.value;
+            if (!path) return;
+            try {
+                const resp = await fetch(path);
+                const code = await resp.text();
+                document.getElementById("code").value = code;
+            } catch (e) {
+                document.getElementById("output").textContent = `Error loading example: ${e.message}`;
+            }
+        }
+
+        main();
+    </script>
+</body>
+
+</html>
