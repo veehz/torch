@@ -16,9 +16,11 @@ export declare class Tensor {
         operation?: TorchFunction;
         shape?: number[];
     });
+    size(dim?: number): number | number[];
     toArray_(): void;
     toFlatArray(): number[];
     toArray(): NestedNumberArray;
+    toString(): string;
     dataLength(): number;
     private _executeUnaryOp;
     private _executeBinaryOp;
