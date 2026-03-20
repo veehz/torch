@@ -45,48 +45,116 @@ function _get_original_index(original_shape, new_shape, index2) {
   return original_index;
 }
 __name(_get_original_index, "_get_original_index");
-function get_shape_from_args(args) {
+let globalId = 0;
+const getNextId = /* @__PURE__ */ __name(() => {
+  return globalId++;
+}, "getNextId");
+const eventBus = new EventTarget();
+const events = {
+  TENSOR_BEFORE_BACKWARD: "tensor.beforeBackward",
+  TENSOR_AFTER_BACKWARD: "tensor.afterBackward",
+  OPERATION_BEFORE_FORWARD: "operation.beforeForward",
+  OPERATION_AFTER_FORWARD: "operation.afterForward",
+  OPERATION_BEFORE_BACKWARD: "operation.beforeBackward",
+  OPERATION_AFTER_BACKWARD: "operation.afterBackward",
+  OPERATION_BEFORE_ACCUMULATE_GRAD: "operation.beforeAccumulateGrad",
+  OPERATION_AFTER_ACCUMULATE_GRAD: "operation.afterAccumulateGrad"
+};
+function _numel(shape) {
+  return shape.reduce((a, b) => a * b, 1);
+}
+__name(_numel, "_numel");
+function _get_shape_from_args(args) {
   if (Array.isArray(args[0])) {
     return args[0];
   }
   return args;
 }
-__name(get_shape_from_args, "get_shape_from_args");
+__name(_get_shape_from_args, "_get_shape_from_args");
+let _rng = /* @__PURE__ */ __name(() => Math.random(), "_rng");
+function getRng() {
+  return _rng;
+}
+__name(getRng, "getRng");
+function manual_seed(seed2) {
+  seed2 = seed2 >>> 0;
+  _rng = mulberry32(seed2);
+  return seed2;
+}
+__name(manual_seed, "manual_seed");
+function seed() {
+  const s = Math.random() * 4294967295 >>> 0;
+  _rng = mulberry32(s);
+  return s;
+}
+__name(seed, "seed");
+function mulberry32(seed2) {
+  return function() {
+    let t = seed2 += 1831565813;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+__name(mulberry32, "mulberry32");
+function uniformDist(min2 = 0, max2 = 1) {
+  return () => min2 + getRng()() * (max2 - min2);
+}
+__name(uniformDist, "uniformDist");
+function normalDist(mean2 = 0, std = 1) {
+  return function() {
+    const u = 1 - getRng()();
+    const v = getRng()();
+    const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    return z * std + mean2;
+  };
+}
+__name(normalDist, "normalDist");
 function randn(...args) {
-  const shape = get_shape_from_args(args);
-  const tensor2 = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(Math.random()));
+  const shape = _get_shape_from_args(args);
+  const tensor2 = new Tensor(Array.from({ length: _numel(shape) }, normalDist()));
   tensor2.shape = shape;
   return tensor2;
 }
 __name(randn, "randn");
 function rand(...args) {
-  const shape = get_shape_from_args(args);
-  const tensor2 = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(Math.random()));
+  const shape = _get_shape_from_args(args);
+  const tensor2 = new Tensor(Array.from({ length: _numel(shape) }, uniformDist()));
   tensor2.shape = shape;
   return tensor2;
 }
 __name(rand, "rand");
 function randint(low, high, shape) {
   const tensor2 = new Tensor(
-    Array(shape.reduce((a, b) => a * b, 1)).fill(Math.floor(Math.random() * (high - low) + low))
+    Array.from({ length: _numel(shape) }, () => Math.floor(uniformDist(low, high)()))
   );
   tensor2.shape = shape;
   return tensor2;
 }
 __name(randint, "randint");
+function randperm(n) {
+  const arr = Array.from({ length: n }, (_, i) => i);
+  for (let i = 0; i < n; i++) {
+    const j = Math.floor(uniformDist()() * (n - i)) + i;
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  const tensor2 = new Tensor(arr);
+  return tensor2;
+}
+__name(randperm, "randperm");
 function tensor(data, requires_grad = false) {
   return new Tensor(data, { requires_grad });
 }
 __name(tensor, "tensor");
 function ones(...args) {
-  const shape = get_shape_from_args(args);
+  const shape = _get_shape_from_args(args);
   const tensor2 = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(1));
   tensor2.shape = shape;
   return tensor2;
 }
 __name(ones, "ones");
 function zeros(...args) {
-  const shape = get_shape_from_args(args);
+  const shape = _get_shape_from_args(args);
   const tensor2 = new Tensor(Array(shape.reduce((a, b) => a * b, 1)).fill(0));
   tensor2.shape = shape;
   return tensor2;
@@ -142,21 +210,6 @@ function no_grad(fn) {
   }
 }
 __name(no_grad, "no_grad");
-let globalId = 0;
-const getNextId = /* @__PURE__ */ __name(() => {
-  return globalId++;
-}, "getNextId");
-const eventBus = new EventTarget();
-const events = {
-  TENSOR_BEFORE_BACKWARD: "tensor.beforeBackward",
-  TENSOR_AFTER_BACKWARD: "tensor.afterBackward",
-  OPERATION_BEFORE_FORWARD: "operation.beforeForward",
-  OPERATION_AFTER_FORWARD: "operation.afterForward",
-  OPERATION_BEFORE_BACKWARD: "operation.beforeBackward",
-  OPERATION_AFTER_BACKWARD: "operation.afterBackward",
-  OPERATION_BEFORE_ACCUMULATE_GRAD: "operation.beforeAccumulateGrad",
-  OPERATION_AFTER_ACCUMULATE_GRAD: "operation.afterAccumulateGrad"
-};
 function resultRequiresGrad(...args) {
   if (!is_grad_enabled()) return false;
   for (const arg of args) {
@@ -294,7 +347,9 @@ __name(_get_shape, "_get_shape");
 function _assert_shape(data, shape) {
   if (Array.isArray(data)) {
     if (data.length !== shape[0]) {
-      throw new Error(`Shape mismatch at dim ${shape.length}: expected ${shape[0]}, got ${data.length}`);
+      throw new Error(
+        `Shape mismatch at dim ${shape.length}: expected ${shape[0]}, got ${data.length}`
+      );
     }
     for (let i = 0; i < data.length; i++) {
       _assert_shape(data[i], shape.slice(1));
@@ -304,7 +359,9 @@ function _assert_shape(data, shape) {
       throw new Error(`Shape mismatch at dim ${shape.length}: expected 1D, got ${shape}`);
     }
     if (data.length !== shape[0]) {
-      throw new Error(`Shape mismatch at dim ${shape.length}: expected ${shape[0]}, got ${data.length}`);
+      throw new Error(
+        `Shape mismatch at dim ${shape.length}: expected ${shape[0]}, got ${data.length}`
+      );
     }
   } else {
     if (shape.length !== 0) {
@@ -359,7 +416,9 @@ const _Tensor = class _Tensor {
         dim += this.shape.length;
       }
       if (dim < 0 || dim >= this.shape.length) {
-        throw new Error(`Dimension out of range (expected to be in range of [${-this.shape.length}, ${this.shape.length - 1}], but got ${dim})`);
+        throw new Error(
+          `Dimension out of range (expected to be in range of [${-this.shape.length}, ${this.shape.length - 1}], but got ${dim})`
+        );
       }
       return this.shape[dim];
     }
@@ -460,9 +519,13 @@ const _Tensor = class _Tensor {
       grad.toArray_();
     }
     if (this.grad_fn) {
-      eventBus.dispatchEvent(new CustomEvent(events.TENSOR_BEFORE_BACKWARD, { detail: { tensor: this } }));
+      eventBus.dispatchEvent(
+        new CustomEvent(events.TENSOR_BEFORE_BACKWARD, { detail: { tensor: this } })
+      );
       this.grad_fn.backward(grad);
-      eventBus.dispatchEvent(new CustomEvent(events.TENSOR_AFTER_BACKWARD, { detail: { tensor: this } }));
+      eventBus.dispatchEvent(
+        new CustomEvent(events.TENSOR_AFTER_BACKWARD, { detail: { tensor: this } })
+      );
     }
   }
   // operations
@@ -593,6 +656,9 @@ const _Tensor = class _Tensor {
     }
     return true;
   }
+  numel() {
+    return this.dataLength();
+  }
   // other
   sigmoid() {
     return this._executeUnaryOp("sigmoid");
@@ -672,6 +738,10 @@ function allclose(a, b, rtol = 1e-5, atol = 1e-8, equal_nan = false) {
   return a.allclose(b, rtol, atol, equal_nan);
 }
 __name(allclose, "allclose");
+function numel(a) {
+  return a.dataLength();
+}
+__name(numel, "numel");
 function _get_strides(shape) {
   const strides = new Array(shape.length).fill(1);
   for (let i = shape.length - 2; i >= 0; i--) {
@@ -2462,6 +2532,7 @@ export {
   linspace,
   log,
   lt,
+  manual_seed,
   matmul,
   max,
   maximum,
@@ -2474,6 +2545,7 @@ export {
   neg,
   index$1 as nn,
   no_grad,
+  numel,
   ones,
   ones_like,
   index as optim,
@@ -2481,8 +2553,10 @@ export {
   rand,
   randint,
   randn,
+  randperm,
   reciprocal,
   reshape,
+  seed,
   sign,
   sin,
   sqrt,

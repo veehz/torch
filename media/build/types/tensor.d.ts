@@ -69,5 +69,6 @@ export declare class Tensor {
     eq(other: Tensor | number): Tensor;
     ne(other: Tensor | number): Tensor;
     allclose(other: Tensor, rtol?: number, atol?: number, equal_nan?: boolean): boolean;
+    numel(): number;
     sigmoid(): Tensor;
 }

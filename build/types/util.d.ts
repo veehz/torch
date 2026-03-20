@@ -10,3 +10,5 @@ export declare const events: {
     OPERATION_BEFORE_ACCUMULATE_GRAD: string;
     OPERATION_AFTER_ACCUMULATE_GRAD: string;
 };
+export declare function _numel(shape: number[]): number;
+export declare function _get_shape_from_args(args: number[] | number[][]): number[];
