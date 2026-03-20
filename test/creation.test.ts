@@ -17,14 +17,38 @@ describe('Creation Functions', () => {
     });
 
     it('should create a tensor with nested 2D array', () => {
-      const t = torch.tensor([[1, 2], [3, 4]]);
-      assert.deepStrictEqual(t.toArray(), [[1, 2], [3, 4]]);
+      const t = torch.tensor([
+        [1, 2],
+        [3, 4]
+      ]);
+      assert.deepStrictEqual(t.toArray(), [
+        [1, 2],
+        [3, 4]
+      ]);
       assert.deepStrictEqual(t.shape, [2, 2]);
     });
 
     it('should create a tensor with nested 3D array', () => {
-      const t = torch.tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]);
-      assert.deepStrictEqual(t.toArray(), [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]);
+      const t = torch.tensor([
+        [
+          [1, 2],
+          [3, 4]
+        ],
+        [
+          [5, 6],
+          [7, 8]
+        ]
+      ]);
+      assert.deepStrictEqual(t.toArray(), [
+        [
+          [1, 2],
+          [3, 4]
+        ],
+        [
+          [5, 6],
+          [7, 8]
+        ]
+      ]);
       assert.deepStrictEqual(t.shape, [2, 2, 2]);
     });
 
@@ -45,8 +69,21 @@ describe('Creation Functions', () => {
     it('should not create tensor with inconsistent shape', () => {
       assert.throws(() => torch.tensor([[1, 2], [3]]));
       assert.throws(() => torch.tensor([1, [2, 3]]));
-      assert.throws(() => torch.tensor([[1, 2], [3, 4, 5]]));
-      assert.throws(() => torch.tensor([[[1, 2], [3, 4]], [[5, 6]]]));
+      assert.throws(() =>
+        torch.tensor([
+          [1, 2],
+          [3, 4, 5]
+        ])
+      );
+      assert.throws(() =>
+        torch.tensor([
+          [
+            [1, 2],
+            [3, 4]
+          ],
+          [[5, 6]]
+        ])
+      );
     });
   });
   describe('ones', () => {
@@ -58,7 +95,10 @@ describe('Creation Functions', () => {
 
     it('should create a 2D tensor of ones', () => {
       const t = torch.ones(2, 3);
-      assert.deepStrictEqual(t.toArray(), [[1, 1, 1], [1, 1, 1]]);
+      assert.deepStrictEqual(t.toArray(), [
+        [1, 1, 1],
+        [1, 1, 1]
+      ]);
       assert.deepStrictEqual(t.shape, [2, 3]);
     });
 
@@ -85,7 +125,11 @@ describe('Creation Functions', () => {
 
     it('should create a 2D tensor of zeros', () => {
       const t = torch.zeros(3, 2);
-      assert.deepStrictEqual(t.toArray(), [[0, 0], [0, 0], [0, 0]]);
+      assert.deepStrictEqual(t.toArray(), [
+        [0, 0],
+        [0, 0],
+        [0, 0]
+      ]);
       assert.deepStrictEqual(t.shape, [3, 2]);
     });
 
@@ -98,7 +142,10 @@ describe('Creation Functions', () => {
 
   describe('ones_like', () => {
     it('should create a tensor of ones with the same shape', () => {
-      const original = new Tensor([[1, 2, 3], [4, 5, 6]]);
+      const original = new Tensor([
+        [1, 2, 3],
+        [4, 5, 6]
+      ]);
       const t = torch.ones_like(original);
       assert.deepStrictEqual(t.shape, [2, 3]);
       assert.isTrue(t.toFlatArray().every((v: number) => v === 1));
@@ -107,7 +154,11 @@ describe('Creation Functions', () => {
 
   describe('zeros_like', () => {
     it('should create a tensor of zeros with the same shape', () => {
-      const original = new Tensor([[1, 2], [3, 4], [5, 6]]);
+      const original = new Tensor([
+        [1, 2],
+        [3, 4],
+        [5, 6]
+      ]);
       const t = torch.zeros_like(original);
       assert.deepStrictEqual(t.shape, [3, 2]);
       assert.isTrue(t.toFlatArray().every((v: number) => v === 0));
@@ -192,6 +243,22 @@ describe('Creation Functions', () => {
       const arr = t.toFlatArray();
       assert.closeTo(arr[0], 1.0, 1e-6);
       assert.closeTo(arr[7], 4.5, 1e-6);
+    });
+  });
+
+  describe('seed', () => {
+    it('random numbers should be different', () => {
+      const t1 = torch.rand(5);
+      const t2 = torch.rand(5);
+      assert.notDeepEqual(t1.toArray(), t2.toArray());
+    });
+
+    it('manual_seed should seed the random number generator', () => {
+      torch.manual_seed(123);
+      const t1 = torch.rand(5);
+      torch.manual_seed(123);
+      const t2 = torch.rand(5);
+      assert.deepStrictEqual(t1.toArray(), t2.toArray());
     });
   });
 });

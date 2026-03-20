@@ -31,7 +31,9 @@ function _get_shape(data: NestedNumberArray): number[] {
 function _assert_shape(data: NestedNumberArray, shape: number[]): void {
   if (Array.isArray(data)) {
     if (data.length !== shape[0]) {
-      throw new Error(`Shape mismatch at dim ${shape.length}: expected ${shape[0]}, got ${data.length}`);
+      throw new Error(
+        `Shape mismatch at dim ${shape.length}: expected ${shape[0]}, got ${data.length}`
+      );
     }
     for (let i = 0; i < data.length; i++) {
       _assert_shape(data[i], shape.slice(1));
@@ -41,7 +43,9 @@ function _assert_shape(data: NestedNumberArray, shape: number[]): void {
       throw new Error(`Shape mismatch at dim ${shape.length}: expected 1D, got ${shape}`);
     }
     if (data.length !== shape[0]) {
-      throw new Error(`Shape mismatch at dim ${shape.length}: expected ${shape[0]}, got ${data.length}`);
+      throw new Error(
+        `Shape mismatch at dim ${shape.length}: expected ${shape[0]}, got ${data.length}`
+      );
     }
   } else {
     if (shape.length !== 0) {
@@ -83,7 +87,7 @@ export class Tensor {
 
   constructor(
     data: NestedNumberArray,
-    options: { requires_grad?: boolean, name?: string } = {},
+    options: { requires_grad?: boolean; name?: string } = {},
     internal_options: { operation?: TorchFunction; shape?: number[] } = {}
   ) {
     this.data = _flatten(data);
@@ -109,7 +113,9 @@ export class Tensor {
         dim += this.shape.length;
       }
       if (dim < 0 || dim >= this.shape.length) {
-        throw new Error(`Dimension out of range (expected to be in range of [${-this.shape.length}, ${this.shape.length - 1}], but got ${dim})`);
+        throw new Error(
+          `Dimension out of range (expected to be in range of [${-this.shape.length}, ${this.shape.length - 1}], but got ${dim})`
+        );
       }
       return this.shape[dim];
     }
@@ -152,7 +158,7 @@ export class Tensor {
   }
 
   toString(): string {
-    let extra = "";
+    let extra = '';
     if (this.name) {
       extra += `, name="${this.name}"`;
     }
@@ -160,7 +166,7 @@ export class Tensor {
       extra += `, size=(${this.shape.join(', ')})`;
     }
     if (this.requires_grad) {
-      extra += ", requires_grad=True";
+      extra += ', requires_grad=True';
     }
     return `Tensor(${JSON.stringify(this.toArray())}${extra})`;
   }
@@ -170,7 +176,9 @@ export class Tensor {
   }
 
   private _executeUnaryOp(opName: string): Tensor {
-    const operation = resultRequiresGrad(this) ? createOperation(opName) : getOperationCache(opName);
+    const operation = resultRequiresGrad(this)
+      ? createOperation(opName)
+      : getOperationCache(opName);
     return operation.forward(this);
   }
 
@@ -178,7 +186,9 @@ export class Tensor {
     if (typeof other == 'number') {
       other = new Tensor(other);
     }
-    const operation = resultRequiresGrad(this, other) ? createOperation(opName) : getOperationCache(opName);
+    const operation = resultRequiresGrad(this, other)
+      ? createOperation(opName)
+      : getOperationCache(opName);
     return operation.forward(this, other);
   }
 
@@ -233,9 +243,13 @@ export class Tensor {
     }
 
     if (this.grad_fn) {
-      eventBus.dispatchEvent(new CustomEvent(events.TENSOR_BEFORE_BACKWARD, { detail: { tensor: this } }));
+      eventBus.dispatchEvent(
+        new CustomEvent(events.TENSOR_BEFORE_BACKWARD, { detail: { tensor: this } })
+      );
       this.grad_fn.backward(grad);
-      eventBus.dispatchEvent(new CustomEvent(events.TENSOR_AFTER_BACKWARD, { detail: { tensor: this } }));
+      eventBus.dispatchEvent(
+        new CustomEvent(events.TENSOR_AFTER_BACKWARD, { detail: { tensor: this } })
+      );
     }
   }
 
@@ -400,15 +414,25 @@ export class Tensor {
     return this._executeBinaryOp('ne', other);
   }
 
-  allclose(other: Tensor, rtol: number = 1e-5, atol: number = 1e-8, equal_nan: boolean = false): boolean {
+  allclose(
+    other: Tensor,
+    rtol: number = 1e-5,
+    atol: number = 1e-8,
+    equal_nan: boolean = false
+  ): boolean {
     if (this.data.length !== other.data.length) return false;
     for (let i = 0; i < this.data.length; i++) {
-      const av = this.data[i], bv = other.data[i];
+      const av = this.data[i],
+        bv = other.data[i];
       if (equal_nan && isNaN(av) && isNaN(bv)) continue;
       if (isNaN(av) || isNaN(bv)) return false;
       if (Math.abs(av - bv) > atol + rtol * Math.abs(bv)) return false;
     }
     return true;
+  }
+
+  numel(): number {
+    return this.dataLength();
   }
 
   // other

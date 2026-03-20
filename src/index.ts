@@ -12,6 +12,8 @@ export * as nn from './nn/index';
 
 export * as optim from './optim/index';
 
+export { seed, manual_seed } from './prng';
+
 export { eventBus, events } from './util';
 
 export { export_, ExportedProgram } from './export';
