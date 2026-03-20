@@ -16,13 +16,13 @@
   ],
   "main": "./build/node/torch.node.cjs",
   "module": "./build/node/torch.node.es.mjs",
-  "types": "./build/types/src/index.d.ts",
+  "types": "./build/types/index.d.ts",
   "unpkg": "./build/torch.min.js",
   "jsdelivr": "./build/torch.min.js",
   "exports": {
     ".": {
       "torch-src": "./src/index.ts",
-      "types": "./build/types/src/index.d.ts",
+      "types": "./build/types/index.d.ts",
       "browser": "./build/browser/torch.browser.es.js",
       "import": "./build/node/torch.node.es.mjs",
       "require": "./build/node/torch.node.cjs"
