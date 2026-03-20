@@ -3,6 +3,8 @@ import path from 'path';
 
 export default defineConfig({
   build: {
+    minify: false, // don't minify for npm package
+    sourcemap: true,
     lib: {
       entry: path.resolve(__dirname, 'src/index.ts'),
       fileName: (format) => format === 'es' ? 'torch.node.es.mjs' : 'torch.node.cjs',
@@ -10,6 +12,5 @@ export default defineConfig({
     },
     outDir: 'build/node',
     target: 'node20',
-    minify: true,
   },
 });

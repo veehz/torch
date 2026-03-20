@@ -11,12 +11,14 @@
   "license": "Apache-2.0",
   "files": [
     "build",
-    "examples",
-    "vendor"
+    "src",
+    "examples"
   ],
   "main": "./build/node/torch.node.cjs",
   "module": "./build/node/torch.node.es.mjs",
   "types": "./build/types/src/index.d.ts",
+  "unpkg": "./build/torch.min.js",
+  "jsdelivr": "./build/torch.min.js",
   "exports": {
     ".": {
       "torch-src": "./src/index.ts",
@@ -35,8 +37,10 @@
     "build:browser:watch": "vite build --config vite.config.browser.ts --watch",
     "build:node": "vite build --config vite.config.node.ts",
     "build:node:watch": "vite build --config vite.config.node.ts --watch",
+    "build:cdn": "vite build --config vite.config.cdn.ts",
+    "build:cdn:watch": "vite build --config vite.config.cdn.ts --watch",
     "build:types": "tsc -p tsconfig.build.json",
-    "build": "yarn clean && concurrently \"yarn build:node\" \"yarn build:browser\" \"yarn build:types\"",
+    "build": "yarn clean && concurrently \"yarn build:node\" \"yarn build:browser\" \"yarn build:cdn\" \"yarn build:types\"",
     "dev": "concurrently \"yarn:build:browser:watch\" \"yarn:build:node:watch\" \"yarn:test:watch\" \"yarn:serve\"",
     "docs": "typedoc --out docs src",
     "lint": "eslint src",

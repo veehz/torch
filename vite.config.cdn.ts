@@ -3,18 +3,16 @@ import path from 'path';
 
 export default defineConfig({
   build: {
-    minify: false,
+    minify: 'esbuild',
     sourcemap: true,
     lib: {
       entry: path.resolve(__dirname, 'src/index.ts'),
       name: 'torch',
-      fileName: (format) => `torch.browser.${format}.js`,
-      formats: ['es'] // umd -> see cdn build
+      fileName: () => `torch.min.js`,
+      formats: ['umd']
     },
-    outDir: 'build/browser',
-    rollupOptions: {
-      treeshake: true,
-    },
+    emptyOutDir: false,
+    outDir: 'build',
   },
   esbuild: {
     keepNames: true,

@@ -8,10 +8,10 @@ describe('Optimizers', () => {
     it('should update parameters', () => {
       const x = new torch.Tensor([1.0], { requires_grad: true });
       const sgd = new torch.optim.SGD([x], 0.01);
-      
+
       const y = x.mul(new torch.Tensor(2.0));
       y.backward();
-      
+
       /**
        * x = 1, grad = 2
        * x_new = x - lr * grad = 1 - 0.01 * 2 = 0.98
@@ -46,7 +46,7 @@ describe('Optimizers', () => {
       y = x.pow(2);
       y.backward();
       sgd.step();
-      
+
       actual = x.data[0];
       assert.closeTo(actual, 0.32, EPS);
     });
