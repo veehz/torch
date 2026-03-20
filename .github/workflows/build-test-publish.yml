@@ -32,6 +32,13 @@ jobs:
         - name: Test on build/
           run: yarn test:build
 
+        - name: Test in browser
+          run: |
+            yarn serve &
+            npx wait-on tcp:8080
+            npx mocha-headless-chrome -a no-sandbox -t 60000 -f http://127.0.0.1:8080/test/index.html
+            npx mocha-headless-chrome -a no-sandbox -t 60000 -f http://127.0.0.1:8080/test/umd.html
+
         - name: Build docs
           run: yarn docs
 
