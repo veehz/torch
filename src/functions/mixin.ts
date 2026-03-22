@@ -165,7 +165,8 @@ export function ReductionFunctionMixin(
         const is_full_reduce = dim === undefined;
 
         // Accumulate
-        for (let i = 0; i < a.data.length; i++) {
+        const aData = a.data; // cache: avoids repeated allocations for view tensors
+        for (let i = 0; i < aData.length; i++) {
           const in_coords = _unravel_index(i, in_strides);
           let out_coords: number[];
 
@@ -183,7 +184,7 @@ export function ReductionFunctionMixin(
           }
 
           const out_idx = _ravel_index(out_coords, out_strides);
-          res_data[out_idx] = reduce_op(res_data[out_idx], a.data[i]);
+          res_data[out_idx] = reduce_op(res_data[out_idx], aData[i]);
           counts[out_idx]++;
         }
 

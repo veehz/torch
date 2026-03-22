@@ -70,6 +70,15 @@ function _flatten(data: NestedNumberArray): number[] {
   }
 }
 
+/**
+ * A shared backing store for tensor data.
+ * Multiple tensors (views) may reference the same TensorStorage instance.
+ * Mutating `data` on the TensorStorage is visible to all sharing tensors.
+ */
+export class TensorStorage {
+  constructor(public data: number[]) {}
+}
+
 export class Tensor {
   // Auto-generated ID
   public id: number = getNextId();
@@ -77,7 +86,49 @@ export class Tensor {
   // Optional user-defined name
   public name: string | null = null;
 
-  public data: number[];
+  // Shared backing storage and offset into it.
+  // Views share the same TensorStorage but differ in _offset and shape.
+  private _storage: TensorStorage = new TensorStorage([]);
+  private _offset: number = 0;
+
+  /**
+   * Returns the flat, contiguous data for this tensor.
+   *
+   * Fast path (non-view): returns the storage array directly — no allocation.
+   * View path: materialises a contiguous slice — one allocation per call,
+   * so callers inside tight loops should cache the result: `const d = t.data`.
+   */
+  get data(): number[] {
+    const n = this.dataLength();
+    if (this._offset === 0 && this._storage.data.length === n) {
+      return this._storage.data;
+    }
+    return this._storage.data.slice(this._offset, this._offset + n);
+  }
+
+  /**
+   * Sets the tensor's data.
+   *
+   * Non-view (offset=0, storage covers exactly this tensor's numel):
+   *   replaces the shared storage's data array in-place — all other views
+   *   sharing the same TensorStorage immediately see the new values.
+   *
+   * View (offset≠0 or storage is larger than this tensor):
+   *   copies `values` element-by-element into the shared storage at the
+   *   correct offset — the original tensor and sibling views are updated.
+   */
+  set data(values: number[]) {
+    const n = values.length;
+    if (this._offset === 0 && this._storage.data.length === n) {
+      // Full-storage owner: swap out the backing array.
+      this._storage.data = values;
+    } else {
+      // View: write into shared storage at the right offset.
+      for (let i = 0; i < n; i++) {
+        this._storage.data[this._offset + i] = values[i];
+      }
+    }
+  }
 
   public shape: number[];
   public grad_fn: TorchFunction | null = null;
@@ -88,16 +139,32 @@ export class Tensor {
   constructor(
     data: NestedNumberArray,
     options: { requires_grad?: boolean; name?: string } = {},
-    internal_options: { operation?: TorchFunction; shape?: number[] } = {}
+    internal_options: {
+      operation?: TorchFunction;
+      shape?: number[];
+      /** For internal view construction only — share an existing storage. */
+      _storage?: TensorStorage;
+      /** Byte offset into _storage (in elements). */
+      _offset?: number;
+    } = {}
   ) {
-    this.data = _flatten(data);
+    if (internal_options._storage !== undefined) {
+      // View construction: share the provided storage.
+      this._storage = internal_options._storage;
+      this._offset = internal_options._offset ?? 0;
+      this.shape = internal_options.shape ?? [];
+    } else {
+      this._storage = new TensorStorage(_flatten(data));
+      this._offset = 0;
+      this.shape = internal_options.shape ?? _get_and_assert_shape(data);
+    }
+
     this.requires_grad = options.requires_grad ?? false;
 
     if (options.name) {
       this.name = options.name;
     }
 
-    this.shape = internal_options.shape ?? _get_and_assert_shape(data);
     this.grad_fn = internal_options.operation ?? null;
 
     if (this.requires_grad && !this.grad_fn) {
@@ -187,7 +254,8 @@ export class Tensor {
   }
 
   dataLength(): number {
-    return this.data.length;
+    if (this.shape.length === 0) return 1;
+    return this.shape.reduce((a, b) => a * b, 1);
   }
 
   private _executeUnaryOp(opName: string): Tensor {
@@ -266,6 +334,37 @@ export class Tensor {
         new CustomEvent(events.TENSOR_AFTER_BACKWARD, { detail: { tensor: this } })
       );
     }
+  }
+
+  /**
+   * Returns a view of this tensor along dimension 0.
+   *
+   * The returned tensor shares the same underlying TensorStorage — mutations
+   * to either tensor (via zero_(), the data setter, or the optimizer) are
+   * immediately visible in the other.
+   *
+   * Supports negative indices (e.g. index(-1) is the last row).
+   *
+   * Note: the view does not carry a grad_fn; autograd does not propagate
+   * through index() at this time.
+   */
+  index(i: number): Tensor {
+    if (this.shape.length === 0) {
+      throw new Error('Cannot index a scalar tensor');
+    }
+    if (i < 0) {
+      i += this.shape[0];
+    }
+    if (i < 0 || i >= this.shape[0]) {
+      throw new Error(
+        `Index ${i} out of bounds for dimension 0 with size ${this.shape[0]}`
+      );
+    }
+    const newShape = this.shape.slice(1);
+    // Number of elements per row along dim 0.
+    const rowSize = newShape.length === 0 ? 1 : newShape.reduce((a, b) => a * b, 1);
+    const newOffset = this._offset + i * rowSize;
+    return new Tensor([], {}, { shape: newShape, _storage: this._storage, _offset: newOffset });
   }
 
   // operations
@@ -435,10 +534,12 @@ export class Tensor {
     atol: number = 1e-8,
     equal_nan: boolean = false
   ): boolean {
-    if (this.data.length !== other.data.length) return false;
-    for (let i = 0; i < this.data.length; i++) {
-      const av = this.data[i],
-        bv = other.data[i];
+    const thisData = this.data;
+    const otherData = other.data;
+    if (thisData.length !== otherData.length) return false;
+    for (let i = 0; i < thisData.length; i++) {
+      const av = thisData[i],
+        bv = otherData[i];
       if (equal_nan && isNaN(av) && isNaN(bv)) continue;
       if (isNaN(av) || isNaN(bv)) return false;
       if (Math.abs(av - bv) > atol + rtol * Math.abs(bv)) return false;

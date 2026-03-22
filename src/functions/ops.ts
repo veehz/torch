@@ -75,9 +75,12 @@ const Div = BinaryFunctionMixin(
 
 function _where(mask: Tensor, x: Tensor, fallback: Tensor | number): Tensor {
   const fb = typeof fallback === 'number' ? fallback : null;
+  const maskData = mask.data;
+  const xData = x.data;
+  const fbData = fb === null ? (fallback as Tensor).data : null;
   const data = new Array(x.dataLength());
   for (let i = 0; i < data.length; i++) {
-    data[i] = mask.data[i] ? x.data[i] : (fb !== null ? fb : (fallback as Tensor).data[i]);
+    data[i] = maskData[i] ? xData[i] : (fb !== null ? fb : fbData![i]);
   }
   return new Tensor(data, {}, { shape: x.shape });
 }
@@ -129,9 +132,10 @@ const Minimum = BinaryFunctionMixin(
 );
 
 function _powint_tensor(a: Tensor, n: number, operation: TorchFunction | null = null): Tensor {
+  const aData = a.data;
   const data = new Array(a.dataLength());
   for (let i = 0; i < data.length; i++) {
-    data[i] = Math.pow(a.data[i], n);
+    data[i] = Math.pow(aData[i], n);
   }
   return new Tensor(
     data,
@@ -492,6 +496,7 @@ function _transpose_tensor(
   [output_shape[dim0], output_shape[dim1]] = [output_shape[dim1], output_shape[dim0]];
   const size = a.dataLength();
   const data = new Array(size);
+  const aData = a.data;
 
   const a_strides = new Array(a.shape.length);
   const out_strides = new Array(output_shape.length);
@@ -518,7 +523,7 @@ function _transpose_tensor(
 
       input_idx += coord * a_strides[input_d];
     }
-    data[i] = a.data[input_idx];
+    data[i] = aData[input_idx];
   }
 
   return new Tensor(
@@ -582,6 +587,8 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: TorchFunction | null = 
   const dim_N = broadcast_shape[broadcast_shape.length - 1];
   const dim_K = a_shape[a_shape.length - 1]; // or b_shape[b_shape.length - 2]
 
+  const aData = a.data;
+  const bData = b.data;
   for (let i = 0; i < output_size; i++) {
     const mn_idx = i % (dim_M * dim_N);
     const m = Math.floor(mn_idx / dim_N);
@@ -592,7 +599,7 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: TorchFunction | null = 
 
     let sum = 0;
     for (let k = 0; k < dim_K; k++) {
-      sum += a.data[base_a + k] * b.data[base_b + k * dim_N];
+      sum += aData[base_a + k] * bData[base_b + k * dim_N];
     }
     data[i] = sum;
   }
@@ -733,6 +740,9 @@ function _convNd_forward(
   const out_strides = get_strides(output_shape);
   const in_channels_per_group = in_channels / groups;
   const out_channels_per_group = out_channels / groups;
+  const inputData = input.data;
+  const weightData = weight.data;
+  const biasData = bias ? bias.data : null;
 
   for (let b = 0; b < batch_size; b++) {
     for (let g = 0; g < groups; g++) {
@@ -751,7 +761,7 @@ function _convNd_forward(
             temp_os = Math.floor(temp_os / out_dims[d]);
           }
 
-          let sum = bias ? bias.data[oc] : 0;
+          let sum = biasData ? biasData[oc] : 0;
 
           // Iterate over kernel spatial dimensions and in_channels
           for (let ic_g = 0; ic_g < in_channels_per_group; ic_g++) {
@@ -787,7 +797,7 @@ function _convNd_forward(
                 let w_flat_idx = oc * w_strides[0] + ic_g * w_strides[1];
                 for (let d = 0; d < dims; d++) w_flat_idx += ks_coords[d] * w_strides[d + 2];
 
-                sum += input.data[in_flat_idx] * weight.data[w_flat_idx];
+                sum += inputData[in_flat_idx] * weightData[w_flat_idx];
               }
             }
           }
@@ -842,6 +852,9 @@ function _convNd_backward(
   const in_strides = get_strides(input.shape);
   const w_strides = get_strides(weight.shape);
   const dz_strides = get_strides(dz.shape);
+  const dzData = dz.data;
+  const weightDataBwd = weight.data;
+  const inputDataBwd = input.data;
 
   let dInput: Tensor | null = null;
   let dWeight: Tensor | null = null;
@@ -877,7 +890,7 @@ function _convNd_backward(
 
           let dz_flat_idx = b * dz_strides[0] + oc * dz_strides[1];
           for (let d = 0; d < dims; d++) dz_flat_idx += os_coords[d] * dz_strides[d + 2];
-          const dz_val = dz.data[dz_flat_idx];
+          const dz_val = dzData[dz_flat_idx];
 
           for (let ic_g = 0; ic_g < in_channels_per_group; ic_g++) {
             const ic = g * in_channels_per_group + ic_g;
@@ -910,10 +923,10 @@ function _convNd_backward(
                 for (let d = 0; d < dims; d++) w_flat_idx += ks_coords[d] * w_strides[d + 2];
 
                 if (input_requires_grad) {
-                  dInput_data![in_flat_idx] += dz_val * weight.data[w_flat_idx];
+                  dInput_data![in_flat_idx] += dz_val * weightDataBwd[w_flat_idx];
                 }
                 if (weight_requires_grad) {
-                  dWeight_data![w_flat_idx] += dz_val * input.data[in_flat_idx];
+                  dWeight_data![w_flat_idx] += dz_val * inputDataBwd[in_flat_idx];
                 }
               }
             }
