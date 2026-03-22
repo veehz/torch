@@ -10,6 +10,9 @@ export * from './creation/index';
 
 export * as nn from './nn/index';
 
+// Allow for torch.relu -> torch.nn.functional.relu (and others)
+export * from './nn/functional';
+
 export * as optim from './optim/index';
 
 export { seed, manual_seed } from './prng';

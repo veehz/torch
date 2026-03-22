@@ -556,4 +556,8 @@ export class Tensor {
   sigmoid(): Tensor {
     return this._executeUnaryOp('sigmoid');
   }
+
+  relu(): Tensor {
+    return this._executeUnaryOp('relu');
+  }
 }
