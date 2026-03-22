@@ -106,3 +106,7 @@ export function allclose(
 export function numel(a: Tensor): number {
   return a.dataLength();
 }
+
+export function flatten(input: Tensor, start_dim: number = 0, end_dim: number = -1): Tensor {
+  return input.flatten(start_dim, end_dim);
+}

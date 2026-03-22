@@ -4,10 +4,10 @@ import * as functional from "./functional";
 import { Tensor } from "../tensor";
 
 export class Linear extends Module {
-  private weight: Parameter;
-  private bias: Parameter;
+  public weight: Parameter;
+  public bias: Parameter | null;
 
-  constructor(in_features: number, out_features: number) {
+  constructor(in_features: number, out_features: number, bias: boolean = true) {
     super();
     const k = Math.sqrt(1 / in_features);
 
@@ -16,18 +16,23 @@ export class Linear extends Module {
         .mul(2 * k)
         .sub(k)
     );
-    this.bias = new Parameter(
-      rand([out_features])
-        .mul(2 * k)
-        .sub(k)
-    );
-
     this.register('weight', this.weight);
-    this.register('bias', this.bias);
+
+    if (bias) {
+      this.bias = new Parameter(
+        rand([out_features])
+          .mul(2 * k)
+          .sub(k)
+      );
+      this.register('bias', this.bias);
+    } else {
+      this.bias = null;
+    }
   }
 
   forward(input: Tensor) {
-    return input.matmul(this.weight.transpose(0, 1)).add(this.bias);
+    const out = input.matmul(this.weight.transpose(0, 1));
+    return this.bias ? out.add(this.bias) : out;
   }
 }
 

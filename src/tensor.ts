@@ -448,6 +448,10 @@ export class Tensor {
     return this._executeOpRaw('reshape', shape);
   }
 
+  flatten(start_dim: number = 0, end_dim: number = -1): Tensor {
+    return this._executeOpRaw('flatten', start_dim, end_dim);
+  }
+
   squeeze(dim: number): Tensor {
     return this._executeOpRaw('squeeze', dim);
   }

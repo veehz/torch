@@ -281,6 +281,42 @@ class Reshape extends TorchFunction {
 }
 registerOperation('reshape', Reshape);
 
+class Flatten extends TorchFunction {
+  protected _forward(a: Tensor, start_dim: number = 0, end_dim: number = -1) {
+    const ndim = a.shape.length;
+    const sd = start_dim < 0 ? start_dim + ndim : start_dim;
+    const ed = end_dim < 0 ? end_dim + ndim : end_dim;
+    const newShape = [
+      ...a.shape.slice(0, sd),
+      a.shape.slice(sd, ed + 1).reduce((acc, val) => acc * val, 1),
+      ...a.shape.slice(ed + 1),
+    ];
+
+    const rg = resultRequiresGrad(a);
+    if (rg) {
+      this.saved_tensors = [a];
+    }
+    if (a.grad_fn) {
+      this.next_functions.push(a.grad_fn);
+    } else {
+      this.next_functions.push(nullOp);
+    }
+
+    return new Tensor(
+      a.data,
+      { requires_grad: rg },
+      { operation: rg ? this : null, shape: newShape }
+    );
+  }
+  protected _backward(dz: Tensor) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+
+    aFn.backward(dz.reshape(a.shape));
+  }
+}
+registerOperation('flatten', Flatten);
+
 class Squeeze extends TorchFunction {
   protected _forward(a: Tensor, dim?: number) {
     const rg = resultRequiresGrad(a);

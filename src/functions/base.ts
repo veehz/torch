@@ -4,7 +4,9 @@ import { is_grad_enabled } from '../grad_mode';
 import { Tensor } from '../tensor';
 import { eventBus, getNextId, events } from '../util';
 
-export function resultRequiresGrad(...args: (Tensor | number | number[] | boolean)[]): boolean {
+type ArgumentType = Tensor | number | number[] | boolean | string;
+
+export function resultRequiresGrad(...args: ArgumentType[]): boolean {
   if (!is_grad_enabled()) return false;
   for (const arg of args) {
     if (arg instanceof Tensor && arg.requires_grad) {
@@ -21,10 +23,10 @@ abstract class TorchFunction {
   public saved_tensors: Tensor[] = [];
   public _retained_tensors: Tensor[] = [];
 
-  protected abstract _forward(...args: (Tensor | number | number[] | boolean)[]): Tensor;
+  protected abstract _forward(...args: ArgumentType[]): Tensor;
   protected abstract _backward(dz: Tensor | number): void;
 
-  forward(...args: (Tensor | number | number[] | boolean)[]): Tensor {
+  forward(...args: ArgumentType[]): Tensor {
     const requires_grad = resultRequiresGrad(...args);
     eventBus.dispatchEvent(new CustomEvent(events.OPERATION_BEFORE_FORWARD, {
       detail: {
@@ -59,7 +61,7 @@ abstract class TorchFunction {
 }
 
 class NullOp extends TorchFunction {
-  protected _forward(..._args: (Tensor | number | number[])[]): Tensor {
+  protected _forward(..._args: ArgumentType[]): Tensor {
     throw new Error('NullOp should not be called');
   }
   protected _backward(_dz: Tensor): void {

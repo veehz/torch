@@ -26,16 +26,18 @@ const Sigmoid = UnaryFunctionMixin(
  * Forward:
  *   input  – (N, C) logits (unnormalized scores)
  *   target – (N,)   integer class indices in [0, C)
- *   Returns a scalar loss tensor.
+ *   reduction – 'mean' | 'sum' | 'none'
  *
  * Backward:
- *   d_input[i,j] = (softmax(input)[i,j] - 1{j == target[i]}) / N
+ *   d_input[i,j] = (softmax(input)[i,j] - 1{j == target[i]}) * scale
  */
 class CrossEntropyLossOp extends TorchFunction {
   private N: number = 0;
   private C: number = 0;
+  private reduction: string = 'mean';
 
-  protected _forward(input: Tensor, target: Tensor): Tensor {
+  protected _forward(input: Tensor, target: Tensor, reduction: string = 'mean'): Tensor {
+    this.reduction = reduction;
     const rg = resultRequiresGrad(input);
     if (rg) {
       this.saved_tensors = [input, target];
@@ -52,7 +54,7 @@ class CrossEntropyLossOp extends TorchFunction {
     const targetData = target.data;
 
     // Numerically stable log-softmax + gather
-    let totalLoss = 0;
+    const perSampleLoss = new Array(N);
     for (let i = 0; i < N; i++) {
       const rowOffset = i * C;
 
@@ -74,11 +76,23 @@ class CrossEntropyLossOp extends TorchFunction {
       // log_softmax for the target class
       const t = targetData[i];
       const logSoftmax = inputData[rowOffset + t] - maxVal - logSumExp;
-      totalLoss -= logSoftmax;
+      perSampleLoss[i] = -logSoftmax;
     }
 
-    const loss = totalLoss / N;
-    const result = new Tensor([loss], { requires_grad: rg }, { operation: rg ? this : null, shape: [] });
+    let lossData: number[];
+    let resultShape: number[];
+    if (reduction === 'none') {
+      lossData = perSampleLoss;
+      resultShape = [N];
+    } else if (reduction === 'sum') {
+      lossData = [perSampleLoss.reduce((a: number, b: number) => a + b, 0)];
+      resultShape = [];
+    } else {
+      lossData = [perSampleLoss.reduce((a: number, b: number) => a + b, 0) / N];
+      resultShape = [];
+    }
+
+    const result = new Tensor(lossData, { requires_grad: rg }, { operation: rg ? this : null, shape: resultShape });
     return result;
   }
 
@@ -87,12 +101,18 @@ class CrossEntropyLossOp extends TorchFunction {
     const [inputFn] = this.next_functions;
     const N = this.N;
     const C = this.C;
+    const reduction = this.reduction;
 
     const inputData = input.data;
     const targetData = target.data;
-    const dzVal = typeof dz === 'number' ? dz : dz.data[0];
 
-    // Gradient: (softmax - one_hot) / N * dz
+    let dzData: number[];
+    if (typeof dz === 'number') {
+      dzData = new Array(reduction === 'none' ? N : 1).fill(dz);
+    } else {
+      dzData = [...dz.data];
+    }
+
     const grad = new Array(N * C);
     for (let i = 0; i < N; i++) {
       const rowOffset = i * C;
@@ -110,10 +130,13 @@ class CrossEntropyLossOp extends TorchFunction {
       }
 
       const t = targetData[i];
+      const dzVal = reduction === 'none' ? dzData[i] : dzData[0];
+      const scale = reduction === 'mean' ? dzVal / N : dzVal;
+
       for (let j = 0; j < C; j++) {
         const softmax_j = Math.exp(inputData[rowOffset + j] - maxVal) / sumExp;
         const oneHot = j === t ? 1 : 0;
-        grad[rowOffset + j] = (softmax_j - oneHot) / N * dzVal;
+        grad[rowOffset + j] = (softmax_j - oneHot) * scale;
       }
     }
 

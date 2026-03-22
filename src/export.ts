@@ -60,6 +60,7 @@ export const _atenMap: Record<string, string> = {
   'reciprocal': 'aten.reciprocal.default',
   'nan_to_num': 'aten.nan_to_num.default',
   'reshape': 'aten.reshape.default',
+  'flatten': 'aten.flatten.using_ints',
   'squeeze': 'aten.squeeze.dim',
   'unsqueeze': 'aten.unsqueeze.default',
   'expand': 'aten.expand.default',
