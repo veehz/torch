@@ -20,6 +20,11 @@ export const {
   mul,
   randn,
   allclose,
+  numel,
+  seed,
+  manual_seed,
+  randperm,
+  rand,
   __right_index__,
   __left_index__,
   // etc...

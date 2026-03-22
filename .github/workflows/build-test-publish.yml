@@ -32,7 +32,7 @@ jobs:
         - name: Test on build/
           run: yarn test:build
 
-        - name: Test in browser
+        - name: Test in browser (If UMD tests are failing, check torch-bridge.js)
           run: |
             yarn serve &
             npx wait-on tcp:8080

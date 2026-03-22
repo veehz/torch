@@ -231,7 +231,7 @@ describe('Tensor views via index()', () => {
       const model = new Linear();
       const optim = new torch.optim.SGD(model.parameters(), 0.1);
 
-      const x = torch.tensor([[1.0, 2.0]], { requires_grad: false });
+      const x = torch.tensor([[1.0, 2.0]]);
       const y = model.forward(x);
       const loss = y.sum();
       loss.backward();
