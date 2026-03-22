@@ -15,4 +15,8 @@ export declare class BCELoss extends Loss {
     constructor(weight?: Tensor | null);
     forward(input: Tensor, target: Tensor): Tensor;
 }
+export declare class CrossEntropyLoss extends Loss {
+    constructor();
+    forward(input: Tensor, target: Tensor): Tensor;
+}
 export {};

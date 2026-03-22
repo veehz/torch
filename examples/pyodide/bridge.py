@@ -284,6 +284,29 @@ class Tensor:
     def __format__(self, fmt):    return format(self.item(), fmt)
 
     # ------------------------------------------------------------------
+    # Indexing
+    # ------------------------------------------------------------------
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return Tensor(self._js.index(key))
+        if isinstance(key, tuple):
+            result = self._js
+            for k in key:
+                if isinstance(k, int):
+                    result = result.index(k)
+                else:
+                    raise NotImplementedError(
+                        "Only integer indexing is supported in multi-dimensional indexing"
+                    )
+            return Tensor(result)
+        if isinstance(key, slice):
+            start, stop, step = key.indices(self.shape[0])
+            data = [Tensor(self._js.index(i)).tolist() for i in range(start, stop, step)]
+            return Tensor(data)
+        raise TypeError(f"Invalid index type: {type(key).__name__}")
+
+    # ------------------------------------------------------------------
     # Iteration and length
     # ------------------------------------------------------------------
 
@@ -446,12 +469,22 @@ class _NNFunctional:
 
 
 # ---------------------------------------------------------------------------
+# nn.parameter namespace
+# ---------------------------------------------------------------------------
+
+class _NNParameterNamespace:
+    def __init__(self):
+        self.Parameter = Parameter
+
+
+# ---------------------------------------------------------------------------
 # nn namespace
 # ---------------------------------------------------------------------------
 
 class _NNNamespace:
     def __init__(self):
         self.functional = _NNFunctional()
+        self.parameter = _NNParameterNamespace()
         self.Module = Module
         self.Parameter = Parameter
 
@@ -476,6 +509,30 @@ class _NNNamespace:
 
     def BCELoss(self):
         return _NNModule(js_torch.nn.BCELoss.new())
+
+    def CrossEntropyLoss(self):
+        return _NNModule(js_torch.nn.CrossEntropyLoss.new())
+
+    def Conv1d(self, in_channels, out_channels, kernel_size,
+               stride=1, padding=0, dilation=1, groups=1, bias=True):
+        return _NNModule(js_torch.nn.Conv1d.new(
+            in_channels, out_channels, kernel_size,
+            stride, padding, dilation, groups, bias
+        ))
+
+    def Conv2d(self, in_channels, out_channels, kernel_size,
+               stride=1, padding=0, dilation=1, groups=1, bias=True):
+        return _NNModule(js_torch.nn.Conv2d.new(
+            in_channels, out_channels, kernel_size,
+            stride, padding, dilation, groups, bias
+        ))
+
+    def Conv3d(self, in_channels, out_channels, kernel_size,
+               stride=1, padding=0, dilation=1, groups=1, bias=True):
+        return _NNModule(js_torch.nn.Conv3d.new(
+            in_channels, out_channels, kernel_size,
+            stride, padding, dilation, groups, bias
+        ))
 
 
 # ---------------------------------------------------------------------------
@@ -556,6 +613,42 @@ class _Torch:
     def linspace(self, start, end, steps):
         return Tensor(js_torch.linspace(start, end, steps))
 
+    def empty(self, *args, **kwargs):
+        return Tensor(js_torch.empty(to_js(self._shape_from_args(args))))
+
+    def empty_like(self, input):
+        return Tensor(js_torch.empty_like(input._js))
+
+    def full(self, shape, fill_value):
+        return Tensor(js_torch.full(to_js(list(shape)), fill_value))
+
+    def full_like(self, input, fill_value):
+        return Tensor(js_torch.full_like(input._js, fill_value))
+
+    def rand_like(self, input):
+        return Tensor(js_torch.rand_like(input._js))
+
+    def randn_like(self, input):
+        return Tensor(js_torch.randn_like(input._js))
+
+    def randint_like(self, input, low, high):
+        return Tensor(js_torch.randint_like(input._js, low, high))
+
+    # --- utility functions ---
+
+    def is_tensor(self, obj):
+        return isinstance(obj, Tensor)
+
+    def is_nonzero(self, input):
+        if input.numel() != 1:
+            raise RuntimeError(
+                "Boolean value of Tensor with more than one element is ambiguous"
+            )
+        return bool(input.item() != 0)
+
+    def numel(self, input):
+        return input.numel()
+
     # --- functional wrappers ---
 
     def sum(self, input, dim=None, keepdim=False):
@@ -563,6 +656,12 @@ class _Torch:
 
     def mean(self, input, dim=None, keepdim=False):
         return input.mean(dim, keepdim)
+
+    def sigmoid(self, input):
+        return input.sigmoid()
+
+    def relu(self, input):
+        return input.relu()
 
     def allclose(self, a, b, rtol=1e-5, atol=1e-8, equal_nan=False):
         return a.allclose(b, rtol, atol, equal_nan)

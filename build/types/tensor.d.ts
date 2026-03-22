@@ -1,10 +1,40 @@
 import { TorchFunction } from './functions/base';
 export type TypedArray = Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array;
 export type NestedNumberArray = number | TypedArray | NestedNumberArray[];
+/**
+ * A shared backing store for tensor data.
+ * Multiple tensors (views) may reference the same TensorStorage instance.
+ * Mutating `data` on the TensorStorage is visible to all sharing tensors.
+ */
+export declare class TensorStorage {
+    data: number[];
+    constructor(data: number[]);
+}
 export declare class Tensor {
     id: number;
     name: string | null;
-    data: number[];
+    private _storage;
+    private _offset;
+    /**
+     * Returns the flat, contiguous data for this tensor.
+     *
+     * Fast path (non-view): returns the storage array directly — no allocation.
+     * View path: materialises a contiguous slice — one allocation per call,
+     * so callers inside tight loops should cache the result: `const d = t.data`.
+     */
+    get data(): number[];
+    /**
+     * Sets the tensor's data.
+     *
+     * Non-view (offset=0, storage covers exactly this tensor's numel):
+     *   replaces the shared storage's data array in-place — all other views
+     *   sharing the same TensorStorage immediately see the new values.
+     *
+     * View (offset≠0 or storage is larger than this tensor):
+     *   copies `values` element-by-element into the shared storage at the
+     *   correct offset — the original tensor and sibling views are updated.
+     */
+    set data(values: number[]);
     shape: number[];
     grad_fn: TorchFunction | null;
     grad: Tensor | null;
@@ -15,6 +45,10 @@ export declare class Tensor {
     }, internal_options?: {
         operation?: TorchFunction;
         shape?: number[];
+        /** For internal view construction only — share an existing storage. */
+        _storage?: TensorStorage;
+        /** Byte offset into _storage (in elements). */
+        _offset?: number;
     });
     size(dim?: number): number | number[];
     toArray_(): void;
@@ -32,6 +66,19 @@ export declare class Tensor {
     private is_retain_grad;
     retain_grad(): void;
     backward(grad?: Tensor | null): void;
+    /**
+     * Returns a view of this tensor along dimension 0.
+     *
+     * The returned tensor shares the same underlying TensorStorage — mutations
+     * to either tensor (via zero_(), the data setter, or the optimizer) are
+     * immediately visible in the other.
+     *
+     * Supports negative indices (e.g. index(-1) is the last row).
+     *
+     * Note: the view does not carry a grad_fn; autograd does not propagate
+     * through index() at this time.
+     */
+    index(i: number): Tensor;
     add(other: Tensor | number): Tensor;
     sub(other: Tensor | number): Tensor;
     mul(other: Tensor | number): Tensor;
@@ -71,4 +118,5 @@ export declare class Tensor {
     allclose(other: Tensor, rtol?: number, atol?: number, equal_nan?: boolean): boolean;
     numel(): number;
     sigmoid(): Tensor;
+    relu(): Tensor;
 }
