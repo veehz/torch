@@ -84,6 +84,7 @@ export const _atenMap: Record<string, string> = {
   'conv2d': 'aten.conv2d.default',
   'conv3d': 'aten.conv3d.default',
   'linear': 'aten.linear.default',
+  'cross_entropy_loss': 'aten.cross_entropy_loss.default',
 };
 
 /**

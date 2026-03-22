@@ -18,3 +18,22 @@ export { eventBus, events } from './util';
 
 export { export_, ExportedProgram } from './export';
 export type { GraphNode, InputSpec, OutputSpec, GraphSignature } from './export';
+
+import { Tensor } from './tensor';
+
+export function is_tensor(obj: unknown): boolean {
+  return obj instanceof Tensor;
+}
+
+export function is_nonzero(input: Tensor): boolean {
+  if (input.numel() !== 1) {
+    throw new Error(
+      `Boolean value of Tensor with more than one element is ambiguous`
+    );
+  }
+  return input.item() !== 0;
+}
+
+export function numel(input: Tensor): number {
+  return input.numel();
+}

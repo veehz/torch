@@ -246,6 +246,124 @@ describe('Creation Functions', () => {
     });
   });
 
+  describe('empty', () => {
+    it('should create a tensor with the correct shape', () => {
+      const t = torch.empty(3, 4);
+      assert.deepStrictEqual(t.shape, [3, 4]);
+      assert.strictEqual(t.toFlatArray().length, 12);
+    });
+
+    it('should accept shape as an array', () => {
+      const t = torch.empty([2, 3]);
+      assert.deepStrictEqual(t.shape, [2, 3]);
+    });
+  });
+
+  describe('empty_like', () => {
+    it('should create a tensor with the same shape', () => {
+      const original = new Tensor([[1, 2, 3], [4, 5, 6]]);
+      const t = torch.empty_like(original);
+      assert.deepStrictEqual(t.shape, [2, 3]);
+    });
+  });
+
+  describe('full', () => {
+    it('should create a tensor filled with a value', () => {
+      const t = torch.full([2, 3], 7);
+      assert.deepStrictEqual(t.shape, [2, 3]);
+      assert.isTrue(t.toFlatArray().every((v: number) => v === 7));
+    });
+
+    it('should create a 1D tensor filled with a value', () => {
+      const t = torch.full([5], 3.14);
+      assert.deepStrictEqual(t.shape, [5]);
+      for (const v of t.toFlatArray()) {
+        assert.closeTo(v, 3.14, 1e-6);
+      }
+    });
+  });
+
+  describe('full_like', () => {
+    it('should create a tensor filled with a value with the same shape', () => {
+      const original = new Tensor([[1, 2], [3, 4]]);
+      const t = torch.full_like(original, 42);
+      assert.deepStrictEqual(t.shape, [2, 2]);
+      assert.isTrue(t.toFlatArray().every((v: number) => v === 42));
+    });
+  });
+
+  describe('rand_like', () => {
+    it('should create a tensor with the same shape and values in [0, 1)', () => {
+      const original = new Tensor([[1, 2, 3], [4, 5, 6]]);
+      const t = torch.rand_like(original);
+      assert.deepStrictEqual(t.shape, [2, 3]);
+      for (const v of t.toFlatArray()) {
+        assert.isAtLeast(v, 0);
+        assert.isBelow(v, 1);
+      }
+    });
+  });
+
+  describe('randn_like', () => {
+    it('should create a tensor with the same shape', () => {
+      const original = new Tensor([[1, 2], [3, 4]]);
+      const t = torch.randn_like(original);
+      assert.deepStrictEqual(t.shape, [2, 2]);
+      assert.strictEqual(t.toFlatArray().length, 4);
+    });
+  });
+
+  describe('randint_like', () => {
+    it('should create a tensor with the same shape and integer values in [low, high)', () => {
+      const original = new Tensor([[1, 2, 3], [4, 5, 6]]);
+      const t = torch.randint_like(original, 0, 10);
+      assert.deepStrictEqual(t.shape, [2, 3]);
+      for (const v of t.toFlatArray()) {
+        assert.isAtLeast(v, 0);
+        assert.isBelow(v, 10);
+        assert.strictEqual(v, Math.floor(v));
+      }
+    });
+  });
+
+  describe('is_tensor', () => {
+    it('should return true for tensors', () => {
+      const t = torch.tensor([1, 2, 3]);
+      assert.isTrue(torch.is_tensor(t));
+    });
+
+    it('should return false for non-tensors', () => {
+      assert.isFalse(torch.is_tensor(5));
+      assert.isFalse(torch.is_tensor([1, 2, 3]));
+      assert.isFalse(torch.is_tensor('hello'));
+      assert.isFalse(torch.is_tensor(null));
+    });
+  });
+
+  describe('is_nonzero', () => {
+    it('should return true for non-zero scalar tensor', () => {
+      assert.isTrue(torch.is_nonzero(torch.tensor(5)));
+      assert.isTrue(torch.is_nonzero(torch.tensor(-1)));
+      assert.isTrue(torch.is_nonzero(torch.tensor(0.001)));
+    });
+
+    it('should return false for zero scalar tensor', () => {
+      assert.isFalse(torch.is_nonzero(torch.tensor(0)));
+    });
+
+    it('should throw for multi-element tensor', () => {
+      assert.throws(() => torch.is_nonzero(torch.tensor([1, 2])));
+    });
+  });
+
+  describe('numel', () => {
+    it('should return the total number of elements', () => {
+      assert.strictEqual(torch.numel(torch.tensor([1, 2, 3])), 3);
+      assert.strictEqual(torch.numel(torch.tensor([[1, 2], [3, 4]])), 4);
+      assert.strictEqual(torch.numel(torch.tensor(5)), 1);
+    });
+  });
+
   describe('seed', () => {
     it('random numbers should be different', () => {
       const t1 = torch.rand(5);

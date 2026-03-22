@@ -25,3 +25,4 @@ export const sigmoid = generate_unary_function('sigmoid');
 export const conv1d = generate_function('conv1d');
 export const conv2d = generate_function('conv2d');
 export const conv3d = generate_function('conv3d');
+export const cross_entropy = generate_function('cross_entropy_loss');

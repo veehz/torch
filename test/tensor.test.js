@@ -257,4 +257,43 @@ describe('Operations', () => {
       assert.deepStrictEqual(result.shape, [6]);
     });
   });
+
+  describe('Comparison Operations', () => {
+    it('le should return 1 where a <= b', () => {
+      const a = new Tensor([1, 2, 3]);
+      const b = new Tensor([2, 2, 1]);
+      const result = a.le(b);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [1, 1, 0]);
+    });
+
+    it('ge should return 1 where a >= b', () => {
+      const a = new Tensor([1, 2, 3]);
+      const b = new Tensor([2, 2, 1]);
+      const result = a.ge(b);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [0, 1, 1]);
+    });
+
+    it('ne should return 1 where a != b', () => {
+      const a = new Tensor([1, 2, 3]);
+      const b = new Tensor([1, 0, 3]);
+      const result = a.ne(b);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [0, 1, 0]);
+    });
+  });
+
+  describe('Fmod', () => {
+    it('should compute element-wise remainder', () => {
+      const a = new Tensor([7, -7, 5, 10]);
+      const b = new Tensor([3, 3, 2, 4]);
+      const result = a.fmod(b);
+      assert.deepStrictEqual(Array.from(result.toFlatArray()), [1, -1, 1, 2]);
+    });
+  });
+
+  describe('Numel', () => {
+    it('should return the total number of elements', () => {
+      const t = new Tensor([[1, 2, 3], [4, 5, 6]]);
+      assert.strictEqual(t.numel(), 6);
+    });
+  });
 });

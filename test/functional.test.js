@@ -121,6 +121,35 @@ describe('Functional', () => {
     });
   });
 
+  describe('numel', () => {
+    it('should return the total number of elements', () => {
+      const t = new Tensor([[1, 2], [3, 4], [5, 6]]);
+      assert.strictEqual(torch.numel(t), 6);
+    });
+  });
+
+  describe('randperm', () => {
+    it('should return a permutation of 0..n-1', () => {
+      torch.manual_seed(42);
+      const t = torch.randperm(5);
+      assert.strictEqual(t.numel(), 5);
+      const sorted = Array.from(t.toFlatArray()).sort((a, b) => a - b);
+      assert.deepStrictEqual(sorted, [0, 1, 2, 3, 4]);
+    });
+  });
+
+  describe('seed', () => {
+    it('should return a seed and make rng deterministic', () => {
+      const s = torch.seed();
+      assert.isNumber(s);
+      const a = torch.rand(3);
+      // Re-seed with same seed should produce same values
+      torch.manual_seed(s);
+      const b = torch.rand(3);
+      assert.deepStrictEqual(Array.from(a.toFlatArray()), Array.from(b.toFlatArray()));
+    });
+  });
+
   describe('allclose', () => {
     it('returns true for identical tensors', () => {
       const a = new Tensor([1, 2, 3]);

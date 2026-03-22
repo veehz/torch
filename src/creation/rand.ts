@@ -33,3 +33,15 @@ export function randperm(n: number): Tensor {
   const tensor = new Tensor(arr);
   return tensor;
 }
+
+export function rand_like(input: Tensor): Tensor {
+  return rand(input.shape);
+}
+
+export function randn_like(input: Tensor): Tensor {
+  return randn(input.shape);
+}
+
+export function randint_like(input: Tensor, low: number, high: number): Tensor {
+  return randint(low, high, input.shape);
+}

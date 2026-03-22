@@ -6,8 +6,12 @@ def generate_optimizer_tests():
     configs = [
         ("SGD_basic", torch.optim.SGD, {"lr": 0.1}),
         ("SGD_momentum", torch.optim.SGD, {"lr": 0.1, "momentum": 0.9}),
+        ("SGD_weight_decay", torch.optim.SGD, {"lr": 0.1, "weight_decay": 0.01}),
+        ("SGD_nesterov", torch.optim.SGD, {"lr": 0.1, "momentum": 0.9, "nesterov": True}),
         ("Adam_basic", torch.optim.Adam, {"lr": 0.1}),
         ("Adam_custom_betas", torch.optim.Adam, {"lr": 0.1, "betas": (0.95, 0.999)}),
+        ("Adam_weight_decay", torch.optim.Adam, {"lr": 0.1, "weight_decay": 0.01}),
+        ("Adam_amsgrad", torch.optim.Adam, {"lr": 0.1, "amsgrad": True}),
     ]
 
     for test_name, optim_class, kwargs in configs:

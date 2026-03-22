@@ -1,4 +1,5 @@
 import { Tensor } from "../tensor";
+import { createOperation } from "../functions/registry";
 
 abstract class Loss {
   abstract forward(input: Tensor, target: Tensor): Tensor;
@@ -40,5 +41,16 @@ export class BCELoss extends Loss {
       return loss.mul(this.weight);
     }
     return loss;
+  }
+}
+
+export class CrossEntropyLoss extends Loss {
+  constructor() {
+    super();
+  }
+
+  forward(input: Tensor, target: Tensor) {
+    const op = createOperation('cross_entropy_loss');
+    return op.forward(input, target);
   }
 }

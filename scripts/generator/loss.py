@@ -41,4 +41,30 @@ def generate_loss_tests():
             }
         )
 
+    # CrossEntropyLoss: input is (N, C) logits, target is (N,) class indices
+    ce_cases = [
+        ((3, 5), "ce_3x5"),
+        ((4, 3), "ce_4x3"),
+        ((2, 10), "ce_2x10"),
+    ]
+
+    for (N, C), desc in ce_cases:
+        input = torch.randn(N, C, requires_grad=True)
+        target = torch.randint(0, C, (N,))
+
+        loss_fn = nn.CrossEntropyLoss()
+        output = loss_fn(input, target)
+        output.backward()
+
+        tests.append(
+            {
+                "test_name": desc,
+                "loss_type": "CrossEntropyLoss",
+                "input": input.detach().numpy().tolist(),
+                "target": target.numpy().tolist(),
+                "expected_output": output.detach().numpy().tolist(),
+                "expected_grad_input": input.grad.numpy().tolist(),
+            }
+        )
+
     return tests
