@@ -469,12 +469,22 @@ class _NNFunctional:
 
 
 # ---------------------------------------------------------------------------
+# nn.parameter namespace
+# ---------------------------------------------------------------------------
+
+class _NNParameterNamespace:
+    def __init__(self):
+        self.Parameter = Parameter
+
+
+# ---------------------------------------------------------------------------
 # nn namespace
 # ---------------------------------------------------------------------------
 
 class _NNNamespace:
     def __init__(self):
         self.functional = _NNFunctional()
+        self.parameter = _NNParameterNamespace()
         self.Module = Module
         self.Parameter = Parameter
 
@@ -646,6 +656,12 @@ class _Torch:
 
     def mean(self, input, dim=None, keepdim=False):
         return input.mean(dim, keepdim)
+
+    def sigmoid(self, input):
+        return input.sigmoid()
+
+    def relu(self, input):
+        return input.relu()
 
     def allclose(self, a, b, rtol=1e-5, atol=1e-8, equal_nan=False):
         return a.allclose(b, rtol, atol, equal_nan)
