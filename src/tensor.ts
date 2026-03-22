@@ -168,7 +168,22 @@ export class Tensor {
     if (this.requires_grad) {
       extra += ', requires_grad=True';
     }
-    return `Tensor(${JSON.stringify(this.toArray())}${extra})`;
+
+    function formatNum(val: number): string {
+      return String(Math.round(val * 1e4) / 1e4);
+    }
+
+    function formatArray(val: unknown): string {
+      if (Array.isArray(val)) {
+        return "[" + val.map(formatArray).join(", ") + "]";
+      }
+      if (typeof val === "number") {
+        return formatNum(val);
+      }
+      return String(val);
+    }
+
+    return `tensor(${formatArray(this.toArray())}${extra})`;
   }
 
   dataLength(): number {
