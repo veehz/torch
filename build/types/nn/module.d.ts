@@ -1,9 +1,9 @@
 import { Module, Parameter } from "./base";
 import { Tensor } from "../tensor";
 export declare class Linear extends Module {
-    private weight;
-    private bias;
-    constructor(in_features: number, out_features: number);
+    weight: Parameter;
+    bias: Parameter | null;
+    constructor(in_features: number, out_features: number, bias?: boolean);
     forward(input: Tensor): Tensor;
 }
 export declare class ReLU extends Module {

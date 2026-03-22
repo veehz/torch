@@ -488,8 +488,8 @@ class _NNNamespace:
         self.Module = Module
         self.Parameter = Parameter
 
-    def Linear(self, in_features, out_features):
-        return _NNModule(js_torch.nn.Linear.new(in_features, out_features))
+    def Linear(self, in_features, out_features, bias=True):
+        return _NNModule(js_torch.nn.Linear.new(in_features, out_features, bias))
 
     def ReLU(self):
         return _NNModule(js_torch.nn.ReLU.new())
@@ -501,17 +501,18 @@ class _NNNamespace:
         js_mods = [m._module for m in modules]
         return _NNModule(js_torch.nn.Sequential.new(*js_mods))
 
-    def MSELoss(self):
-        return _NNModule(js_torch.nn.MSELoss.new())
+    def MSELoss(self, reduction='mean'):
+        return _NNModule(js_torch.nn.MSELoss.new(reduction))
 
-    def L1Loss(self):
-        return _NNModule(js_torch.nn.L1Loss.new())
+    def L1Loss(self, reduction='mean'):
+        return _NNModule(js_torch.nn.L1Loss.new(reduction))
 
-    def BCELoss(self):
-        return _NNModule(js_torch.nn.BCELoss.new())
+    def BCELoss(self, weight=None, reduction='mean'):
+        js_weight = weight._js if isinstance(weight, Tensor) else None
+        return _NNModule(js_torch.nn.BCELoss.new(js_weight, reduction))
 
-    def CrossEntropyLoss(self):
-        return _NNModule(js_torch.nn.CrossEntropyLoss.new())
+    def CrossEntropyLoss(self, reduction='mean'):
+        return _NNModule(js_torch.nn.CrossEntropyLoss.new(reduction))
 
     def Conv1d(self, in_channels, out_channels, kernel_size,
                stride=1, padding=0, dilation=1, groups=1, bias=True):
@@ -662,6 +663,9 @@ class _Torch:
 
     def relu(self, input):
         return input.relu()
+
+    def flatten(self, input, start_dim=0, end_dim=-1):
+        return input.flatten(start_dim, end_dim)
 
     def allclose(self, a, b, rtol=1e-5, atol=1e-8, equal_nan=False):
         return a.allclose(b, rtol, atol, equal_nan)

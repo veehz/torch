@@ -708,6 +708,9 @@ const _Tensor = class _Tensor {
   reshape(shape) {
     return this._executeOpRaw("reshape", shape);
   }
+  flatten(start_dim = 0, end_dim = -1) {
+    return this._executeOpRaw("flatten", start_dim, end_dim);
+  }
   squeeze(dim) {
     return this._executeOpRaw("squeeze", dim);
   }
@@ -863,6 +866,10 @@ function allclose(a, b, rtol = 1e-5, atol = 1e-8, equal_nan = false) {
   return a.allclose(b, rtol, atol, equal_nan);
 }
 __name(allclose, "allclose");
+function flatten(input, start_dim = 0, end_dim = -1) {
+  return input.flatten(start_dim, end_dim);
+}
+__name(flatten, "flatten");
 function _get_strides(shape) {
   const strides = new Array(shape.length).fill(1);
   for (let i = shape.length - 2; i >= 0; i--) {
@@ -1296,6 +1303,40 @@ const _Reshape = class _Reshape extends TorchFunction {
 __name(_Reshape, "Reshape");
 let Reshape = _Reshape;
 registerOperation("reshape", Reshape);
+const _Flatten = class _Flatten extends TorchFunction {
+  _forward(a, start_dim = 0, end_dim = -1) {
+    const ndim = a.shape.length;
+    const sd = start_dim < 0 ? start_dim + ndim : start_dim;
+    const ed = end_dim < 0 ? end_dim + ndim : end_dim;
+    const newShape = [
+      ...a.shape.slice(0, sd),
+      a.shape.slice(sd, ed + 1).reduce((acc, val) => acc * val, 1),
+      ...a.shape.slice(ed + 1)
+    ];
+    const rg = resultRequiresGrad(a);
+    if (rg) {
+      this.saved_tensors = [a];
+    }
+    if (a.grad_fn) {
+      this.next_functions.push(a.grad_fn);
+    } else {
+      this.next_functions.push(nullOp);
+    }
+    return new Tensor(
+      a.data,
+      { requires_grad: rg },
+      { operation: rg ? this : null, shape: newShape }
+    );
+  }
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.reshape(a.shape));
+  }
+};
+__name(_Flatten, "Flatten");
+let Flatten = _Flatten;
+registerOperation("flatten", Flatten);
 const _Squeeze = class _Squeeze extends TorchFunction {
   _forward(a, dim) {
     const rg = resultRequiresGrad(a);
@@ -2018,7 +2059,9 @@ UnaryFunctionMixin(
 const _CrossEntropyLossOp = class _CrossEntropyLossOp extends TorchFunction {
   N = 0;
   C = 0;
-  _forward(input, target) {
+  reduction = "mean";
+  _forward(input, target, reduction = "mean") {
+    this.reduction = reduction;
     const rg = resultRequiresGrad(input);
     if (rg) {
       this.saved_tensors = [input, target];
@@ -2031,7 +2074,7 @@ const _CrossEntropyLossOp = class _CrossEntropyLossOp extends TorchFunction {
     this.C = C;
     const inputData = input.data;
     const targetData = target.data;
-    let totalLoss = 0;
+    const perSampleLoss = new Array(N);
     for (let i = 0; i < N; i++) {
       const rowOffset = i * C;
       let maxVal = -Infinity;
@@ -2047,10 +2090,21 @@ const _CrossEntropyLossOp = class _CrossEntropyLossOp extends TorchFunction {
       const logSumExp = Math.log(sumExp);
       const t = targetData[i];
       const logSoftmax = inputData[rowOffset + t] - maxVal - logSumExp;
-      totalLoss -= logSoftmax;
+      perSampleLoss[i] = -logSoftmax;
     }
-    const loss = totalLoss / N;
-    const result = new Tensor([loss], { requires_grad: rg }, { operation: rg ? this : null, shape: [] });
+    let lossData;
+    let resultShape;
+    if (reduction === "none") {
+      lossData = perSampleLoss;
+      resultShape = [N];
+    } else if (reduction === "sum") {
+      lossData = [perSampleLoss.reduce((a, b) => a + b, 0)];
+      resultShape = [];
+    } else {
+      lossData = [perSampleLoss.reduce((a, b) => a + b, 0) / N];
+      resultShape = [];
+    }
+    const result = new Tensor(lossData, { requires_grad: rg }, { operation: rg ? this : null, shape: resultShape });
     return result;
   }
   _backward(dz) {
@@ -2058,9 +2112,15 @@ const _CrossEntropyLossOp = class _CrossEntropyLossOp extends TorchFunction {
     const [inputFn] = this.next_functions;
     const N = this.N;
     const C = this.C;
+    const reduction = this.reduction;
     const inputData = input.data;
     const targetData = target.data;
-    const dzVal = typeof dz === "number" ? dz : dz.data[0];
+    let dzData;
+    if (typeof dz === "number") {
+      dzData = new Array(reduction === "none" ? N : 1).fill(dz);
+    } else {
+      dzData = [...dz.data];
+    }
     const grad = new Array(N * C);
     for (let i = 0; i < N; i++) {
       const rowOffset = i * C;
@@ -2075,10 +2135,12 @@ const _CrossEntropyLossOp = class _CrossEntropyLossOp extends TorchFunction {
         sumExp += Math.exp(inputData[rowOffset + j] - maxVal);
       }
       const t = targetData[i];
+      const dzVal = reduction === "none" ? dzData[i] : dzData[0];
+      const scale = reduction === "mean" ? dzVal / N : dzVal;
       for (let j = 0; j < C; j++) {
         const softmax_j = Math.exp(inputData[rowOffset + j] - maxVal) / sumExp;
         const oneHot = j === t ? 1 : 0;
-        grad[rowOffset + j] = (softmax_j - oneHot) / N * dzVal;
+        grad[rowOffset + j] = (softmax_j - oneHot) * scale;
       }
     }
     const gradTensor = new Tensor(grad, {}, { shape: [N, C] });
@@ -2186,55 +2248,71 @@ const _Sequential = class _Sequential extends Module {
 };
 __name(_Sequential, "Sequential");
 let Sequential = _Sequential;
+function applyReduction(loss, reduction) {
+  if (reduction === "mean") return loss.mean();
+  if (reduction === "sum") return loss.sum();
+  return loss;
+}
+__name(applyReduction, "applyReduction");
 const _Loss = class _Loss {
 };
 __name(_Loss, "Loss");
 let Loss = _Loss;
 const _MSELoss = class _MSELoss extends Loss {
-  constructor() {
+  reduction;
+  constructor(reduction = "mean") {
     super();
+    this.reduction = reduction;
   }
   forward(input, target) {
-    return input.sub(target).pow(2).mean();
+    const unreduced = input.sub(target).pow(2);
+    return applyReduction(unreduced, this.reduction);
   }
 };
 __name(_MSELoss, "MSELoss");
 let MSELoss = _MSELoss;
 const _L1Loss = class _L1Loss extends Loss {
-  constructor() {
+  reduction;
+  constructor(reduction = "mean") {
     super();
+    this.reduction = reduction;
   }
   forward(input, target) {
-    return input.sub(target).abs().mean();
+    const unreduced = input.sub(target).abs();
+    return applyReduction(unreduced, this.reduction);
   }
 };
 __name(_L1Loss, "L1Loss");
 let L1Loss = _L1Loss;
 const _BCELoss = class _BCELoss extends Loss {
   weight;
-  constructor(weight = null) {
+  reduction;
+  constructor(weight = null, reduction = "mean") {
     super();
     this.weight = weight;
+    this.reduction = reduction;
   }
   forward(input, target) {
     const left = target.mul(input.log());
     const right = target.neg().add(1).mul(input.neg().add(1).log());
-    const loss = left.add(right).neg().mean();
+    let unreduced = left.add(right).neg();
     if (this.weight) {
-      return loss.mul(this.weight);
+      unreduced = unreduced.mul(this.weight);
     }
-    return loss;
+    return applyReduction(unreduced, this.reduction);
   }
 };
 __name(_BCELoss, "BCELoss");
 let BCELoss = _BCELoss;
 const _CrossEntropyLoss = class _CrossEntropyLoss extends Loss {
-  constructor() {
+  reduction;
+  constructor(reduction = "mean") {
     super();
+    this.reduction = reduction;
   }
   forward(input, target) {
     const op = createOperation("cross_entropy_loss");
-    return op.forward(input, target);
+    return op.forward(input, target, this.reduction);
   }
 };
 __name(_CrossEntropyLoss, "CrossEntropyLoss");
@@ -2274,20 +2352,25 @@ const functional = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePr
 const _Linear = class _Linear extends Module {
   weight;
   bias;
-  constructor(in_features, out_features) {
+  constructor(in_features, out_features, bias = true) {
     super();
     const k = Math.sqrt(1 / in_features);
     this.weight = new Parameter(
       rand([out_features, in_features]).mul(2 * k).sub(k)
     );
-    this.bias = new Parameter(
-      rand([out_features]).mul(2 * k).sub(k)
-    );
     this.register("weight", this.weight);
-    this.register("bias", this.bias);
+    if (bias) {
+      this.bias = new Parameter(
+        rand([out_features]).mul(2 * k).sub(k)
+      );
+      this.register("bias", this.bias);
+    } else {
+      this.bias = null;
+    }
   }
   forward(input) {
-    return input.matmul(this.weight.transpose(0, 1)).add(this.bias);
+    const out = input.matmul(this.weight.transpose(0, 1));
+    return this.bias ? out.add(this.bias) : out;
   }
 };
 __name(_Linear, "Linear");
@@ -2547,6 +2630,7 @@ const _atenMap = {
   "reciprocal": "aten.reciprocal.default",
   "nan_to_num": "aten.nan_to_num.default",
   "reshape": "aten.reshape.default",
+  "flatten": "aten.flatten.using_ints",
   "squeeze": "aten.squeeze.dim",
   "unsqueeze": "aten.unsqueeze.default",
   "expand": "aten.expand.default",
@@ -2775,6 +2859,7 @@ export {
   exp,
   expand,
   export_,
+  flatten,
   fmod,
   full,
   full_like,

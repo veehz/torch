@@ -651,6 +651,9 @@ class Tensor {
   reshape(shape) {
     return this._executeOpRaw("reshape", shape);
   }
+  flatten(start_dim = 0, end_dim = -1) {
+    return this._executeOpRaw("flatten", start_dim, end_dim);
+  }
   squeeze(dim) {
     return this._executeOpRaw("squeeze", dim);
   }
@@ -799,6 +802,9 @@ const eq = generate_binary_function("eq");
 const ne = generate_binary_function("ne");
 function allclose(a, b, rtol = 1e-5, atol = 1e-8, equal_nan = false) {
   return a.allclose(b, rtol, atol, equal_nan);
+}
+function flatten(input, start_dim = 0, end_dim = -1) {
+  return input.flatten(start_dim, end_dim);
 }
 function _get_strides(shape) {
   const strides = new Array(shape.length).fill(1);
@@ -1218,6 +1224,38 @@ class Reshape extends TorchFunction {
   }
 }
 registerOperation("reshape", Reshape);
+class Flatten extends TorchFunction {
+  _forward(a, start_dim = 0, end_dim = -1) {
+    const ndim = a.shape.length;
+    const sd = start_dim < 0 ? start_dim + ndim : start_dim;
+    const ed = end_dim < 0 ? end_dim + ndim : end_dim;
+    const newShape = [
+      ...a.shape.slice(0, sd),
+      a.shape.slice(sd, ed + 1).reduce((acc, val) => acc * val, 1),
+      ...a.shape.slice(ed + 1)
+    ];
+    const rg = resultRequiresGrad(a);
+    if (rg) {
+      this.saved_tensors = [a];
+    }
+    if (a.grad_fn) {
+      this.next_functions.push(a.grad_fn);
+    } else {
+      this.next_functions.push(nullOp);
+    }
+    return new Tensor(
+      a.data,
+      { requires_grad: rg },
+      { operation: rg ? this : null, shape: newShape }
+    );
+  }
+  _backward(dz) {
+    const [a] = this.saved_tensors;
+    const [aFn] = this.next_functions;
+    aFn.backward(dz.reshape(a.shape));
+  }
+}
+registerOperation("flatten", Flatten);
 class Squeeze extends TorchFunction {
   _forward(a, dim) {
     const rg = resultRequiresGrad(a);
@@ -1920,7 +1958,9 @@ UnaryFunctionMixin(
 class CrossEntropyLossOp extends TorchFunction {
   N = 0;
   C = 0;
-  _forward(input, target) {
+  reduction = "mean";
+  _forward(input, target, reduction = "mean") {
+    this.reduction = reduction;
     const rg = resultRequiresGrad(input);
     if (rg) {
       this.saved_tensors = [input, target];
@@ -1933,7 +1973,7 @@ class CrossEntropyLossOp extends TorchFunction {
     this.C = C;
     const inputData = input.data;
     const targetData = target.data;
-    let totalLoss = 0;
+    const perSampleLoss = new Array(N);
     for (let i = 0; i < N; i++) {
       const rowOffset = i * C;
       let maxVal = -Infinity;
@@ -1949,10 +1989,21 @@ class CrossEntropyLossOp extends TorchFunction {
       const logSumExp = Math.log(sumExp);
       const t = targetData[i];
       const logSoftmax = inputData[rowOffset + t] - maxVal - logSumExp;
-      totalLoss -= logSoftmax;
+      perSampleLoss[i] = -logSoftmax;
     }
-    const loss = totalLoss / N;
-    const result = new Tensor([loss], { requires_grad: rg }, { operation: rg ? this : null, shape: [] });
+    let lossData;
+    let resultShape;
+    if (reduction === "none") {
+      lossData = perSampleLoss;
+      resultShape = [N];
+    } else if (reduction === "sum") {
+      lossData = [perSampleLoss.reduce((a, b) => a + b, 0)];
+      resultShape = [];
+    } else {
+      lossData = [perSampleLoss.reduce((a, b) => a + b, 0) / N];
+      resultShape = [];
+    }
+    const result = new Tensor(lossData, { requires_grad: rg }, { operation: rg ? this : null, shape: resultShape });
     return result;
   }
   _backward(dz) {
@@ -1960,9 +2011,15 @@ class CrossEntropyLossOp extends TorchFunction {
     const [inputFn] = this.next_functions;
     const N = this.N;
     const C = this.C;
+    const reduction = this.reduction;
     const inputData = input.data;
     const targetData = target.data;
-    const dzVal = typeof dz === "number" ? dz : dz.data[0];
+    let dzData;
+    if (typeof dz === "number") {
+      dzData = new Array(reduction === "none" ? N : 1).fill(dz);
+    } else {
+      dzData = [...dz.data];
+    }
     const grad = new Array(N * C);
     for (let i = 0; i < N; i++) {
       const rowOffset = i * C;
@@ -1977,10 +2034,12 @@ class CrossEntropyLossOp extends TorchFunction {
         sumExp += Math.exp(inputData[rowOffset + j] - maxVal);
       }
       const t = targetData[i];
+      const dzVal = reduction === "none" ? dzData[i] : dzData[0];
+      const scale = reduction === "mean" ? dzVal / N : dzVal;
       for (let j = 0; j < C; j++) {
         const softmax_j = Math.exp(inputData[rowOffset + j] - maxVal) / sumExp;
         const oneHot = j === t ? 1 : 0;
-        grad[rowOffset + j] = (softmax_j - oneHot) / N * dzVal;
+        grad[rowOffset + j] = (softmax_j - oneHot) * scale;
       }
     }
     const gradTensor = new Tensor(grad, {}, { shape: [N, C] });
@@ -2080,47 +2139,62 @@ class Sequential extends Module {
     return x;
   }
 }
+function applyReduction(loss, reduction) {
+  if (reduction === "mean") return loss.mean();
+  if (reduction === "sum") return loss.sum();
+  return loss;
+}
 class Loss {
 }
 class MSELoss extends Loss {
-  constructor() {
+  reduction;
+  constructor(reduction = "mean") {
     super();
+    this.reduction = reduction;
   }
   forward(input, target) {
-    return input.sub(target).pow(2).mean();
+    const unreduced = input.sub(target).pow(2);
+    return applyReduction(unreduced, this.reduction);
   }
 }
 class L1Loss extends Loss {
-  constructor() {
+  reduction;
+  constructor(reduction = "mean") {
     super();
+    this.reduction = reduction;
   }
   forward(input, target) {
-    return input.sub(target).abs().mean();
+    const unreduced = input.sub(target).abs();
+    return applyReduction(unreduced, this.reduction);
   }
 }
 class BCELoss extends Loss {
   weight;
-  constructor(weight = null) {
+  reduction;
+  constructor(weight = null, reduction = "mean") {
     super();
     this.weight = weight;
+    this.reduction = reduction;
   }
   forward(input, target) {
     const left = target.mul(input.log());
     const right = target.neg().add(1).mul(input.neg().add(1).log());
-    const loss = left.add(right).neg().mean();
+    let unreduced = left.add(right).neg();
     if (this.weight) {
-      return loss.mul(this.weight);
+      unreduced = unreduced.mul(this.weight);
     }
-    return loss;
+    return applyReduction(unreduced, this.reduction);
   }
 }
 class CrossEntropyLoss extends Loss {
-  constructor() {
+  reduction;
+  constructor(reduction = "mean") {
     super();
+    this.reduction = reduction;
   }
   forward(input, target) {
     const op = createOperation("cross_entropy_loss");
-    return op.forward(input, target);
+    return op.forward(input, target, this.reduction);
   }
 }
 function generate_function(opname) {
@@ -2156,20 +2230,25 @@ const functional = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePr
 class Linear extends Module {
   weight;
   bias;
-  constructor(in_features, out_features) {
+  constructor(in_features, out_features, bias = true) {
     super();
     const k = Math.sqrt(1 / in_features);
     this.weight = new Parameter(
       rand([out_features, in_features]).mul(2 * k).sub(k)
     );
-    this.bias = new Parameter(
-      rand([out_features]).mul(2 * k).sub(k)
-    );
     this.register("weight", this.weight);
-    this.register("bias", this.bias);
+    if (bias) {
+      this.bias = new Parameter(
+        rand([out_features]).mul(2 * k).sub(k)
+      );
+      this.register("bias", this.bias);
+    } else {
+      this.bias = null;
+    }
   }
   forward(input) {
-    return input.matmul(this.weight.transpose(0, 1)).add(this.bias);
+    const out = input.matmul(this.weight.transpose(0, 1));
+    return this.bias ? out.add(this.bias) : out;
   }
 }
 class ReLU extends Module {
@@ -2409,6 +2488,7 @@ const _atenMap = {
   "reciprocal": "aten.reciprocal.default",
   "nan_to_num": "aten.nan_to_num.default",
   "reshape": "aten.reshape.default",
+  "flatten": "aten.flatten.using_ints",
   "squeeze": "aten.squeeze.dim",
   "unsqueeze": "aten.unsqueeze.default",
   "expand": "aten.expand.default",
@@ -2627,6 +2707,7 @@ exports.events = events;
 exports.exp = exp;
 exports.expand = expand;
 exports.export_ = export_;
+exports.flatten = flatten;
 exports.fmod = fmod;
 exports.full = full;
 exports.full_like = full_like;

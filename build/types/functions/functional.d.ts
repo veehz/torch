@@ -39,3 +39,4 @@ export declare const eq: (a: Tensor | number, b: Tensor | number) => Tensor;
 export declare const ne: (a: Tensor | number, b: Tensor | number) => Tensor;
 export declare function allclose(a: Tensor, b: Tensor, rtol?: number, atol?: number, equal_nan?: boolean): boolean;
 export declare function numel(a: Tensor): number;
+export declare function flatten(input: Tensor, start_dim?: number, end_dim?: number): Tensor;

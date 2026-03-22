@@ -1,18 +1,19 @@
 import { Tensor } from '../tensor';
-export declare function resultRequiresGrad(...args: (Tensor | number | number[] | boolean)[]): boolean;
+type ArgumentType = Tensor | number | number[] | boolean | string;
+export declare function resultRequiresGrad(...args: ArgumentType[]): boolean;
 declare abstract class TorchFunction {
     id: number;
     opName: string;
     next_functions: TorchFunction[];
     saved_tensors: Tensor[];
     _retained_tensors: Tensor[];
-    protected abstract _forward(...args: (Tensor | number | number[] | boolean)[]): Tensor;
+    protected abstract _forward(...args: ArgumentType[]): Tensor;
     protected abstract _backward(dz: Tensor | number): void;
-    forward(...args: (Tensor | number | number[] | boolean)[]): Tensor;
+    forward(...args: ArgumentType[]): Tensor;
     backward(dz: Tensor | number): void;
 }
 declare class NullOp extends TorchFunction {
-    protected _forward(..._args: (Tensor | number | number[])[]): Tensor;
+    protected _forward(..._args: ArgumentType[]): Tensor;
     protected _backward(_dz: Tensor): void;
 }
 export declare const nullOp: NullOp;

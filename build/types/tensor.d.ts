@@ -97,6 +97,7 @@ export declare class Tensor {
     reciprocal(): Tensor;
     nan_to_num(): Tensor;
     reshape(shape: number[]): Tensor;
+    flatten(start_dim?: number, end_dim?: number): Tensor;
     squeeze(dim: number): Tensor;
     unsqueeze(dim: number): Tensor;
     expand(sizes: number[]): Tensor;
