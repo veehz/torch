@@ -3,9 +3,11 @@ name: Build, Test, Publish
 on: [push]
 
 jobs:
-  ci:
-    name: Build, test, publish docs, and publish package
+  test-publish:
+    name: Build, test, and publish package
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 10
     steps:
         - name: Check out source code
@@ -23,7 +25,7 @@ jobs:
         - name: Install dependencies
           run: yarn install --immutable
 
-        - name: Test on src/ and get test coverage
+        - name: Test and Coverage
           run: yarn test:coverage
 
         - name: Build
@@ -39,40 +41,33 @@ jobs:
             npx mocha-headless-chrome -a no-sandbox -t 60000 -f http://127.0.0.1:8080/test/index.html
             npx mocha-headless-chrome -a no-sandbox -t 60000 -f http://127.0.0.1:8080/test/umd.html
 
-        - name: Build docs
-          run: yarn docs
-
-        - name: Copy build to docs/build
+        - name: Build docs and prepare directory
           run: |
-            if [ -d "build" ]; then
-              cp -r build docs/build
-            fi
+            yarn docs
+            mkdir -p docs/media
+            [ -d "build" ] && cp -r build docs/build
+            [ -d "build" ] && cp -r build docs/media/build
+            [ -d "examples" ] && cp -r examples docs/examples
+            [ -d "examples" ] && cp -r examples docs/media/examples
 
-        - name: Copy build to docs/media/build
-          run: |
-            if [ -d "build" ]; then
-              mkdir -p docs/media
-              cp -r build docs/media/build
-            fi
-
-        - name: Copy examples to docs/examples
-          run: |
-            if [ -d "examples" ]; then
-              cp -r examples docs/examples
-            fi
-
-        - name: Copy examples to docs/media/examples
-          run: |
-            if [ -d "examples" ]; then
-              mkdir -p docs/media
-              cp -r examples docs/media/examples
-            fi
-
-        - name: Deploy docs
-          uses: peaceiris/actions-gh-pages@v4
+        - name: Upload Pages Artifact
+          uses: actions/upload-pages-artifact@v4
           with:
-            github_token: ${{ secrets.GITHUB_TOKEN }}
-            publish_dir: ./docs
+            path: './docs'
 
         - name: Publish package
           run: yarn pkg-pr-new publish
+
+  deploy-docs:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    needs: test-publish
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
