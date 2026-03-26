@@ -10,29 +10,18 @@ jobs:
       contents: read
     timeout-minutes: 10
     steps:
-        - name: Check out source code
-          uses: actions/checkout@v6
-
-        - name: Enable Corepack
-          run: corepack enable
-
-        - name: Use Node.js 💻
-          uses: actions/setup-node@v6
+        - uses: actions/checkout@v6
+        - run: corepack enable
+        - uses: actions/setup-node@v6
           with:
             node-version: 24
             cache: yarn
 
-        - name: Install dependencies
-          run: yarn install --immutable
+        - run: yarn install --immutable
 
-        - name: Test and Coverage
-          run: yarn test:coverage
-
-        - name: Build
-          run: yarn build
-
-        - name: Test on build/
-          run: yarn test:build
+        - run: yarn test:coverage
+        - run: yarn build
+        - run: yarn test:build
 
         - name: Test in browser (If UMD tests are failing, check torch-bridge.js)
           run: |
@@ -50,13 +39,11 @@ jobs:
             [ -d "examples" ] && cp -r examples docs/examples
             [ -d "examples" ] && cp -r examples docs/media/examples
 
-        - name: Upload Pages Artifact
-          uses: actions/upload-pages-artifact@v4
+        - uses: actions/upload-pages-artifact@v4
           with:
             path: './docs'
 
-        - name: Publish package
-          run: yarn pkg-pr-new publish
+        - run: yarn pkg-pr-new publish
 
   deploy-docs:
     environment:
@@ -68,6 +55,5 @@ jobs:
       id-token: write
     needs: test-publish
     steps:
-      - name: Deploy to GitHub Pages
+      - uses: actions/deploy-pages@v5
         id: deployment
-        uses: actions/deploy-pages@v5
