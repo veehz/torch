@@ -2,6 +2,8 @@
 /docs
 
 .direnv
+.envrc
+/shell.nix
 .idea
 /test.js
 /test.py
