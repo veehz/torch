@@ -1,4 +1,5 @@
 import { assert } from 'chai';
+import * as torch from 'torch';
 import { Tensor } from 'torch';
 
 describe('Tensor', () => {
@@ -294,6 +295,228 @@ describe('Operations', () => {
     it('should return the total number of elements', () => {
       const t = new Tensor([[1, 2, 3], [4, 5, 6]]);
       assert.strictEqual(t.numel(), 6);
+    });
+  });
+
+  describe('cat', () => {
+    describe('1D tensors', () => {
+      it('concatenates two 1D tensors along dim 0', () => {
+        const a = new Tensor([1, 2, 3]);
+        const b = new Tensor([4, 5]);
+        const out = torch.cat([a, b]);
+        assert.deepStrictEqual(Array.from(out.toFlatArray()), [1, 2, 3, 4, 5]);
+        assert.deepStrictEqual(out.shape, [5]);
+      });
+
+      it('concatenates three 1D tensors', () => {
+        const a = new Tensor([1]);
+        const b = new Tensor([2, 3]);
+        const c = new Tensor([4, 5, 6]);
+        const out = torch.cat([a, b, c]);
+        assert.deepStrictEqual(Array.from(out.toFlatArray()), [1, 2, 3, 4, 5, 6]);
+        assert.deepStrictEqual(out.shape, [6]);
+      });
+    });
+
+    describe('2D tensors', () => {
+      it('concatenates along dim 0 (row-wise)', () => {
+        const a = new Tensor([[1, 2], [3, 4]]);
+        const b = new Tensor([[5, 6]]);
+        const out = torch.cat([a, b], 0);
+        assert.deepStrictEqual(Array.from(out.toFlatArray()), [1, 2, 3, 4, 5, 6]);
+        assert.deepStrictEqual(out.shape, [3, 2]);
+      });
+
+      it('concatenates along dim 1 (column-wise)', () => {
+        const a = new Tensor([[1, 2], [3, 4]]);
+        const b = new Tensor([[5], [6]]);
+        const out = torch.cat([a, b], 1);
+        assert.deepStrictEqual(Array.from(out.toFlatArray()), [1, 2, 5, 3, 4, 6]);
+        assert.deepStrictEqual(out.shape, [2, 3]);
+      });
+    });
+
+    describe('3D tensors', () => {
+      it('concatenates along dim 0', () => {
+        const out = torch.cat([torch.ones([2, 3, 4]), torch.zeros([1, 3, 4])], 0);
+        assert.deepStrictEqual(out.shape, [3, 3, 4]);
+      });
+
+      it('concatenates along dim 2', () => {
+        const out = torch.cat([torch.ones([2, 3, 4]), torch.ones([2, 3, 2])], 2);
+        assert.deepStrictEqual(out.shape, [2, 3, 6]);
+      });
+    });
+
+    describe('negative dim', () => {
+      it('dim=-1 is the last dimension', () => {
+        const a = new Tensor([[1, 2], [3, 4]]);
+        const b = new Tensor([[5], [6]]);
+        const pos = torch.cat([a, b], 1);
+        const neg = torch.cat([a, b], -1);
+        assert.deepStrictEqual(Array.from(neg.toFlatArray()), Array.from(pos.toFlatArray()));
+        assert.deepStrictEqual(neg.shape, [2, 3]);
+      });
+
+      it('dim=-2 on a 3D tensor', () => {
+        const a = torch.ones([2, 3, 4]);
+        const b = torch.ones([2, 1, 4]);
+        const pos = torch.cat([a, b], 1);
+        const neg = torch.cat([a, b], -2);
+        assert.deepStrictEqual(neg.shape, pos.shape);
+        assert.deepStrictEqual(Array.from(neg.toFlatArray()), Array.from(pos.toFlatArray()));
+      });
+    });
+
+    describe('autograd', () => {
+      it('grad flows back to each input (1D)', () => {
+        const x = new Tensor([1, 2, 3], { requires_grad: true });
+        const y = new Tensor([4, 5], { requires_grad: true });
+        torch.cat([x, y]).sum().backward();
+        assert.deepStrictEqual(Array.from(x.grad.toFlatArray()), [1, 1, 1]);
+        assert.deepStrictEqual(Array.from(y.grad.toFlatArray()), [1, 1]);
+      });
+
+      it('grad flows back to each input (2D, dim 0)', () => {
+        const x = new Tensor([[1, 2], [3, 4]], { requires_grad: true });
+        const y = new Tensor([[5, 6]], { requires_grad: true });
+        torch.cat([x, y], 0).sum().backward();
+        assert.deepStrictEqual(Array.from(x.grad.toFlatArray()), [1, 1, 1, 1]);
+        assert.deepStrictEqual(Array.from(y.grad.toFlatArray()), [1, 1]);
+      });
+
+      it('grad flows back to each input (2D, dim 1)', () => {
+        const x = new Tensor([[1, 2], [3, 4]], { requires_grad: true });
+        const y = new Tensor([[5], [6]], { requires_grad: true });
+        torch.cat([x, y], 1).sum().backward();
+        assert.deepStrictEqual(Array.from(x.grad.toFlatArray()), [1, 1, 1, 1]);
+        assert.deepStrictEqual(Array.from(y.grad.toFlatArray()), [1, 1]);
+      });
+
+      it('non-uniform upstream gradient is sliced correctly', () => {
+        const x = new Tensor([[1, 0], [0, 1]], { requires_grad: true });
+        const y = new Tensor([[2, 2]], { requires_grad: true });
+        const upstream = new Tensor([[1, 2], [3, 4], [5, 6]]);
+        torch.cat([x, y], 0).mul(upstream).sum().backward();
+        assert.deepStrictEqual(Array.from(x.grad.toFlatArray()), [1, 2, 3, 4]);
+        assert.deepStrictEqual(Array.from(y.grad.toFlatArray()), [5, 6]);
+      });
+
+      it('grad only flows to tensors with requires_grad=true', () => {
+        const x = new Tensor([1, 2, 3], { requires_grad: true });
+        const y = new Tensor([4, 5]);
+        torch.cat([x, y]).sum().backward();
+        assert.deepStrictEqual(Array.from(x.grad.toFlatArray()), [1, 1, 1]);
+        assert.isNull(y.grad);
+      });
+
+      it('grad flows through three inputs', () => {
+        const a = new Tensor([1, 2], { requires_grad: true });
+        const b = new Tensor([3], { requires_grad: true });
+        const c = new Tensor([4, 5, 6], { requires_grad: true });
+        torch.cat([a, b, c]).sum().backward();
+        assert.deepStrictEqual(Array.from(a.grad.toFlatArray()), [1, 1]);
+        assert.deepStrictEqual(Array.from(b.grad.toFlatArray()), [1]);
+        assert.deepStrictEqual(Array.from(c.grad.toFlatArray()), [1, 1, 1]);
+      });
+
+      it('cat result can be used in further computation', () => {
+        const x = new Tensor([2, 3], { requires_grad: true });
+        const y = new Tensor([4], { requires_grad: true });
+        torch.cat([x, y]).mul(new Tensor([1, 2, 3])).sum().backward();
+        assert.deepStrictEqual(Array.from(x.grad.toFlatArray()), [1, 2]);
+        assert.deepStrictEqual(Array.from(y.grad.toFlatArray()), [3]);
+      });
+    });
+
+    describe('tensor.cat method', () => {
+      it('tensor.cat(other) prepends self', () => {
+        const a = new Tensor([1, 2, 3]);
+        const b = new Tensor([4, 5]);
+        assert.deepStrictEqual(Array.from(a.cat(b).toFlatArray()), [1, 2, 3, 4, 5]);
+      });
+
+      it('tensor.cat([b, c]) prepends self before b and c', () => {
+        const a = new Tensor([1]);
+        const b = new Tensor([2, 3]);
+        const c = new Tensor([4]);
+        assert.deepStrictEqual(Array.from(a.cat([b, c]).toFlatArray()), [1, 2, 3, 4]);
+      });
+
+      it('tensor.cat with dim argument', () => {
+        const a = new Tensor([[1, 2], [3, 4]]);
+        const b = new Tensor([[5, 6]]);
+        assert.deepStrictEqual(a.cat(b, 0).shape, [3, 2]);
+      });
+
+      it('tensor.cat gradient flows back through self', () => {
+        const a = new Tensor([1, 2], { requires_grad: true });
+        const b = new Tensor([3, 4], { requires_grad: true });
+        a.cat(b).sum().backward();
+        assert.deepStrictEqual(Array.from(a.grad.toFlatArray()), [1, 1]);
+        assert.deepStrictEqual(Array.from(b.grad.toFlatArray()), [1, 1]);
+      });
+    });
+
+    describe('aliases (concatenate, concat)', () => {
+      it('torch.concatenate produces the same result as torch.cat', () => {
+        const a = new Tensor([1, 2, 3]);
+        const b = new Tensor([4, 5]);
+        assert.deepStrictEqual(
+          Array.from(torch.concatenate([a, b]).toFlatArray()),
+          Array.from(torch.cat([a, b]).toFlatArray())
+        );
+      });
+
+      it('torch.concat produces the same result as torch.cat', () => {
+        const a = new Tensor([1, 2, 3]);
+        const b = new Tensor([4, 5]);
+        assert.deepStrictEqual(
+          Array.from(torch.concat([a, b]).toFlatArray()),
+          Array.from(torch.cat([a, b]).toFlatArray())
+        );
+      });
+
+      it('tensor.concatenate is an alias for tensor.cat', () => {
+        const a = new Tensor([1, 2]);
+        const b = new Tensor([3]);
+        assert.deepStrictEqual(
+          Array.from(a.concatenate(b).toFlatArray()),
+          Array.from(a.cat(b).toFlatArray())
+        );
+      });
+
+      it('tensor.concat is an alias for tensor.cat', () => {
+        const a = new Tensor([1, 2]);
+        const b = new Tensor([3]);
+        assert.deepStrictEqual(
+          Array.from(a.concat(b).toFlatArray()),
+          Array.from(a.cat(b).toFlatArray())
+        );
+      });
+    });
+
+    describe('error handling', () => {
+      it('throws on empty tensor list', () => {
+        assert.throws(() => torch.cat([]), /non-empty/);
+      });
+
+      it('throws on zero-dimensional tensor', () => {
+        const a = new Tensor(1);
+        assert.throws(() => torch.cat([a, a]), /zero-dimensional/);
+      });
+
+      it('throws on mismatched ndim', () => {
+        const a = new Tensor([1, 2]);
+        const b = new Tensor([[1, 2]]);
+        assert.throws(() => torch.cat([a, b]), /dimensions/);
+      });
+
+      it('throws on mismatched non-cat dimension', () => {
+        const a = new Tensor([[1, 2, 3]]);
+        const b = new Tensor([[1, 2]]);
+        assert.throws(() => torch.cat([a, b], 0), /shape/);
+      });
     });
   });
 });

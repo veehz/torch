@@ -674,17 +674,15 @@ class _Torch:
         return bool(js_torch.is_grad_enabled())
 
     def cat(self, tensors, dim=0):
-        """Concatenate tensors along dim. NOTE: gradient is not tracked."""
-        if dim != 0:
-            raise NotImplementedError("torch.cat only supports dim=0 in this bridge")
-        result = []
-        for t in tensors:
-            data = t.tolist()
-            if isinstance(data, list):
-                result.extend(data)
-            else:
-                result.append(data)
-        return Tensor(result)
+        if isinstance(tensors, Tensor):
+            tensors = [tensors]
+        return Tensor(self._js.cat(to_js([t._js for t in tensors]), dim))
+
+    def concatenate(self, tensors, dim=0):
+        return self.cat(tensors, dim)
+
+    def concat(self, tensors, dim=0):
+        return self.cat(tensors, dim)
 
     def Size(self, shape):
         return list(shape)

@@ -36,7 +36,16 @@ function generate_binary_function(opname: string) {
 
 // debug operations
 
+/**
+ * @ignore
+ * Get left index in a binary function
+ */
 export const __left_index__ = generate_binary_function('__left_index__');
+
+/**
+ * @ignore
+ * Get right index in a binary function
+ */
 export const __right_index__ = generate_binary_function('__right_index__');
 
 // binary pointwise
@@ -110,3 +119,21 @@ export function numel(a: Tensor): number {
 export function flatten(input: Tensor, start_dim: number = 0, end_dim: number = -1): Tensor {
   return input.flatten(start_dim, end_dim);
 }
+
+/**
+ * Concatenates tensors along a given dimension.
+ */
+export function cat(tensors: Tensor[], dim: number = 0): Tensor {
+  const operation = createOperation('cat');
+  return operation.forward(tensors, dim);
+}
+
+/**
+ * Alias for {@link cat}.
+ */
+export const concatenate = cat;
+
+/**
+ * Alias for {@link cat}.
+ */
+export const concat = cat;

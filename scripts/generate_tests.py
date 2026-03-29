@@ -13,6 +13,7 @@ from generator.conv import generate_conv_tests
 from generator.export import generate_export_tests
 from generator.loss import generate_loss_tests
 from generator.activation import generate_activation_tests
+from generator.cat import generate_cat_tests
 
 UNARY_OPS = ["log", "sqrt", "exp", "square", "abs", "sign", "neg", "reciprocal", "sin", "cos", "tan"]
 BINARY_OPS = ["add", "sub", "mul", "div", "pow", "maximum", "minimum"]
@@ -33,6 +34,7 @@ if __name__ == "__main__":
         "export": generate_export_tests(),
         "loss": generate_loss_tests(),
         "activations": generate_activation_tests(),
+        "cat": generate_cat_tests(),
     }
 
     print("export const testData = ", end="")

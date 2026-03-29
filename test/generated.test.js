@@ -243,6 +243,20 @@ describe('Automated Tests', () => {
     });
   });
 
+  describe('Cat Operations', () => {
+    testData.cat?.forEach(test => {
+      it(test.test_name, () => {
+        const tensors = test.inputs.map(inp => new Tensor(inp, { requires_grad: true }));
+        const out = torch.cat(tensors, test.dim);
+        assertDeepCloseTo(out.toArray(), test.expected_output, `${test.test_name} output`);
+        out.sum().backward();
+        tensors.forEach((t, i) => {
+          assertDeepCloseTo(t.grad.toArray(), test.expected_grads[i], `${test.test_name} grad[${i}]`);
+        });
+      });
+    });
+  });
+
   describe('Expand Operations', () => {
     testData.expand?.forEach(test => {
       it(test.test_name, () => {

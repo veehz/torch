@@ -564,4 +564,17 @@ export class Tensor {
   relu(): Tensor {
     return this._executeUnaryOp('relu');
   }
+
+  cat(tensors: Tensor | Tensor[], dim: number = 0): Tensor {
+    const others = Array.isArray(tensors) ? tensors : [tensors];
+    return createOperation('cat').forward([this, ...others], dim);
+  }
+
+  concatenate(tensors: Tensor | Tensor[], dim: number = 0): Tensor {
+    return this.cat(tensors, dim);
+  }
+
+  concat(tensors: Tensor | Tensor[], dim: number = 0): Tensor {
+    return this.cat(tensors, dim);
+  }
 }

@@ -4,7 +4,7 @@ import { is_grad_enabled } from '../grad_mode';
 import { Tensor } from '../tensor';
 import { eventBus, getNextId, events } from '../util';
 
-type ArgumentType = Tensor | number | number[] | boolean | string;
+type ArgumentType = Tensor | Tensor[] | number | number[] | boolean | string;
 
 export function resultRequiresGrad(...args: ArgumentType[]): boolean {
   if (!is_grad_enabled()) return false;

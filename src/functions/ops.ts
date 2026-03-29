@@ -1180,3 +1180,98 @@ const Ne = BinaryFunctionMixin(
   () => { },
   "ne"
 );
+
+class Cat extends TorchFunction {
+  private _dim: number;
+  private _input_sizes: number[];
+
+  protected _forward(tensors: Tensor[], dim: number = 0): Tensor {
+    if (tensors.length === 0) {
+      throw new Error('torch.cat: expected a non-empty list of Tensors');
+    }
+
+    const ndim = tensors[0].shape.length;
+    if (ndim === 0) {
+      throw new Error('torch.cat: zero-dimensional tensors cannot be concatenated');
+    }
+
+    if (dim < 0) dim = dim + ndim;
+    if (dim < 0 || dim >= ndim) {
+      throw new Error(`torch.cat: dimension out of range`);
+    }
+
+    for (let i = 1; i < tensors.length; i++) {
+      if (tensors[i].shape.length !== ndim) {
+        throw new Error('torch.cat: all tensors must have the same number of dimensions');
+      }
+      for (let d = 0; d < ndim; d++) {
+        if (d !== dim && tensors[i].shape[d] !== tensors[0].shape[d]) {
+          throw new Error(`torch.cat: all tensors must have the same shape, except in dimension ${dim}`);
+        }
+      }
+    }
+
+    const rg = resultRequiresGrad(...tensors);
+    if (rg) {
+      this.saved_tensors = [...tensors];
+      this._dim = dim;
+      this._input_sizes = tensors.map(t => t.shape[dim]);
+    }
+
+    for (const t of tensors) {
+      this.next_functions.push(t.grad_fn ? t.grad_fn : nullOp);
+    }
+
+    const result_shape = [...tensors[0].shape];
+    result_shape[dim] = tensors.reduce((sum, t) => sum + t.shape[dim], 0);
+
+    const inner_size = result_shape.slice(dim + 1).reduce((a, b) => a * b, 1);
+    const outer_size = result_shape.slice(0, dim).reduce((a, b) => a * b, 1);
+    const total_size = result_shape.reduce((a, b) => a * b, 1);
+
+    const data = new Array(total_size);
+    let out_idx = 0;
+    for (let o = 0; o < outer_size; o++) {
+      for (const t of tensors) {
+        const block_size = t.shape[dim] * inner_size;
+        const tData = t.data;
+        const src_base = o * block_size;
+        for (let i = 0; i < block_size; i++) {
+          data[out_idx++] = tData[src_base + i];
+        }
+      }
+    }
+
+    return new Tensor(data, { requires_grad: rg }, { operation: rg ? this : null, shape: result_shape });
+  }
+
+  protected _backward(dz: Tensor): void {
+    const tensors = this.saved_tensors;
+    const dim = this._dim;
+    const input_sizes = this._input_sizes;
+
+    const inner_size = dz.shape.slice(dim + 1).reduce((a, b) => a * b, 1);
+    const outer_size = dz.shape.slice(0, dim).reduce((a, b) => a * b, 1);
+    const dzData = dz.data;
+
+    const grad_datas: number[][] = tensors.map(t => new Array(t.dataLength()));
+
+    let dz_idx = 0;
+    for (let o = 0; o < outer_size; o++) {
+      for (let i = 0; i < tensors.length; i++) {
+        const block_size = input_sizes[i] * inner_size;
+        const dst_base = o * block_size;
+        for (let j = 0; j < block_size; j++) {
+          grad_datas[i][dst_base + j] = dzData[dz_idx++];
+        }
+      }
+    }
+
+    for (let i = 0; i < tensors.length; i++) {
+      this.next_functions[i].backward(
+        new Tensor(grad_datas[i], {}, { shape: tensors[i].shape })
+      );
+    }
+  }
+}
+registerOperation('cat', Cat);
