@@ -387,7 +387,7 @@ class Module:
             object.__setattr__(self, name, value)
             return
 
-        if isinstance(value, Tensor) and value.requires_grad:
+        if isinstance(value, Parameter):
             params[name] = value
         elif isinstance(value, (Module, _NNModule)):
             modules[name] = value
