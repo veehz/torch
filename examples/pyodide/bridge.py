@@ -184,8 +184,7 @@ class Tensor:
         return Tensor(self._js.transpose(dim0, dim1))
 
     def flatten(self, start_dim=0, end_dim=-1):
-        n = self.numel()
-        return self.reshape([n])
+        return Tensor(self._js.flatten(start_dim, end_dim))
 
     # ------------------------------------------------------------------
     # Reductions — default (no dim) sums all elements, matching PyTorch
@@ -676,7 +675,7 @@ class _Torch:
     def cat(self, tensors, dim=0):
         if isinstance(tensors, Tensor):
             tensors = [tensors]
-        return Tensor(self._js.cat(to_js([t._js for t in tensors]), dim))
+        return Tensor(js_torch.cat(to_js([t._js for t in tensors]), dim))
 
     def concatenate(self, tensors, dim=0):
         return self.cat(tensors, dim)
