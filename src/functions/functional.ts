@@ -305,3 +305,10 @@ export function clamp(input: Tensor, min: number, max: number): Tensor {
  * Alias for {@link clamp}.
  */
 export const clip = clamp;
+
+/**
+ * Stack tensors along a new dimension.
+ */
+export function stack(tensors: Tensor[], dim: number = 0): Tensor {
+  return cat(tensors.map(t => t.unsqueeze(dim)), dim);
+}
