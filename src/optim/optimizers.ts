@@ -3,6 +3,52 @@ import { Parameter } from "../nn/base";
 import { Tensor } from "../tensor";
 import { zeros_like } from "../creation";
 
+export class Adagrad extends Optimizer {
+  private state: Map<Parameter, { sum: Tensor }> = new Map();
+  private lr: number;
+  private lr_decay: number;
+  private weight_decay: number;
+  private eps: number;
+  private step_count: number = 0;
+
+  constructor(
+    params: Parameter[],
+    lr: number = 0.01,
+    lr_decay: number = 0,
+    weight_decay: number = 0,
+    eps: number = 1e-10,
+  ) {
+    super(params, {});
+    this.lr = lr;
+    this.lr_decay = lr_decay;
+    this.weight_decay = weight_decay;
+    this.eps = eps;
+  }
+
+  step(): void {
+    this.step_count += 1;
+    const clr = this.lr / (1 + (this.step_count - 1) * this.lr_decay);
+
+    for (const param of this.params) {
+      let grad = param.grad;
+
+      if (this.weight_decay !== 0) {
+        grad = grad.add(param.mul(this.weight_decay));
+      }
+
+      if (!this.state.has(param)) {
+        this.state.set(param, { sum: zeros_like(param) });
+      }
+
+      const state = this.state.get(param)!;
+      state.sum = state.sum.add(grad.mul(grad));
+
+      const update = grad.div(state.sum.sqrt().add(this.eps)).mul(clr);
+      param.data = param.sub(update).data;
+    }
+  }
+}
+
 export class SGD extends Optimizer {
   private state: Map<Parameter, { velocity: Tensor }> = new Map();
   private lr: number;
