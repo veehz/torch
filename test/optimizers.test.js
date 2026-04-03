@@ -71,4 +71,53 @@ describe('Optimizers', () => {
       assert.closeTo(x.data[0], 9.8, EPS);
     });
   });
+
+  describe('Adagrad', () => {
+    it('parameters are updated', () => {
+      const w = new torch.nn.Parameter(torch.tensor([1.0, 2.0, 3.0]));
+      const opt = new torch.optim.Adagrad([w], 0.1);
+      opt.zero_grad();
+      w.mul(torch.tensor([1.0, 1.0, 1.0])).sum().backward();
+      const before = [...w.toFlatArray()];
+      opt.step();
+      w.toFlatArray().forEach((v, i) => assert.notEqual(v, before[i]));
+    });
+
+    it('step size decreases over time (accumulating squared gradients)', () => {
+      const w = new torch.nn.Parameter(torch.tensor([2.0]));
+      const opt = new torch.optim.Adagrad([w], 0.1);
+      const steps = [];
+      for (let i = 0; i < 3; i++) {
+        opt.zero_grad();
+        w.mul(torch.ones(1)).sum().backward();
+        const before = w.item();
+        opt.step();
+        steps.push(Math.abs(w.item() - before));
+      }
+      assert.isBelow(steps[1], steps[0]);
+      assert.isBelow(steps[2], steps[1]);
+    });
+
+    it('weight_decay adds L2 regularization', () => {
+      const w1 = new torch.nn.Parameter(torch.tensor([1.0, 2.0]));
+      const w2 = new torch.nn.Parameter(torch.tensor([1.0, 2.0]));
+      const opt1 = new torch.optim.Adagrad([w1], 0.1, 0.0, 0.0);
+      const opt2 = new torch.optim.Adagrad([w2], 0.1, 0.0, 0.01);
+      for (const [w, opt] of [[w1, opt1], [w2, opt2]]) {
+        opt.zero_grad();
+        w.mul(torch.ones(2)).sum().backward();
+        opt.step();
+      }
+      assert.notDeepEqual(w1.toArray(), w2.toArray());
+    });
+
+    it('zero_grad clears gradients', () => {
+      const w = new torch.nn.Parameter(torch.tensor([1.0, 2.0]));
+      const opt = new torch.optim.Adagrad([w], 0.1);
+      w.mul(torch.ones(2)).sum().backward();
+      assert.isNotNull(w.grad);
+      opt.zero_grad();
+      assert.isNull(w.grad);
+    });
+  });
 });

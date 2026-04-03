@@ -34,3 +34,44 @@ describe('BCELoss', () => {
         assert.closeTo(result.item(), 0.7657, 0.001);
     });
 });
+
+describe('NLLLoss', () => {
+  it('basic mean reduction', () => {
+    const loss_fn = new torch.nn.NLLLoss();
+    const logProbs = torch.tensor([
+      [Math.log(0.1), Math.log(0.3), Math.log(0.6)],
+      [Math.log(0.7), Math.log(0.2), Math.log(0.1)],
+    ]);
+    const target = torch.tensor([2, 0]);
+    const out = loss_fn.forward(logProbs, target);
+    const expected = -(Math.log(0.6) + Math.log(0.7)) / 2;
+    assert.closeTo(out.item(), expected, 1e-5);
+  });
+
+  it('gradient flows back to input', () => {
+    const loss_fn = new torch.nn.NLLLoss();
+    const logProbs = torch.tensor([[-1.0, -2.0, -0.5], [-0.8, -1.2, -0.3]], true);
+    const target = torch.tensor([0, 2]);
+    loss_fn.forward(logProbs, target).backward();
+    assert.closeTo(logProbs.grad.toArray()[0][0], -0.5, 1e-6);
+    assert.closeTo(logProbs.grad.toArray()[1][2], -0.5, 1e-6);
+    assert.closeTo(logProbs.grad.toArray()[0][1],  0.0, 1e-6);
+  });
+
+  it('reduction=sum', () => {
+    const loss_fn = new torch.nn.NLLLoss('sum');
+    const logProbs = torch.tensor([[-1.0, -0.5], [-0.8, -0.3]]);
+    const target = torch.tensor([1, 0]);
+    assert.closeTo(loss_fn.forward(logProbs, target).item(), 1.3, 1e-5);
+  });
+
+  it('reduction=none returns per-sample losses', () => {
+    const loss_fn = new torch.nn.NLLLoss('none');
+    const logProbs = torch.tensor([[-1.0, -0.5], [-0.8, -0.3]]);
+    const target = torch.tensor([1, 0]);
+    const out = loss_fn.forward(logProbs, target);
+    assert.deepStrictEqual(out.shape, [2]);
+    assert.closeTo(out.toArray()[0], 0.5, 1e-5);
+    assert.closeTo(out.toArray()[1], 0.8, 1e-5);
+  });
+});

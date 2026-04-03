@@ -192,4 +192,48 @@ describe('Functional', () => {
       assert.strictEqual(a.allclose(b), torch.allclose(a, b));
     });
   });
+
+  describe('Softmax', () => {
+    it('outputs sum to 1 along specified dim', () => {
+      const x = torch.tensor([1.0, 2.0, 3.0]);
+      assert.closeTo(torch.softmax(x, 0).sum().item(), 1.0, 1e-6);
+    });
+
+    it('tensor.softmax() method works', () => {
+      const x = torch.tensor([[1.0, 2.0], [3.0, 4.0]]);
+      x.softmax(1).toArray().forEach(row => assert.closeTo(row.reduce((a, b) => a + b, 0), 1.0, 1e-6));
+    });
+
+    it('negative dim works', () => {
+      const x = torch.tensor([[1.0, 2.0], [3.0, 4.0]]);
+      assert.deepStrictEqual(torch.softmax(x, 1).toArray(), torch.softmax(x, -1).toArray());
+    });
+
+    it('gradient flows back through softmax (grad of sum = 0)', () => {
+      const x = torch.tensor([1.0, 2.0, 3.0], true);
+      torch.softmax(x, 0).sum().backward();
+      x.grad.toFlatArray().forEach(g => assert.closeTo(g, 0.0, 1e-6));
+    });
+  });
+
+  describe('Clamp / Clip', () => {
+    it('clamps values below min and above max', () => {
+      assert.deepStrictEqual(torch.clamp(torch.tensor([-2.0, 0.0, 2.0, 5.0]), 0, 3).toArray(), [0.0, 0.0, 2.0, 3.0]);
+    });
+
+    it('torch.clip is an alias for torch.clamp', () => {
+      const x = torch.tensor([-1.0, 0.5, 2.0]);
+      assert.deepStrictEqual(torch.clamp(x, 0, 1).toArray(), torch.clip(x, 0, 1).toArray());
+    });
+
+    it('tensor.clamp() method works', () => {
+      assert.deepStrictEqual(torch.tensor([-1.0, 0.5, 2.0]).clamp(0, 1).toArray(), [0.0, 0.5, 1.0]);
+    });
+
+    it('gradient is 1 inside range, 0 outside', () => {
+      const x = torch.tensor([-1.0, 0.5, 2.0], true);
+      torch.clamp(x, 0, 1).sum().backward();
+      assert.deepStrictEqual(x.grad.toArray(), [0.0, 1.0, 0.0]);
+    });
+  });
 });
