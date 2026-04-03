@@ -6,6 +6,7 @@ export { Parameter } from './parameter';
 export abstract class Module {
   private _modules: { [key: string]: Module };
   private _parameters: { [key: string]: Parameter };
+  public training: boolean = true;
 
   constructor() {
     this._parameters = {};
@@ -29,6 +30,18 @@ export abstract class Module {
   }
 
   public abstract forward(...args: Tensor[]): Tensor;
+
+  public train(mode: boolean = true): this {
+    this.training = mode;
+    for (const module of Object.values(this._modules)) {
+      module.train(mode);
+    }
+    return this;
+  }
+
+  public eval(): this {
+    return this.train(false);
+  }
 
   public parameters(): Parameter[] {
     let params: Parameter[] = Object.values(this._parameters);

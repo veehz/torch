@@ -1,6 +1,7 @@
 import { Module, Parameter } from "./base";
 import { rand } from "../creation";
 import * as functional from "./functional";
+import { softmax as _softmax } from "../functions/functional";
 import { Tensor } from "../tensor";
 
 export class Linear extends Module {
@@ -159,6 +160,90 @@ export class Conv2d extends _ConvNd {
 
   forward(input: Tensor) {
     return functional.conv2d(input, this.weight, this.bias, this.stride, this.padding, this.dilation, this.groups);
+  }
+}
+
+export class LeakyReLU extends Module {
+  private negative_slope: number;
+
+  constructor(negative_slope: number = 0.01) {
+    super();
+    this.negative_slope = negative_slope;
+  }
+
+  forward(input: Tensor) {
+    return functional.leaky_relu(input, this.negative_slope);
+  }
+}
+
+export class MaxPool2d extends Module {
+  private kernel_size: number | number[];
+  private stride: number | number[] | undefined;
+  private padding: number | number[];
+
+  constructor(
+    kernel_size: number | number[],
+    stride?: number | number[],
+    padding: number | number[] = 0
+  ) {
+    super();
+    this.kernel_size = kernel_size;
+    this.stride = stride;
+    this.padding = padding;
+  }
+
+  forward(input: Tensor) {
+    return functional.max_pool2d(input, this.kernel_size, this.stride, this.padding);
+  }
+}
+
+export class Dropout extends Module {
+  private p: number;
+
+  constructor(p: number = 0.5) {
+    super();
+    this.p = p;
+  }
+
+  forward(input: Tensor) {
+    if (!this.training || this.p === 0) {
+      return input;
+    }
+    if (this.p === 1) {
+      return input.mul(0);
+    }
+    const scale = 1 / (1 - this.p);
+    const maskData = input.toFlatArray().map(() => (Math.random() > this.p ? scale : 0));
+    const mask = new Tensor(maskData, {}, { shape: [...input.shape] });
+    return input.mul(mask);
+  }
+}
+
+export class Softmax extends Module {
+  private dim: number;
+
+  constructor(dim: number) {
+    super();
+    this.dim = dim;
+  }
+
+  forward(input: Tensor) {
+    return _softmax(input, this.dim);
+  }
+}
+
+export class Flatten extends Module {
+  private start_dim: number;
+  private end_dim: number;
+
+  constructor(start_dim: number = 1, end_dim: number = -1) {
+    super();
+    this.start_dim = start_dim;
+    this.end_dim = end_dim;
+  }
+
+  forward(input: Tensor) {
+    return input.flatten(this.start_dim, this.end_dim);
   }
 }
 
