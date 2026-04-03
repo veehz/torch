@@ -75,3 +75,17 @@ export class CrossEntropyLoss extends Loss {
     return op.forward(input, target, this.reduction);
   }
 }
+
+export class NLLLoss extends Loss {
+  private reduction: Reduction;
+
+  constructor(reduction: Reduction = 'mean') {
+    super();
+    this.reduction = reduction;
+  }
+
+  forward(input: Tensor, target: Tensor) {
+    const op = createOperation('nll_loss');
+    return op.forward(input, target, this.reduction);
+  }
+}

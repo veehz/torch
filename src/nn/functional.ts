@@ -22,7 +22,11 @@ function generate_unary_function(opname: string) {
 export const relu = generate_unary_function('relu');
 export const sigmoid = generate_unary_function('sigmoid');
 
+export const leaky_relu = generate_function('leaky_relu');
+
 export const conv1d = generate_function('conv1d');
 export const conv2d = generate_function('conv2d');
 export const conv3d = generate_function('conv3d');
 export const cross_entropy = generate_function('cross_entropy_loss');
+export const nll_loss = generate_function('nll_loss');
+export const max_pool2d = generate_function('max_pool2d');
