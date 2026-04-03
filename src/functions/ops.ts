@@ -250,6 +250,20 @@ const NanToNum = UnaryFunctionMixin(
 class Reshape extends TorchFunction {
   protected _forward(a: Tensor, shape: number[]) {
     const previous_length = a.dataLength();
+
+    const negIdx = shape.indexOf(-1);
+    if (negIdx !== -1) {
+      if (shape.indexOf(-1, negIdx + 1) !== -1) {
+        throw new Error('Only one -1 is allowed in reshape shape');
+      }
+      const known = shape.reduce((acc, val, i) => i === negIdx ? acc : acc * val, 1);
+      if (previous_length % known !== 0) {
+        throw new Error('Shape mismatch: cannot infer -1 dimension for shape ' + a.shape + ' -> ' + shape);
+      }
+      shape = shape.slice();
+      shape[negIdx] = previous_length / known;
+    }
+
     const target_length = shape.reduce((acc, val) => acc * val, 1);
 
     if (previous_length !== target_length) {
