@@ -86,7 +86,12 @@ export const _atenMap: Record<string, string> = {
   'conv3d': 'aten.conv3d.default',
   'linear': 'aten.linear.default',
   'cross_entropy_loss': 'aten.cross_entropy_loss.default',
+  'nll_loss': 'aten.nll_loss_forward.default',
   'cat': 'aten.cat.default',
+  'softmax': 'aten._softmax.default',
+  'clamp': 'aten.clamp.default',
+  'leaky_relu': 'aten.leaky_relu.default',
+  'max_pool2d': 'aten.max_pool2d.default',
 };
 
 /**
