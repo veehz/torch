@@ -255,6 +255,8 @@ class Tensor:
     def tan(self):        return Tensor(self._js.tan())
     def sigmoid(self):    return Tensor(self._js.sigmoid())
     def relu(self):       return Tensor(js_torch.nn.functional.relu(self._js))
+    def softmax(self, dim): return Tensor(self._js.softmax(dim))
+    def clamp(self, min, max): return Tensor(self._js.clamp(min, max))
     def sign(self):       return Tensor(self._js.sign())
     def reciprocal(self): return Tensor(self._js.reciprocal())
     def nan_to_num(self): return Tensor(self._js.nan_to_num())
@@ -377,6 +379,7 @@ class Module:
     def __init__(self):
         object.__setattr__(self, '_parameters', {})
         object.__setattr__(self, '_modules', {})
+        object.__setattr__(self, 'training', True)
 
     def __setattr__(self, name, value):
         try:
@@ -414,6 +417,15 @@ class Module:
             result.extend(mod.named_parameters(full_mod))
         return result
 
+    def train(self, mode=True):
+        object.__setattr__(self, 'training', mode)
+        for mod in object.__getattribute__(self, '_modules').values():
+            mod.train(mode)
+        return self
+
+    def eval(self):
+        return self.train(False)
+
     def zero_grad(self):
         for p in self.parameters():
             p.grad = None
@@ -443,6 +455,13 @@ class _NNModule:
         raw = self._module.named_parameters(prefix).to_py()
         return [(pair[0], Tensor(pair[1])) for pair in raw]
 
+    def train(self, mode=True):
+        self._module.train(mode)
+        return self
+
+    def eval(self):
+        return self.train(False)
+
     def zero_grad(self):
         for p in self.parameters():
             p.grad = None
@@ -458,6 +477,17 @@ class _NNFunctional:
 
     def sigmoid(self, input):
         return Tensor(js_torch.nn.functional.sigmoid(input._js))
+
+    def leaky_relu(self, input, negative_slope=0.01):
+        return Tensor(js_torch.nn.functional.leaky_relu(input._js, negative_slope))
+
+    def max_pool2d(self, input, kernel_size, stride=None, padding=0):
+        if stride is None:
+            return Tensor(js_torch.nn.functional.max_pool2d(input._js, kernel_size))
+        return Tensor(js_torch.nn.functional.max_pool2d(input._js, kernel_size, stride, padding))
+
+    def nll_loss(self, input, target, reduction='mean'):
+        return Tensor(js_torch.nn.functional.nll_loss(input._js, target._js, reduction))
 
     def __getattr__(self, name):
         if name.startswith('_'):
@@ -534,6 +564,26 @@ class _NNNamespace:
             stride, padding, dilation, groups, bias
         ))
 
+    def LeakyReLU(self, negative_slope=0.01):
+        return _NNModule(js_torch.nn.LeakyReLU.new(negative_slope))
+
+    def MaxPool2d(self, kernel_size, stride=None, padding=0):
+        if stride is None:
+            return _NNModule(js_torch.nn.MaxPool2d.new(kernel_size))
+        return _NNModule(js_torch.nn.MaxPool2d.new(kernel_size, stride, padding))
+
+    def Dropout(self, p=0.5):
+        return _NNModule(js_torch.nn.Dropout.new(p))
+
+    def Softmax(self, dim):
+        return _NNModule(js_torch.nn.Softmax.new(dim))
+
+    def Flatten(self, start_dim=1, end_dim=-1):
+        return _NNModule(js_torch.nn.Flatten.new(start_dim, end_dim))
+
+    def NLLLoss(self, reduction='mean'):
+        return _NNModule(js_torch.nn.NLLLoss.new(reduction))
+
 
 # ---------------------------------------------------------------------------
 # optim wrappers
@@ -564,6 +614,12 @@ class _OptimNamespace:
         js_betas = to_js(list(betas))
         return _Optimizer(js_torch.optim.Adam.new(
             js_params, lr, js_betas, eps, weight_decay, amsgrad, maximize
+        ))
+
+    def Adagrad(self, params, lr=0.01, lr_decay=0, weight_decay=0, eps=1e-10):
+        js_params = to_js([p._js for p in params])
+        return _Optimizer(js_torch.optim.Adagrad.new(
+            js_params, lr, lr_decay, weight_decay, eps
         ))
 
 
@@ -662,6 +718,15 @@ class _Torch:
 
     def relu(self, input):
         return input.relu()
+
+    def softmax(self, input, dim):
+        return input.softmax(dim)
+
+    def clamp(self, input, min, max):
+        return input.clamp(min, max)
+
+    def clip(self, input, min, max):
+        return self.clamp(input, min, max)
 
     def flatten(self, input, start_dim=0, end_dim=-1):
         return input.flatten(start_dim, end_dim)
