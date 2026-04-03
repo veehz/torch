@@ -786,6 +786,9 @@ class _Torch:
     def concat(self, tensors, dim=0):
         return self.cat(tensors, dim)
 
+    def stack(self, tensors, dim=0):
+        return Tensor(js_torch.stack(to_js([t._js for t in tensors]), dim))
+
     def Size(self, shape):
         return list(shape)
 
