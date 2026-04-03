@@ -2,6 +2,7 @@ const _torch = window.torch;
 
 export const {
   Tensor,
+  tensor,
   no_grad,
   enable_no_grad,
   disable_no_grad,
