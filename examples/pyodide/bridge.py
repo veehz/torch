@@ -336,6 +336,42 @@ class Tensor:
 
 
 # ---------------------------------------------------------------------------
+# Typed tensor subclasses
+# ---------------------------------------------------------------------------
+
+def _trunc_nested(data):
+    """Truncate all numbers in a nested list toward zero (for LongTensor)."""
+    if isinstance(data, (int, float)):
+        return int(data)  # Python int() truncates toward zero
+    return [_trunc_nested(item) for item in data]
+
+
+class FloatTensor(Tensor):
+    """
+    A Tensor that stores floating-point values.
+    Equivalent to a regular Tensor; provided for PyTorch API compatibility.
+    """
+    def __init__(self, data, requires_grad=False):
+        if isinstance(data, JsProxy):
+            super().__init__(data)
+        else:
+            super().__init__(data, requires_grad)
+
+
+class LongTensor(Tensor):
+    """
+    A Tensor whose values are truncated to integers (toward zero).
+    LongTensor([-1.7]) -> tensor([-1]),  LongTensor([1.9]) -> tensor([1]).
+    """
+    def __init__(self, data, requires_grad=False):
+        if isinstance(data, JsProxy):
+            super().__init__(data)
+        else:
+            truncated = _trunc_nested(data) if isinstance(data, (list, tuple)) else int(data)
+            super().__init__(truncated, requires_grad)
+
+
+# ---------------------------------------------------------------------------
 # no_grad context manager — actually disables grad in the JS engine
 # ---------------------------------------------------------------------------
 
@@ -632,6 +668,8 @@ class _Torch:
         self.nn    = _NNNamespace()
         self.optim = _OptimNamespace()
         self.no_grad = _NoGrad
+        self.FloatTensor = FloatTensor
+        self.LongTensor  = LongTensor
 
     @property
     def tensor(self):
