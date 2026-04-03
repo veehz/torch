@@ -185,7 +185,11 @@ describe('Automated Tests', () => {
     describe('Activation Functions', () => {
       testData.activations?.forEach(test => {
         it(test.test_name, () => {
-          const activation = new torch.nn[test.activation_type]();
+          const ActivationClass = torch.nn[test.activation_type];
+          const kwargs = test.kwargs || {};
+          const activation = test.activation_type === 'LeakyReLU'
+            ? new ActivationClass(kwargs.negative_slope)
+            : new ActivationClass();
 
           const input = new Tensor(test.input, { requires_grad: true });
 
@@ -228,6 +232,14 @@ describe('Automated Tests', () => {
             test.kwargs.amsgrad,
             test.kwargs.maximize
           );
+        } else if (test.optimizer === 'Adagrad') {
+          optimizer = new OptimizerClass(
+            [w],
+            test.kwargs.lr,
+            test.kwargs.lr_decay,
+            test.kwargs.weight_decay,
+            test.kwargs.eps
+          );
         }
 
         optimizer.zero_grad();
@@ -268,6 +280,43 @@ describe('Automated Tests', () => {
       });
     });
   });
+  describe('Softmax', () => {
+    testData.softmax?.forEach(test => {
+      it(test.test_name, () => {
+        const x = new Tensor(test.input, { requires_grad: true });
+        const out = torch.softmax(x, test.dim);
+        assertDeepCloseTo(out.toArray(), test.expected_output, `${test.test_name} output`);
+        out.sum().backward();
+        assertDeepCloseTo(x.grad.toArray(), test.expected_grad, `${test.test_name} grad`);
+      });
+    });
+  });
+
+  describe('Clamp', () => {
+    testData.clamp?.forEach(test => {
+      it(test.test_name, () => {
+        const x = new Tensor(test.input, { requires_grad: true });
+        const out = torch.clamp(x, test.min, test.max);
+        assertDeepCloseTo(out.toArray(), test.expected_output, `${test.test_name} output`);
+        out.sum().backward();
+        assertDeepCloseTo(x.grad.toArray(), test.expected_grad, `${test.test_name} grad`);
+      });
+    });
+  });
+
+  describe('MaxPool2d', () => {
+    testData.maxpool?.forEach(test => {
+      it(test.test_name, () => {
+        const x = new Tensor(test.input, { requires_grad: true });
+        const pool = new torch.nn.MaxPool2d(test.kernel_size, test.stride, test.padding);
+        const out = pool.forward(x);
+        assertDeepCloseTo(out.toArray(), test.expected_output, `${test.test_name} output`);
+        out.sum().backward();
+        assertDeepCloseTo(x.grad.toArray(), test.expected_grad, `${test.test_name} grad`);
+      });
+    });
+  });
+
   describe('Export', () => {
     testData.export?.forEach(test => {
       it(`export_${test.test_name}`, () => {
