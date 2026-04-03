@@ -12,6 +12,9 @@ def generate_optimizer_tests():
         ("Adam_custom_betas", torch.optim.Adam, {"lr": 0.1, "betas": (0.95, 0.999)}),
         ("Adam_weight_decay", torch.optim.Adam, {"lr": 0.1, "weight_decay": 0.01}),
         ("Adam_amsgrad", torch.optim.Adam, {"lr": 0.1, "amsgrad": True}),
+        ("Adagrad_basic", torch.optim.Adagrad, {"lr": 0.1}),
+        ("Adagrad_lr_decay", torch.optim.Adagrad, {"lr": 0.1, "lr_decay": 0.01}),
+        ("Adagrad_weight_decay", torch.optim.Adagrad, {"lr": 0.1, "weight_decay": 0.01}),
     ]
 
     for test_name, optim_class, kwargs in configs:

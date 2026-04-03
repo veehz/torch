@@ -67,4 +67,34 @@ def generate_loss_tests():
             }
         )
 
+    # NLLLoss: input is (N, C) log-probs, target is (N,) class indices
+    nll_cases = [
+        ((3, 5), "nll_3x5"),
+        ((4, 3), "nll_4x3"),
+        ((2, 10), "nll_2x10"),
+    ]
+
+    for (N, C), desc in nll_cases:
+        # Produce proper log-probabilities via log_softmax
+        raw = torch.randn(N, C, requires_grad=True)
+        import torch.nn.functional as F
+        input = F.log_softmax(raw, dim=1)
+        input = input.detach().requires_grad_(True)
+        target = torch.randint(0, C, (N,))
+
+        loss_fn = nn.NLLLoss()
+        output = loss_fn(input, target)
+        output.backward()
+
+        tests.append(
+            {
+                "test_name": desc,
+                "loss_type": "NLLLoss",
+                "input": input.detach().numpy().tolist(),
+                "target": target.numpy().tolist(),
+                "expected_output": output.detach().numpy().tolist(),
+                "expected_grad_input": input.grad.numpy().tolist(),
+            }
+        )
+
     return tests
