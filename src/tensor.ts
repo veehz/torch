@@ -586,3 +586,36 @@ export class Tensor {
     return this.cat(tensors, dim);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Typed tensor constructors
+// ---------------------------------------------------------------------------
+
+function _truncate_nested(data: NestedNumberArray): NestedNumberArray {
+  if (typeof data === 'number') return Math.trunc(data);
+  if (Array.isArray(data)) return (data as NestedNumberArray[]).map(_truncate_nested);
+  // TypedArray
+  const out = new Float64Array((data as Float64Array).length);
+  for (let i = 0; i < out.length; i++) out[i] = Math.trunc((data as Float64Array)[i]);
+  return out;
+}
+
+/**
+ * A Tensor that stores 32-bit float values (same as the default Tensor).
+ * Provided for PyTorch API compatibility.
+ */
+export class FloatTensor extends Tensor {
+  constructor(data: NestedNumberArray, options: { requires_grad?: boolean } = {}) {
+    super(data, options);
+  }
+}
+
+/**
+ * A Tensor whose values are truncated to integers (64-bit integer semantics).
+ * Negative numbers are truncated toward zero: LongTensor([-1.7]) -> tensor([-1]).
+ */
+export class LongTensor extends Tensor {
+  constructor(data: NestedNumberArray, options: { requires_grad?: boolean } = {}) {
+    super(_truncate_nested(data), options);
+  }
+}

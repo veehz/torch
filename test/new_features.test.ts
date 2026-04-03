@@ -1,6 +1,6 @@
 import { assert } from 'chai';
 import * as torch from 'torch';
-import { Tensor } from 'torch';
+import { Tensor, FloatTensor, LongTensor } from 'torch';
 
 // ─── softmax ─────────────────────────────────────────────────────────────────
 
@@ -426,5 +426,83 @@ describe('Module training mode', () => {
     assert.isFalse(drop.training);
     net.train();
     assert.isTrue(drop.training);
+  });
+});
+
+// ─── FloatTensor / LongTensor ─────────────────────────────────────────────────
+
+describe('FloatTensor', () => {
+  it('is an instance of Tensor', () => {
+    const t = new FloatTensor([1.5, 2.5]);
+    assert.instanceOf(t, Tensor);
+  });
+
+  it('preserves float values unchanged', () => {
+    const t = new FloatTensor([1.1, 2.9, -3.7]);
+    const data = t.toArray() as number[];
+    assert.closeTo(data[0], 1.1, 1e-9);
+    assert.closeTo(data[1], 2.9, 1e-9);
+    assert.closeTo(data[2], -3.7, 1e-9);
+  });
+
+  it('works with nested (2D) data', () => {
+    const t = new FloatTensor([[1.5, 2.5], [3.5, 4.5]]);
+    assert.deepStrictEqual(t.shape, [2, 2]);
+  });
+
+  it('accepts requires_grad option', () => {
+    const t = new FloatTensor([1.0, 2.0], { requires_grad: true });
+    assert.isTrue(t.requires_grad);
+  });
+
+  it('participates in autograd', () => {
+    const t = new FloatTensor([2.0, 3.0], { requires_grad: true });
+    t.sum().backward();
+    assert.deepStrictEqual((t.grad!.toArray() as number[]), [1, 1]);
+  });
+});
+
+describe('LongTensor', () => {
+  it('is an instance of Tensor', () => {
+    const t = new LongTensor([1, 2, 3]);
+    assert.instanceOf(t, Tensor);
+  });
+
+  it('truncates positive floats toward zero', () => {
+    const t = new LongTensor([1.1, 1.9, 2.0]);
+    assert.deepStrictEqual(t.toArray(), [1, 1, 2]);
+  });
+
+  it('truncates negative floats toward zero', () => {
+    const t = new LongTensor([-1.1, -1.9, -2.0]);
+    assert.deepStrictEqual(t.toArray(), [-1, -1, -2]);
+  });
+
+  it('works with nested (2D) data', () => {
+    const t = new LongTensor([[1.7, 2.3], [3.9, -4.1]]);
+    assert.deepStrictEqual(t.shape, [2, 2]);
+    assert.deepStrictEqual(t.toArray(), [[1, 2], [3, -4]]);
+  });
+
+  it('accepts integer data unchanged', () => {
+    const t = new LongTensor([0, 1, 2, 3]);
+    assert.deepStrictEqual(t.toArray(), [0, 1, 2, 3]);
+  });
+
+  it('accepts requires_grad option', () => {
+    const t = new LongTensor([1.5, 2.5], { requires_grad: true });
+    assert.isTrue(t.requires_grad);
+    assert.deepStrictEqual(t.toArray(), [1, 2]);
+  });
+
+  it('also accessible as torch.LongTensor', () => {
+    const t = new torch.LongTensor([1.9, -1.9]);
+    assert.instanceOf(t, Tensor);
+    assert.deepStrictEqual(t.toArray(), [1, -1]);
+  });
+
+  it('also accessible as torch.FloatTensor', () => {
+    const t = new torch.FloatTensor([1.5, 2.5]);
+    assert.instanceOf(t, Tensor);
   });
 });

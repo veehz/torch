@@ -1,4 +1,4 @@
-export { Tensor } from './tensor';
+export { Tensor, FloatTensor, LongTensor } from './tensor';
 export type { TypedArray, NestedNumberArray } from './tensor';
 export { no_grad, enable_no_grad, disable_no_grad, is_grad_enabled } from './grad_mode';
 
