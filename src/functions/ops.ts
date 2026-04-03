@@ -1275,3 +1275,126 @@ class Cat extends TorchFunction {
   }
 }
 registerOperation('cat', Cat);
+
+// softmax
+
+class Softmax extends TorchFunction {
+  private dim: number;
+
+  protected _forward(input: Tensor, dim: number): Tensor {
+    this.dim = dim;
+    const rg = resultRequiresGrad(input);
+    this.next_functions.push(input.grad_fn ? input.grad_fn : nullOp);
+
+    const shape = input.shape;
+    const ndim = shape.length;
+    const d = dim < 0 ? dim + ndim : dim;
+
+    const inputData = input.data;
+    const outputData = new Array(input.dataLength());
+
+    const outer = shape.slice(0, d).reduce((a, b) => a * b, 1);
+    const dimSize = shape[d];
+    const inner = shape.slice(d + 1).reduce((a, b) => a * b, 1);
+
+    for (let o = 0; o < outer; o++) {
+      for (let i = 0; i < inner; i++) {
+        let maxVal = -Infinity;
+        for (let k = 0; k < dimSize; k++) {
+          const idx = o * dimSize * inner + k * inner + i;
+          if (inputData[idx] > maxVal) maxVal = inputData[idx];
+        }
+        let sumExp = 0;
+        for (let k = 0; k < dimSize; k++) {
+          const idx = o * dimSize * inner + k * inner + i;
+          sumExp += Math.exp(inputData[idx] - maxVal);
+        }
+        for (let k = 0; k < dimSize; k++) {
+          const idx = o * dimSize * inner + k * inner + i;
+          outputData[idx] = Math.exp(inputData[idx] - maxVal) / sumExp;
+        }
+      }
+    }
+
+    const result = new Tensor(outputData, { requires_grad: rg }, { operation: rg ? this : null, shape: [...shape] });
+    if (rg) {
+      this.saved_tensors = [result]; // save output for efficient backward
+    }
+    return result;
+  }
+
+  protected _backward(dz: Tensor): void {
+    const [softmaxOut] = this.saved_tensors;
+    const [inputFn] = this.next_functions;
+
+    const shape = softmaxOut.shape;
+    const ndim = shape.length;
+    const d = this.dim < 0 ? this.dim + ndim : this.dim;
+
+    const sData = softmaxOut.data;
+    const dzData = dz.data;
+
+    const outer = shape.slice(0, d).reduce((a, b) => a * b, 1);
+    const dimSize = shape[d];
+    const inner = shape.slice(d + 1).reduce((a, b) => a * b, 1);
+
+    const gradData = new Array(softmaxOut.dataLength());
+
+    for (let o = 0; o < outer; o++) {
+      for (let i = 0; i < inner; i++) {
+        // dot(dz, softmax) along this slice
+        let dotProd = 0;
+        for (let k = 0; k < dimSize; k++) {
+          const idx = o * dimSize * inner + k * inner + i;
+          dotProd += dzData[idx] * sData[idx];
+        }
+        // grad = softmax * (dz - dot)
+        for (let k = 0; k < dimSize; k++) {
+          const idx = o * dimSize * inner + k * inner + i;
+          gradData[idx] = sData[idx] * (dzData[idx] - dotProd);
+        }
+      }
+    }
+
+    inputFn.backward(new Tensor(gradData, {}, { shape: [...shape] }));
+  }
+}
+registerOperation('softmax', Softmax);
+
+// clamp
+
+class Clamp extends TorchFunction {
+  private min_val: number;
+  private max_val: number;
+
+  protected _forward(input: Tensor, min_val: number, max_val: number): Tensor {
+    this.min_val = min_val;
+    this.max_val = max_val;
+    const rg = resultRequiresGrad(input);
+    if (rg) {
+      this.saved_tensors = [input];
+    }
+    this.next_functions.push(input.grad_fn ? input.grad_fn : nullOp);
+
+    const inputData = input.data;
+    const outputData = inputData.map(v => Math.min(Math.max(v, min_val), max_val));
+
+    return new Tensor(outputData, { requires_grad: rg }, { operation: rg ? this : null, shape: [...input.shape] });
+  }
+
+  protected _backward(dz: Tensor): void {
+    const [input] = this.saved_tensors;
+    const [inputFn] = this.next_functions;
+    const min_val = this.min_val;
+    const max_val = this.max_val;
+
+    const inputData = input.data;
+    const dzData = dz.data;
+    const gradData = inputData.map((v, i) =>
+      (v > min_val && v < max_val) ? dzData[i] : 0
+    );
+
+    inputFn.backward(new Tensor(gradData, {}, { shape: [...input.shape] }));
+  }
+}
+registerOperation('clamp', Clamp);

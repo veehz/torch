@@ -565,6 +565,14 @@ export class Tensor {
     return this._executeUnaryOp('relu');
   }
 
+  softmax(dim: number): Tensor {
+    return this._executeOpRaw('softmax', dim);
+  }
+
+  clamp(min: number, max: number): Tensor {
+    return this._executeOpRaw('clamp', min, max);
+  }
+
   cat(tensors: Tensor | Tensor[], dim: number = 0): Tensor {
     const others = Array.isArray(tensors) ? tensors : [tensors];
     return createOperation('cat').forward([this, ...others], dim);
