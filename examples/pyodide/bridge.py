@@ -668,6 +668,7 @@ class _Torch:
         self.nn    = _NNNamespace()
         self.optim = _OptimNamespace()
         self.no_grad = _NoGrad
+        self.Tensor = Tensor
         self.FloatTensor = FloatTensor
         self.LongTensor  = LongTensor
 
