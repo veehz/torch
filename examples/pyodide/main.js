@@ -64,7 +64,6 @@ async function cmdGen() {
 
 async function cmdTest() {
   const files = getPyFiles();
-  const pyodide = await setupPyodide();
   let passed = 0, failed = 0;
 
   for (const file of files) {
@@ -76,6 +75,7 @@ async function cmdTest() {
       continue;
     }
 
+    const pyodide = await setupPyodide();
     const code = readFileSync(path.join(PY_DIR, file), 'utf8');
     let actual;
     try {

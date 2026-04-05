@@ -1,4 +1,5 @@
 import { Tensor } from "../tensor";
+import { Module } from "./base";
 import { createOperation } from "../functions/registry";
 
 export type Reduction = 'mean' | 'sum' | 'none';
@@ -9,7 +10,7 @@ function applyReduction(loss: Tensor, reduction: Reduction): Tensor {
   return loss;
 }
 
-abstract class Loss {
+abstract class Loss extends Module {
   abstract forward(input: Tensor, target: Tensor): Tensor;
 }
 
