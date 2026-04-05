@@ -619,7 +619,7 @@ function _matmul_tensor(a: Tensor, b: Tensor, operation: TorchFunction | null = 
   const b_shape = b_1d ? [b.shape[0], 1] : b.shape;
 
   if (a_shape[a_shape.length - 1] != b_shape[b_shape.length - 2]) {
-    throw new Error('Shape mismatch: ' + a.shape + ' and ' + b.shape);
+    throw new Error(`Shapes cannot be multiplied (${a_shape.join("x")} and ${b_shape.join("x")})`);
   }
 
   const broadcast_shape = _broadcast_shape(a_shape.slice(0, -2), b_shape.slice(0, -2)).concat([
