@@ -479,10 +479,11 @@ class _NNModule:
 
     def __call__(self, *args):
         js_args = [a._js if isinstance(a, Tensor) else a for a in args]
-        return Tensor(self._module.forward(*js_args))
+        return Tensor(self._module.call(*js_args))
 
     def forward(self, *args):
-        return self(*args)
+        js_args = [a._js if isinstance(a, Tensor) else a for a in args]
+        return Tensor(self._module.forward(*js_args))
 
     def parameters(self):
         return [Tensor(p) for p in self._module.parameters().to_py()]

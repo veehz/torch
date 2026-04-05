@@ -31,6 +31,15 @@ export abstract class Module {
 
   public abstract forward(...args: Tensor[]): Tensor;
 
+  /**
+   * Entry point for running the module. Equivalent to `model(x)` in Python.
+   * In the future, this is where forward hooks will be triggered.
+   * Call `forward()` directly to bypass hooks.
+   */
+  public call(...args: Tensor[]): Tensor {
+    return this.forward(...args);
+  }
+
   public train(mode: boolean = true): this {
     this.training = mode;
     for (const module of Object.values(this._modules)) {
@@ -100,7 +109,7 @@ export class Sequential extends Module {
   forward(input: Tensor) {
     let x = input;
     for (const module of this._modulesArr) {
-      x = module.forward(x);
+      x = module.call(x);
     }
     return x;
   }
