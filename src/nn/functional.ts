@@ -21,6 +21,7 @@ function generate_unary_function(opname: string) {
 
 export const relu = generate_unary_function('relu');
 export const sigmoid = generate_unary_function('sigmoid');
+export const tanh = generate_unary_function('tanh');
 
 export const leaky_relu = generate_function('leaky_relu');
 

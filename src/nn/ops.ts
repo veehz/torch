@@ -20,6 +20,15 @@ const Sigmoid = UnaryFunctionMixin(
   "sigmoid"
 );
 
+const Tanh = UnaryFunctionMixin(
+  (a: number[], x: number) => Math.tanh(a[x]),
+  (a, aFn, dz) => {
+    const tanh_a = a.tanh();
+    aFn.backward(dz.mul(tanh_a.mul(tanh_a).mul(-1).add(1)));
+  },
+  "tanh"
+);
+
 /**
  * CrossEntropyLoss operation.
  *

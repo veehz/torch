@@ -57,6 +57,16 @@ export class Sigmoid extends Module {
   }
 }
 
+export class Tanh extends Module {
+  constructor() {
+    super();
+  }
+
+  forward(input: Tensor) {
+    return functional.tanh(input);
+  }
+}
+
 abstract class _ConvNd extends Module {
   public weight: Parameter;
   public bias: Parameter | null;
