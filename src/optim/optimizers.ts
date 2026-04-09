@@ -1,7 +1,7 @@
-import { Optimizer } from "./base";
-import { Parameter } from "../nn/base";
-import { Tensor } from "../tensor";
-import { zeros_like } from "../creation";
+import { Optimizer } from './base';
+import { Parameter } from '../nn/base';
+import { Tensor } from '../tensor';
+import { zeros_like } from '../creation';
 
 export class Adagrad extends Optimizer {
   private state: Map<Parameter, { sum: Tensor }> = new Map();
@@ -16,7 +16,7 @@ export class Adagrad extends Optimizer {
     lr: number = 0.01,
     lr_decay: number = 0,
     weight_decay: number = 0,
-    eps: number = 1e-10,
+    eps: number = 1e-10
   ) {
     super(params, {});
     this.lr = lr;
@@ -31,6 +31,7 @@ export class Adagrad extends Optimizer {
 
     for (const param of this.params) {
       let grad = param.grad;
+      if (grad === null) continue;
 
       if (this.weight_decay !== 0) {
         grad = grad.add(param.mul(this.weight_decay));
@@ -65,7 +66,7 @@ export class SGD extends Optimizer {
     dampening: number = 0.0,
     weight_decay: number = 0.0,
     nesterov: boolean = false,
-    maximize: boolean = false,
+    maximize: boolean = false
   ) {
     super(params, {});
     this.lr = lr;
@@ -78,6 +79,7 @@ export class SGD extends Optimizer {
 
   step(): void {
     for (const param of this.params) {
+      if (param.grad === null) continue;
       let g = this.maximize ? param.grad.mul(-1) : param.grad;
       if (this.weight_decay !== 0) {
         g = g.add(param.mul(this.weight_decay));
@@ -86,7 +88,7 @@ export class SGD extends Optimizer {
       if (this.momentum !== 0) {
         if (this.state.has(param)) {
           let buf = this.state.get(param)!.velocity;
-          buf = buf.mul(this.momentum)
+          buf = buf.mul(this.momentum);
           buf = buf.add(g.mul(1 - this.dampening));
           this.state.set(param, { velocity: buf });
         } else {
@@ -112,11 +114,14 @@ export class SGD extends Optimizer {
 }
 
 export class Adam extends Optimizer {
-  private state: Map<Parameter, {
-    m: Tensor,
-    v: Tensor,
-    vmax: Tensor
-  }> = new Map();
+  private state: Map<
+    Parameter,
+    {
+      m: Tensor;
+      v: Tensor;
+      vmax: Tensor;
+    }
+  > = new Map();
 
   private step_count: number = 0;
   private lr: number;
@@ -134,7 +139,7 @@ export class Adam extends Optimizer {
     eps: number = 1e-8,
     weight_decay: number = 0.0,
     amsgrad: boolean = false,
-    maximize: boolean = false,
+    maximize: boolean = false
   ) {
     super(params, {});
     this.lr = lr;
@@ -149,6 +154,7 @@ export class Adam extends Optimizer {
   step(): void {
     this.step_count += 1;
     for (const param of this.params) {
+      if (param.grad === null) continue;
       let grad = this.maximize ? param.grad.mul(-1) : param.grad;
 
       if (this.weight_decay !== 0) {
@@ -160,7 +166,7 @@ export class Adam extends Optimizer {
         this.state.set(param, {
           m: zeros_like(param),
           v: zeros_like(param),
-          vmax: zeros_like(param),
+          vmax: zeros_like(param)
         });
       }
 
