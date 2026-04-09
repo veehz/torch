@@ -1,8 +1,9 @@
-import { Module, Parameter } from "./base";
-import { rand } from "../creation";
-import * as functional from "./functional";
-import { softmax as _softmax } from "../functions/functional";
-import { Tensor } from "../tensor";
+import { Module, Parameter } from './base';
+import { rand } from '../creation';
+import * as functional from './functional';
+import { softmax as _softmax } from '../functions/functional';
+import { Tensor } from '../tensor';
+import { getRng } from '../prng';
 
 export class Linear extends Module {
   public weight: Parameter;
@@ -107,7 +108,8 @@ abstract class _ConvNd extends Module {
       throw new Error('out_channels must be divisible by groups');
     }
 
-    const kernel_arr = typeof kernel_size === 'number' ? new Array(dims).fill(kernel_size) : kernel_size;
+    const kernel_arr =
+      typeof kernel_size === 'number' ? new Array(dims).fill(kernel_size) : kernel_size;
     const kernel_vol = kernel_arr.reduce((a: number, b: number) => a * b, 1);
 
     const k = Math.sqrt(groups / (in_channels * kernel_vol));
@@ -150,7 +152,15 @@ export class Conv1d extends _ConvNd {
   }
 
   forward(input: Tensor) {
-    return functional.conv1d(input, this.weight, this.bias, this.stride, this.padding, this.dilation, this.groups);
+    return functional.conv1d(
+      input,
+      this.weight,
+      this.bias,
+      this.stride,
+      this.padding,
+      this.dilation,
+      this.groups
+    );
   }
 }
 
@@ -169,7 +179,15 @@ export class Conv2d extends _ConvNd {
   }
 
   forward(input: Tensor) {
-    return functional.conv2d(input, this.weight, this.bias, this.stride, this.padding, this.dilation, this.groups);
+    return functional.conv2d(
+      input,
+      this.weight,
+      this.bias,
+      this.stride,
+      this.padding,
+      this.dilation,
+      this.groups
+    );
   }
 }
 
@@ -223,7 +241,8 @@ export class Dropout extends Module {
       return input.mul(0);
     }
     const scale = 1 / (1 - this.p);
-    const maskData = input.toFlatArray().map(() => (Math.random() > this.p ? scale : 0));
+    const prng = getRng();
+    const maskData = input.toFlatArray().map(() => (prng() > this.p ? scale : 0));
     const mask = new Tensor(maskData, {}, { shape: [...input.shape] });
     return input.mul(mask);
   }
@@ -272,6 +291,14 @@ export class Conv3d extends _ConvNd {
   }
 
   forward(input: Tensor) {
-    return functional.conv3d(input, this.weight, this.bias, this.stride, this.padding, this.dilation, this.groups);
+    return functional.conv3d(
+      input,
+      this.weight,
+      this.bias,
+      this.stride,
+      this.padding,
+      this.dilation,
+      this.groups
+    );
   }
 }
