@@ -67,6 +67,7 @@ export const _atenMap: Record<string, string> = {
   'sin': 'aten.sin.default',
   'cos': 'aten.cos.default',
   'tan': 'aten.tan.default',
+  'tanh': 'aten.tanh.default',
   'sum': 'aten.sum.default',
   'mean': 'aten.mean.default',
   'min': 'aten.min.default',
