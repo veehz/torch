@@ -36,7 +36,3 @@ export function is_nonzero(input: Tensor): boolean {
   }
   return input.item() !== 0;
 }
-
-export function numel(input: Tensor): number {
-  return input.numel();
-}
