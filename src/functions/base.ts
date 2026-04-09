@@ -4,7 +4,7 @@ import { is_grad_enabled } from '../grad_mode';
 import { Tensor } from '../tensor';
 import { eventBus, getNextId, events } from '../util';
 
-type ArgumentType = Tensor | Tensor[] | number | number[] | boolean | string;
+export type ArgumentType = Tensor | Tensor[] | number | number[] | boolean | string;
 
 export function resultRequiresGrad(...args: ArgumentType[]): boolean {
   if (!is_grad_enabled()) return false;
@@ -28,27 +28,33 @@ abstract class TorchFunction {
 
   forward(...args: ArgumentType[]): Tensor {
     const requires_grad = resultRequiresGrad(...args);
-    eventBus.dispatchEvent(new CustomEvent(events.OPERATION_BEFORE_FORWARD, {
-      detail: {
-        operation: this,
-        requires_grad,
-        args
-      }
-    }));
+    eventBus.dispatchEvent(
+      new CustomEvent(events.OPERATION_BEFORE_FORWARD, {
+        detail: {
+          operation: this,
+          requires_grad,
+          args
+        }
+      })
+    );
     const result = this._forward(...args);
-    eventBus.dispatchEvent(new CustomEvent(events.OPERATION_AFTER_FORWARD, {
-      detail: {
-        operation: this,
-        requires_grad,
-        args,
-        result
-      }
-    }));
+    eventBus.dispatchEvent(
+      new CustomEvent(events.OPERATION_AFTER_FORWARD, {
+        detail: {
+          operation: this,
+          requires_grad,
+          args,
+          result
+        }
+      })
+    );
     return result;
   }
 
   backward(dz: Tensor | number): void {
-    eventBus.dispatchEvent(new CustomEvent(events.OPERATION_BEFORE_BACKWARD, { detail: { operation: this, dz } }));
+    eventBus.dispatchEvent(
+      new CustomEvent(events.OPERATION_BEFORE_BACKWARD, { detail: { operation: this, dz } })
+    );
     for (const x of this._retained_tensors) {
       if (!x.grad) {
         x.grad = new Tensor(new Array(x.dataLength()).fill(0));
@@ -56,7 +62,9 @@ abstract class TorchFunction {
       x.grad = x.grad.add(dz);
     }
     this._backward(dz);
-    eventBus.dispatchEvent(new CustomEvent(events.OPERATION_AFTER_BACKWARD, { detail: { operation: this, dz } }));
+    eventBus.dispatchEvent(
+      new CustomEvent(events.OPERATION_AFTER_BACKWARD, { detail: { operation: this, dz } })
+    );
   }
 }
 
@@ -99,13 +107,19 @@ export class AccumulateGrad extends UnaryFunction {
     if (!this.variable.grad) {
       this.variable.grad = zeros_like(this.variable);
     }
-    eventBus.dispatchEvent(new CustomEvent(events.OPERATION_BEFORE_ACCUMULATE_GRAD, { detail: { operation: this, dz } }));
-    if (typeof dz === "number") {
+    eventBus.dispatchEvent(
+      new CustomEvent(events.OPERATION_BEFORE_ACCUMULATE_GRAD, { detail: { operation: this, dz } })
+    );
+    if (typeof dz === 'number') {
       this.variable.grad = this.variable.grad.add(dz);
     } else {
       const unbroadcasted_dz = _unbroadcast(dz.shape, this.variable.shape, dz.data);
-      this.variable.grad = this.variable.grad.add(new Tensor(unbroadcasted_dz, {}, { shape: this.variable.shape }));
+      this.variable.grad = this.variable.grad.add(
+        new Tensor(unbroadcasted_dz, {}, { shape: this.variable.shape })
+      );
     }
-    eventBus.dispatchEvent(new CustomEvent(events.OPERATION_AFTER_ACCUMULATE_GRAD, { detail: { operation: this, dz } }));
+    eventBus.dispatchEvent(
+      new CustomEvent(events.OPERATION_AFTER_ACCUMULATE_GRAD, { detail: { operation: this, dz } })
+    );
   }
 }

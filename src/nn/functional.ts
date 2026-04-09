@@ -1,8 +1,9 @@
-import { Tensor } from "../tensor";
-import { createOperation } from "../functions/registry";
+import { Tensor } from '../tensor';
+import { createOperation } from '../functions/registry';
+import { ArgumentType } from '../functions/base';
 
 function generate_function(opname: string) {
-  return (...args: (Tensor | number | number[] | null)[]) => {
+  return (...args: ArgumentType[]) => {
     const operation = createOperation(opname);
     return operation.forward(...args);
   };
