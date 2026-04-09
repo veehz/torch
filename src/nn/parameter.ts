@@ -12,9 +12,7 @@ export class Parameter extends Tensor {
     internal_options: { operation?: TorchFunction; shape?: number[] } = {}
   ) {
     if (data instanceof Tensor) {
-      super(data.data, { requires_grad: true }, { shape: data.shape });
-    } else if (data instanceof Parameter) {
-      super(data.data, { requires_grad: true }, { shape: data.shape });
+      super(data.data, { requires_grad: options.requires_grad }, { shape: data.shape });
     } else {
       super(data, options, internal_options);
     }
