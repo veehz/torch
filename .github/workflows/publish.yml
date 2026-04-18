@@ -1,0 +1,24 @@
+name: Publish
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish package preview
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    steps:
+        - uses: actions/checkout@v6
+        - run: corepack enable
+        - uses: actions/setup-node@v6
+          with:
+            node-version: 24
+            cache: yarn
+
+        - run: yarn install --immutable
+        - run: yarn build
+        - run: yarn pkg-pr-new publish

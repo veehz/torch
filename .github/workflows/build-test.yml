@@ -1,10 +1,10 @@
-name: Build, Test, Publish
+name: Build and Test
 
 on: [push]
 
 jobs:
-  test-publish:
-    name: Build, test, and publish package
+  test:
+    name: Build, test, and prepare docs
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -43,8 +43,6 @@ jobs:
           with:
             path: './docs'
 
-        - run: yarn pkg-pr-new publish
-
   deploy-docs:
     environment:
       name: github-pages
@@ -53,7 +51,7 @@ jobs:
     permissions:
       pages: write
       id-token: write
-    needs: test-publish
+    needs: test
     steps:
       - uses: actions/deploy-pages@v5
         id: deployment
