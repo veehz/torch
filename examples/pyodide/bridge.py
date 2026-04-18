@@ -1,1 +1,1 @@
-pyodide_bridge.py
+../../pyodide_bridge.py
