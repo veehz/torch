@@ -8,7 +8,7 @@
     "test-pyodide": "node main.js test"
   },
   "dependencies": {
-    "pyodide": "^0.29.3",
-    "@sourceacademy/torch": "portal:../../"
+    "@sourceacademy/torch": "portal:../../",
+    "pyodide": "^0.29.3"
   }
 }
