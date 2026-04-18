@@ -12,7 +12,7 @@
   "files": [
     "build",
     "src",
-    "examples"
+    "pyodide_bridge.py"
   ],
   "main": "./build/node/torch.node.cjs",
   "module": "./build/node/torch.node.es.mjs",
