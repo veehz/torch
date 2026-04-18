@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { Tensor, no_grad, enable_no_grad, disable_no_grad, is_grad_enabled, nn } from 'torch';
+import { Tensor, no_grad, enable_no_grad, disable_no_grad, is_grad_enabled, nn } from '@sourceacademy/torch';
 
 const { Parameter } = nn;
 

@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { Tensor } from 'torch';
+import { Tensor } from '@sourceacademy/torch';
 
 describe('Autograd', () => {
   it('y = x**2, dy/dx at x=2 is 4', () => {

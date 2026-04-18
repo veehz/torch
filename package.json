@@ -1,6 +1,6 @@
 {
   "type": "module",
-  "name": "torch",
+  "name": "@sourceacademy/torch",
   "packageManager": "yarn@4.10.3",
   "version": "0.1.0",
   "description": "machine-learning libraries for Source Academy",

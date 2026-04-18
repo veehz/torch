@@ -1,6 +1,6 @@
 import { assert } from 'chai';
-import * as torch from 'torch';
-import { Tensor, FloatTensor, LongTensor } from 'torch';
+import * as torch from '@sourceacademy/torch';
+import { Tensor, FloatTensor, LongTensor } from '@sourceacademy/torch';
 
 describe('FloatTensor', () => {
   it('is an instance of Tensor', () => {

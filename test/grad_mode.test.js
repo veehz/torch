@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { Tensor, no_grad, enable_no_grad, disable_no_grad, is_grad_enabled } from 'torch';
+import { Tensor, no_grad, enable_no_grad, disable_no_grad, is_grad_enabled } from '@sourceacademy/torch';
 
 describe('Grad Mode', () => {
   afterEach(() => {

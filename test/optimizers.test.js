@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import * as torch from 'torch';
+import * as torch from '@sourceacademy/torch';
 
 const EPS = 1e-6;
 

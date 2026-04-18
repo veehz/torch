@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import * as torch from 'torch';
+import * as torch from '@sourceacademy/torch';
 
 describe('NN Functional', () => {
   describe('Relu', () => {

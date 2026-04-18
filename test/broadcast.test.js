@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { Tensor, add, __left_index__, __right_index__ } from 'torch';
+import { Tensor, add, __left_index__, __right_index__ } from '@sourceacademy/torch';
 
 describe('Broadcast Index', () => {
     it('Broadcast indices should be correct in 2d array', () => {

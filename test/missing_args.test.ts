@@ -1,6 +1,6 @@
 import { assert } from 'chai';
-import * as torch from 'torch';
-import { Tensor } from 'torch';
+import * as torch from '@sourceacademy/torch';
+import { Tensor } from '@sourceacademy/torch';
 
 describe('Linear bias parameter', () => {
   it('should create Linear with bias=true by default', () => {

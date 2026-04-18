@@ -1,4 +1,4 @@
-import { Tensor } from '../build/node/torch.node.es.js';
+import { Tensor } from '../build/node/torch.node.es.mjs';
 
 const x = new Tensor([2.0], { requires_grad: true });
 const y = x.pow(new Tensor([2.0]));

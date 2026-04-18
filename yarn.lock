@@ -1051,6 +1051,33 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@sourceacademy/torch@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "@sourceacademy/torch@workspace:."
+  dependencies:
+    "@eslint/js": "npm:^9.37.0"
+    "@types/mocha": "npm:^10.0.10"
+    "@types/node": "npm:^24.6.2"
+    c8: "npm:^11.0.0"
+    chai: "npm:^6.2.0"
+    concurrently: "npm:^9.2.1"
+    eslint: "npm:^9.37.0"
+    eslint-plugin-import: "npm:^2.32.0"
+    http-server: "npm:^14.1.1"
+    mocha: "npm:^11.7.4"
+    pkg-pr-new: "npm:^0.0.62"
+    prettier: "npm:^3.6.2"
+    rimraf: "npm:^6.0.1"
+    ts-node: "npm:^10.9.2"
+    tsx: "npm:^4.20.6"
+    typedoc: "npm:^0.28.14"
+    typescript: "npm:^5.9.3"
+    typescript-eslint: "npm:^8.46.0"
+    vite: "npm:^7.1.9"
+    vite-plugin-dts: "npm:^4.5.4"
+  languageName: unknown
+  linkType: soft
+
 "@tsconfig/node10@npm:^1.0.7":
   version: 1.0.11
   resolution: "@tsconfig/node10@npm:1.0.11"
@@ -5135,33 +5162,6 @@ __metadata:
   checksum: 10c0/487988b0a19c654ff3e1961b87f471702e708fa8a8dd02a298ef16da7206692e8552a0250e8b3e8759270f62e9d8314616f6da274734d3b558b1fc7b7724e892
   languageName: node
   linkType: hard
-
-"torch@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "torch@workspace:."
-  dependencies:
-    "@eslint/js": "npm:^9.37.0"
-    "@types/mocha": "npm:^10.0.10"
-    "@types/node": "npm:^24.6.2"
-    c8: "npm:^11.0.0"
-    chai: "npm:^6.2.0"
-    concurrently: "npm:^9.2.1"
-    eslint: "npm:^9.37.0"
-    eslint-plugin-import: "npm:^2.32.0"
-    http-server: "npm:^14.1.1"
-    mocha: "npm:^11.7.4"
-    pkg-pr-new: "npm:^0.0.62"
-    prettier: "npm:^3.6.2"
-    rimraf: "npm:^6.0.1"
-    ts-node: "npm:^10.9.2"
-    tsx: "npm:^4.20.6"
-    typedoc: "npm:^0.28.14"
-    typescript: "npm:^5.9.3"
-    typescript-eslint: "npm:^8.46.0"
-    vite: "npm:^7.1.9"
-    vite-plugin-dts: "npm:^4.5.4"
-  languageName: unknown
-  linkType: soft
 
 "tree-kill@npm:1.2.2":
   version: 1.2.2

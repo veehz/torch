@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import * as torch from 'torch';
+import * as torch from '@sourceacademy/torch';
 
 describe('Event Bus', () => {
     const a = new torch.Tensor([1, 2, 3], { requires_grad: true });

@@ -1,5 +1,5 @@
 import { loadPyodide } from 'pyodide';
-import * as torch from 'torch';
+import * as torch from '@sourceacademy/torch';
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
 import path from 'path';

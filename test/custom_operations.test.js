@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { Tensor } from 'torch';
+import { Tensor } from '@sourceacademy/torch';
 
 describe('Custom Operations', () => {
 

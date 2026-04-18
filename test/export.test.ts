@@ -3,7 +3,7 @@ import { _atenMap } from '../src/export';
 import { _getAllOperationNames } from '../src/functions/registry';
 
 // Import torch to trigger operation registration side effects
-import 'torch';
+import '@sourceacademy/torch';
 
 describe('Export', () => {
   // List from https://docs.pytorch.org/docs/2.10/user_guide/torch_compiler/torch.compiler_ir.html
