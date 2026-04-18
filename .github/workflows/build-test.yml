@@ -36,8 +36,8 @@ jobs:
             mkdir -p docs/media
             [ -d "build" ] && cp -r build docs/build
             [ -d "build" ] && cp -r build docs/media/build
-            [ -d "examples" ] && cp -r examples docs/examples
-            [ -d "examples" ] && cp -r examples docs/media/examples
+            [ -d "examples" ] && cp -rL examples docs/examples
+            [ -d "examples" ] && cp -rL examples docs/media/examples
 
         - uses: actions/upload-pages-artifact@v4
           with:
