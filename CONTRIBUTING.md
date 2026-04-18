@@ -1,9 +1,29 @@
+## Development Commands
+
+```bash
+yarn install          # Install dependencies
+yarn build            # Build for browser and node (runs clean first)
+yarn test             # Run tests against src/ (uses mocha + tsx)
+yarn test:build       # Run tests against built library in build/
+yarn test:coverage    # Run tests with coverage report
+yarn test:watch       # Watch mode for tests (alias: yarn watch)
+yarn lint             # Lint src/ with ESLint
+yarn serve            # Serve on localhost:8080
+yarn docs             # Build TypeDoc documentation
+yarn update-tests     # Regenerate test/testcases.gen.js from scripts/generate_tests.py
+```
+
+To run a single test file:
+```bash
+yarn mocha --node-option conditions=torch-src test/tensor.test.js
+```
+
 ## Codebase Structure
 
 - [`src`](src)
     - [`index.ts`](src/index.ts) is the entry point of the library.
     - [`tensor.ts`](src/tensor.ts) is the main tensor class.
-    - [`function`](function) contains all functions that tensors can perform.
+    - [`functions`](functions) contains all functions that tensors can perform.
     - [`nn`](nn) contains all neural network modules (for everything under `torch.nn`).
     - [`optim`](optim) contains all optimizers (for everything under `torch.optim`).
     - [`creation`](creation) contains all tensor creation functions (all functions that create a tensor not from scratch, including `zeros`, `randn`).
@@ -12,7 +32,7 @@
 
 ### Development Scripts
 
-You can use `yarn watch` to automatically test after each edit.
+Use `yarn watch` (or `yarn test:watch`) to automatically re-run tests on each edit.
 
 ### Adding a new Function
 
